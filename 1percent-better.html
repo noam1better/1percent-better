@@ -2728,6 +2728,32 @@ const SCHEMA = {
 };
 
 /* ═══════════════════════════════════════════════════════
+   1b. SHARED UTILITIES (XSS-safe rendering, safe parsing)
+═══════════════════════════════════════════════════════ */
+/** Escape user-controlled strings before interpolating into innerHTML. */
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Encode for use inside an HTML attribute value (no quotes). */
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+/** JSON.parse that won't throw on corrupt localStorage. */
+function safeParse(json, fallback) {
+  if (json === null || json === undefined) return fallback;
+  try { return JSON.parse(json); }
+  catch (e) { console.warn('[safeParse] corrupt JSON, using fallback', e); return fallback; }
+}
+
+/* ═══════════════════════════════════════════════════════
    2. APP STATE
 ═══════════════════════════════════════════════════════ */
 const state = {
@@ -2744,21 +2770,24 @@ const state = {
    3. STREAK LOGIC
 ═══════════════════════════════════════════════════════ */
 
-/** Returns today's date as YYYY-MM-DD */
-function todayKey() {
-  return new Date().toISOString().split('T')[0];
+/** YYYY-MM-DD for any Date in the user's LOCAL timezone.
+ *  Using toISOString() would shift the date by up to ±1 day outside UTC,
+ *  breaking streak / calendar day-boundary detection. */
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function todayKey() { return dateKey(new Date()); }
 
 /** Loads streak object from localStorage */
 function loadStreak() {
-  const saved = localStorage.getItem('1pb_streak');
-  if (saved) return JSON.parse(saved);
-  return {
+  const fallback = {
     current: 7,
     longest: 12,
     lastPostDate: getPastDate(1), // yesterday
     history: [true, true, true, true, true, true, true] // last 7 days
   };
+  const parsed = safeParse(localStorage.getItem('1pb_streak'), null);
+  return parsed || fallback;
 }
 
 /** Saves streak object to localStorage */
@@ -2802,17 +2831,16 @@ function incrementStreak() {
 
 /** Returns whether user has posted proof today */
 function checkTodayDone() {
-  const saved = localStorage.getItem('1pb_streak');
-  if (!saved) return false;
-  const streak = JSON.parse(saved);
+  const streak = safeParse(localStorage.getItem('1pb_streak'), null);
+  if (!streak) return false;
   return streak.lastPostDate === todayKey();
 }
 
-/** Helper: returns date string N days ago */
+/** Helper: returns date string N days ago (LOCAL timezone). */
 function getPastDate(daysAgo) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -3090,9 +3118,10 @@ function postProof() {
   };
 
   // Save to localStorage
-  const posts = JSON.parse(localStorage.getItem('1pb_posts') || '[]');
+  const posts = safeParse(localStorage.getItem('1pb_posts'), []);
   posts.unshift(post);
-  localStorage.setItem('1pb_posts', JSON.stringify(posts.slice(0, 50)));
+  try { localStorage.setItem('1pb_posts', JSON.stringify(posts.slice(0, 50))); }
+  catch (e) { console.warn('[postProof] localStorage write failed', e); }
 
   // Mark today as done
   incrementStreak();
@@ -3564,33 +3593,37 @@ function renderFeed(filter = state.activeFilter) {
     card.className = 'feed-card';
     card.style.animationDelay = (i * 0.06) + 's';
 
-    const isImage = post.imageUrl && !post.imageUrl.startsWith('data:image/gif');
-    const imgEl = post.imageUrl
-      ? `<img src="${post.imageUrl}" alt="Proof" style="width:100%;max-height:260px;object-fit:cover;" />`
-      : `<div class="feed-img placeholder" style="display:flex;align-items:center;justify-content:center;background:var(--bg2);">${post.imageEmoji || '💪'}</div>`;
+    // Only allow http(s) and data: image URLs to prevent javascript: URI XSS.
+    const safeImg = post.imageUrl && /^(https?:|data:image\/)/i.test(post.imageUrl)
+      ? post.imageUrl : '';
+    const imgEl = safeImg
+      ? `<img src="${escapeAttr(safeImg)}" alt="Proof" style="width:100%;max-height:260px;object-fit:cover;" />`
+      : `<div class="feed-img placeholder" style="display:flex;align-items:center;justify-content:center;background:var(--bg2);">${escapeHtml(post.imageEmoji || '💪')}</div>`;
 
     const badgeClass = post.hot ? 'streak-badge hot' : 'streak-badge';
     const badgeIcon = post.hot ? '🔥' : '⚡';
+    const safeAvatarColor = /^(#[0-9a-f]{3,8}|var\(--[a-z0-9-]+\)|[a-z]+)$/i.test(post.avatarColor || '')
+      ? post.avatarColor : 'var(--green)';
 
     card.innerHTML = `
       <div class="feed-card-header">
-        <div class="user-avatar" style="background:${post.avatarColor || 'var(--green)'};">${post.userInitial}</div>
+        <div class="user-avatar" style="background:${escapeAttr(safeAvatarColor)};">${escapeHtml(post.userInitial)}</div>
         <div class="user-info">
-          <div class="user-name">${post.userName}</div>
-          <div class="user-meta">📍 ${post.groupName}</div>
+          <div class="user-name">${escapeHtml(post.userName)}</div>
+          <div class="user-meta">📍 ${escapeHtml(post.groupName)}</div>
         </div>
-        <div class="${badgeClass}">${badgeIcon} ${post.streakDay}d</div>
+        <div class="${badgeClass}">${badgeIcon} ${escapeHtml(post.streakDay)}d</div>
       </div>
       ${imgEl}
       <div class="feed-card-body">
-        <div class="feed-caption">${post.caption}</div>
+        <div class="feed-caption">${escapeHtml(post.caption)}</div>
       </div>
       <div class="feed-card-footer">
-        <button class="feed-action" onclick="likePost('${post.id}', this)">
+        <button class="feed-action" data-post-id="${escapeAttr(post.id)}" onclick="likePost(this.dataset.postId, this)">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
           </svg>
-          ${post.likes}
+          ${escapeHtml(post.likes)}
         </button>
         <button class="feed-action">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -3599,7 +3632,7 @@ function renderFeed(filter = state.activeFilter) {
           Reply
         </button>
         ${buildFeedShareBtn(post)}
-        <div class="feed-time">${post.time}</div>
+        <div class="feed-time">${escapeHtml(post.time)}</div>
       </div>`;
 
     list.appendChild(card);
@@ -5367,8 +5400,8 @@ function fireNotification(title, body, tag = 'general', url = '/') {
         reg.showNotification(title, {
           body,
           tag,
-          icon:    '/manifest.json',
-          badge:   '/manifest.json',
+          icon:    '/icon-192.png',
+          badge:   '/icon-192.png',
           vibrate: [100, 50, 100],
           data:    { url },
           actions: [
@@ -5379,7 +5412,7 @@ function fireNotification(title, body, tag = 'general', url = '/') {
       });
     } else {
       // Fallback: regular Notification API
-      new Notification(title, { body, tag, icon: '/manifest.json' });
+      new Notification(title, { body, tag, icon: '/icon-192.png' });
     }
   } catch(e) {
     console.warn('[Notif] fire failed:', e);
@@ -5589,12 +5622,13 @@ async function copyShareText() {
 function buildFeedShareBtn(post) {
   const isHe = currentLang === 'he';
   const label = isHe ? 'שתף' : 'Share';
-  return `<button class="feed-action" onclick="shareProof('feed','${post.imageUrl || ''}')">
+  const safeUrl = /^(https?:|data:image\/)/i.test(post.imageUrl || '') ? post.imageUrl : '';
+  return `<button class="feed-action" data-img="${escapeAttr(safeUrl)}" onclick="shareProof('feed', this.dataset.img)">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;">
       <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
       <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
     </svg>
-    ${label}
+    ${escapeHtml(label)}
   </button>`;
 }
 
@@ -5607,7 +5641,7 @@ function getActivityLog() {
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const key = d.toISOString().split('T')[0];
+      const key = dateKey(d);
       const done = i === 0 ? 2 : (Math.random() > 0.35 ? Math.floor(Math.random()*5)+1 : 0);
       const xp   = done * (10 + Math.floor(Math.random()*15));
       if (done > 0) log[key] = { done, xp };
@@ -5728,7 +5762,7 @@ function renderXPChart(log, isHe) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const key  = d.toISOString().split('T')[0];
+    const key  = dateKey(d);
     const xp   = log[key]?.xp || 0;
     const dayNames = isHe
       ? ['א','ב','ג','ד','ה','ו','ש']
@@ -5755,7 +5789,7 @@ function renderWeekLog(log, isHe) {
   for (let i = 6; i >= 0; i--) {
     const d   = new Date(today);
     d.setDate(today.getDate() - i);
-    const key = d.toISOString().split('T')[0];
+    const key = dateKey(d);
     const entry = log[key];
     const done  = entry?.done || 0;
     const xp    = entry?.xp   || 0;
@@ -6061,7 +6095,7 @@ function renderLearningPaths() {
     card.querySelector('.lp-card-btn').onclick = () => {
       if (finished) return;
       if (!started) {
-        const prog2 = { started:true, startDate: new Date().toISOString().split('T')[0], completedDays:[], earnedXP:0, badge:false };
+        const prog2 = { started:true, startDate: todayKey(), completedDays:[], earnedXP:0, badge:false };
         savePathProgress(path.id, prog2);
       }
       openActivePath(path.id);

@@ -14,11 +14,19 @@ const PRE_CACHE = [
 ];
 
 // ── INSTALL ──────────────────────────────────────
+// Use per-asset add() so a single missing file (e.g. an icon not yet
+// uploaded) doesn't fail the entire SW install via addAll's atomic semantics.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(PRE_CACHE);
-    })
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(
+        PRE_CACHE.map(url =>
+          cache.add(url).catch(err =>
+            console.warn('[SW] pre-cache miss for', url, err)
+          )
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
@@ -70,8 +78,13 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         return response;
       }).catch(() => {
-        // Offline fallback
-        return caches.match(OFFLINE_URL);
+        // Offline fallback — only for navigations; other request types should
+        // surface the network error so the page can react appropriately.
+        if (request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL)
+            .then(r => r || caches.match('/1percent-better.html'));
+        }
+        return Response.error();
       });
     })
   );
@@ -83,8 +96,8 @@ self.addEventListener('push', event => {
   const title = data.title || '1% Better 🔥';
   const options = {
     body:  data.body  || 'הרצף שלך מחכה לך — בוא תוכיח את זה',
-    icon:  data.icon  || '/manifest.json',
-    badge: data.badge || '/manifest.json',
+    icon:  data.icon  || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
     tag:   data.tag   || 'daily-reminder',
     data:  { url: data.url || '/1percent-better.html' },
     actions: [
