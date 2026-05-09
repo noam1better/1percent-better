@@ -1,0 +1,43 @@
+{
+  "name": "1% Better",
+  "short_name": "1% Better",
+  "description": "בצע משימות, תתקדם, ותוכיח את זה",
+  "start_url": "/1percent-better.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "lang": "he",
+  "dir": "rtl",
+  "categories": ["fitness", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "התחל משימה",
+      "short_name": "משימה",
+      "description": "פתח ישירות למסך המשימות",
+      "url": "/1percent-better.html#hub"
+    },
+    {
+      "name": "העלה הוכחה",
+      "short_name": "הוכחה",
+      "description": "פתח ישירות למצלמה",
+      "url": "/1percent-better.html#upload"
+    }
+  ]
+}
+

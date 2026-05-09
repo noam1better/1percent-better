@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── PROOF PHOTOS ────────────────────────────────────
+    // Only the owner can upload/read/delete their own proofs
+    match /proofs/{uid}/{fileName} {
+      allow read:   if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size < 10 * 1024 * 1024  // max 10MB
+                    && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow update: if false; // no overwriting
+    }
+
+    // ── DENY EVERYTHING ELSE ───────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
