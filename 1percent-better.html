@@ -1123,16 +1123,22 @@
   ══════════════════════════════════════════════════ */
   #onboarding {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
     z-index: 500;
-    background: #050505;
+    background: var(--bg);
     display: flex;
     flex-direction: column;
     max-width: 430px;
     margin: 0 auto;
     overflow: hidden;
+    /* Use dynamic viewport height so the mobile URL bar doesn't push
+       the footer off-screen. 100vh fallback for older browsers. */
+    height: 100vh;
+    height: 100dvh;
+    /* Extend bg to full viewport width on screens wider than the panel. */
+    box-shadow: 0 0 0 100vmax var(--bg);
+    clip-path: inset(0 -100vmax);
   }
-  body.light #onboarding { background: #f4f4f2; }
   #onboarding.hidden { display: none; }
 
   .ob-slides {
@@ -1189,9 +1195,10 @@
   }
   .ob-dot.active { width: 24px; background: var(--green); }
 
-  /* Bottom bar */
+  /* Bottom bar — pinned, with iOS safe-area padding so the home indicator
+     never overlaps the Continue button. */
   .ob-footer {
-    padding: 10px 24px 36px;
+    padding: 14px 24px calc(20px + env(safe-area-inset-bottom, 16px));
     display: flex; flex-direction: column; gap: 8px;
     flex-shrink: 0;
     background: var(--bg);
@@ -1833,7 +1840,7 @@
 <!-- ══════════════════════════════════════════════
      ONBOARDING — shown only to new users
 ══════════════════════════════════════════════════ -->
-<div id="onboarding" class="notranslate" translate="no">
+<div id="onboarding" class="notranslate hidden" translate="no">
 
   <!-- SLIDES TRACK -->
   <div class="ob-slides" id="obSlidesWrap">
@@ -4900,15 +4907,23 @@ function applyObCopy(lang) {
 }
 
 function initOnboarding() {
+  const ob = document.getElementById('onboarding');
+  if (!ob) return;
+
   if (localStorage.getItem('1pb_onboarded')) {
-    document.getElementById('onboarding').classList.add('hidden');
+    ob.classList.add('hidden');
     return;
   }
-  // Don't reinitialize if user already moved past slide 0
-  if (obStep > 0) return;
 
-  // Default to English
-  applyObCopy('en');
+  // Reset flow state so re-entries (e.g. sign-out → new sign-in) start
+  // fresh instead of resuming a stale obStep with an empty container.
+  obStep   = 0;
+  obHabits = [];
+  obXP     = 0;
+  obLang   = localStorage.getItem('1pb_lang') || 'en';
+
+  ob.classList.remove('hidden');
+  applyObCopy(obLang);
   buildObDots();
   updateObStep();
 }
@@ -5010,8 +5025,14 @@ function renderLangGrid() {
 function pickObLangById(lang) {
   obLang = lang;
   localStorage.setItem('1pb_lang', lang);
+  obInteracted = true;
   applyObCopy(lang);
   renderSlideContent(obStep);
+  // Auto-advance from the language-picker slide so the user doesn't have
+  // to hunt for "Continue" after tapping a flag.
+  if (obStep === 0) {
+    setTimeout(() => { if (obStep === 0) { obStep = 1; updateObStep(); } }, 220);
+  }
 }
 
 function renderHabitsGrid() {
@@ -5103,6 +5124,7 @@ function updateObStep() {
 
 function obNext() {
   const c = OB_COPY[obLang] || OB_COPY.en;
+  obInteracted = true;
 
   if (obStep === 3) {
     const name = document.getElementById('obNameInput')?.value.trim();
@@ -5122,7 +5144,7 @@ function obNext() {
   else                        { finishOnboarding(); }
 }
 
-function obSkip() { finishOnboarding(); }
+function obSkip() { obInteracted = true; finishOnboarding(); }
 
 function toggleHabit(el) {
   const id = el.dataset.id;
@@ -6538,33 +6560,51 @@ async function doForgotPassword() {
   }
 }
 
+/* Per-user keys — wiped on sign-out so the next user on this device
+   doesn't inherit the previous user's onboarding flag, name, streak, etc. */
+const PER_USER_KEYS = [
+  '1pb_onboarded', '1pb_name', '1pb_xp', '1pb_streak', '1pb_habits',
+  '1pb_activity', '1pb_posts', '1pb_uid',
+];
+
 async function doSignOut() {
   if (!isFirebaseConfigured()) return;
+  PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
   await fbAuth.signOut();
+  // Reset in-memory onboarding flow so the next sign-in re-renders cleanly.
+  obStep = 0; obHabits = []; obXP = 0; obInteracted = false;
 }
 
 /* Offline / dev mode — skip auth */
 function offlineLogin() {
   hideAuthScreen();
-  document.getElementById('onboarding').classList.remove('hidden');
+  // Let initOnboarding decide whether to show the panel based on the
+  // 1pb_onboarded flag, instead of unconditionally revealing it.
   initApp();
 }
 
 /* ── Called after successful sign-in ── */
 async function onUserSignedIn(user) {
   hideAuthScreen();
+
+  // If this is a different user than last sign-in on this device, drop the
+  // previous user's local cache so we don't carry over their onboarded
+  // flag, streak, name, etc.
+  const prevUid = localStorage.getItem('1pb_uid');
+  if (prevUid && prevUid !== user.uid) {
+    PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
+  }
+  localStorage.setItem('1pb_uid', user.uid);
+
   // Pre-fill name from Firebase profile
   const name = user.displayName || localStorage.getItem('1pb_name') || '';
   if (name) localStorage.setItem('1pb_name', name);
 
-  // Load user data from Firestore
+  // Load user data from Firestore (authoritative source for onboarded flag).
   await loadUserFromFirestore(user.uid);
 
-  // Show onboarding if new user, else go straight to app
-  const onboarded = localStorage.getItem('1pb_onboarded');
-  if (!onboarded) {
-    document.getElementById('onboarding').classList.remove('hidden');
-  }
+  // initApp → init → initOnboarding will show or hide the onboarding panel
+  // based on the (now-correct) localStorage state.
   initApp();
 }
 
