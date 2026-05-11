@@ -1633,6 +1633,25 @@
   .hub-stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .08em; }
   [dir="rtl"] .hub-stat-label { letter-spacing: 0; text-transform: none; }
 
+  /* ── STREAK FREEZE ICON ─────────────────────────────
+     Sized in em so it tracks the streak number; visible on dark and
+     light themes; subtle pulse to draw the eye without being noisy. */
+  .freeze-icon {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: .42em;
+    line-height: 1;
+    vertical-align: top;
+    filter: drop-shadow(0 0 4px rgba(140, 220, 255, .55));
+    animation: freezePulse 2.4s ease-in-out infinite;
+  }
+  [dir="rtl"] .freeze-icon { margin-left: 0; margin-right: 4px; }
+  .freeze-icon[hidden] { display: none; }
+  @keyframes freezePulse {
+    0%, 100% { transform: scale(1);   opacity: .85; }
+    50%      { transform: scale(1.15); opacity: 1;  }
+  }
+
   /* ── PRIMARY CTA ──────────────────────────────────── */
   .primary-cta {
     margin: 0 20px 16px;
@@ -1897,7 +1916,9 @@
     <!-- STATS ROW -->
     <div class="hub-stats">
       <div class="hub-stat">
-        <div class="hub-stat-val green" id="streakNum">7</div>
+        <div class="hub-stat-val green" id="streakNum">
+          <span id="streakNumVal">7</span><span id="streakFreezeIcon" class="freeze-icon" hidden aria-label="Streak freeze used" title="Streak freeze used">❄️</span>
+        </div>
         <div class="hub-stat-label" id="lbl-days-unit">ימי רצף</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="streakDots2">🔥🔥🔥🔥🔥🔥🔥</div>
       </div>
@@ -2791,10 +2812,14 @@ function loadStreak() {
     current: 7,
     longest: 12,
     lastPostDate: getPastDate(1), // yesterday
-    history: [true, true, true, true, true, true, true] // last 7 days
+    history: [true, true, true, true, true, true, true], // last 7 days
+    lastFreezeDate: null, // ISO date (YYYY-MM-DD) of the last freeze, or null
   };
   const parsed = safeParse(localStorage.getItem('1pb_streak'), null);
-  return parsed || fallback;
+  if (!parsed) return fallback;
+  // Backfill freeze field for users created before streak-freeze shipped.
+  if (parsed.lastFreezeDate === undefined) parsed.lastFreezeDate = null;
+  return parsed;
 }
 
 /** Saves streak object to localStorage */
@@ -2811,6 +2836,11 @@ function saveStreak(streak) {
  *  - If last post was 2+ days ago → reset streak to 1
  */
 function incrementStreak() {
+  // If the tab has been open across midnight and the user missed a single
+  // day, this call will rewrite lastPostDate to yesterday so the streak
+  // continues uninterrupted instead of resetting.
+  applyStreakFreezeIfNeeded();
+
   const streak = state.streak;
   const today = todayKey();
   const yesterday = getPastDate(1);
@@ -2848,6 +2878,73 @@ function getPastDate(daysAgo) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   3b. STREAK FREEZE
+   Each user gets 1 freeze per rolling 7-day window. If they miss
+   exactly one day and a freeze is available, it auto-activates: we
+   rewrite lastPostDate to yesterday so the existing streak math
+   continues uninterrupted. The snowflake icon stays visible until the
+   next freeze becomes available (7 days later).
+═══════════════════════════════════════════════════════ */
+const FREEZE_COOLDOWN_DAYS = 7;
+
+/** Whole-day delta between two YYYY-MM-DD strings (b - a). Negative if a > b. */
+function dayDiff(a, b) {
+  if (!a || !b) return Infinity;
+  // Parse as UTC midnight so DST transitions don't introduce fractional days.
+  const da = new Date(a + 'T00:00:00Z');
+  const db = new Date(b + 'T00:00:00Z');
+  return Math.round((db - da) / 86400000);
+}
+
+/** True iff a freeze can be consumed today. */
+function freezeAvailable(streak) {
+  if (!streak.lastFreezeDate) return true;
+  return dayDiff(streak.lastFreezeDate, todayKey()) >= FREEZE_COOLDOWN_DAYS;
+}
+
+/** True iff a freeze was used within the current 7-day window — drives the snowflake icon. */
+function freezeRecentlyUsed(streak) {
+  if (!streak.lastFreezeDate) return false;
+  return dayDiff(streak.lastFreezeDate, todayKey()) < FREEZE_COOLDOWN_DAYS;
+}
+
+/**
+ * Auto-activate a freeze if the user missed exactly one day and one is
+ * available. Idempotent — safe to call on every app open / streak read.
+ * Returns true if a freeze was consumed this call (caller can show UI).
+ */
+function applyStreakFreezeIfNeeded() {
+  // Re-read from storage: Firestore sync (or another tab) may have written
+  // newer values than the cached state.streak we loaded at page open.
+  state.streak = loadStreak();
+  const s = state.streak;
+  if (!s || !s.lastPostDate) return false;
+
+  const today = todayKey();
+  const yesterday = getPastDate(1);
+
+  // Already current — no gap to bridge.
+  if (s.lastPostDate === today || s.lastPostDate === yesterday) return false;
+
+  // Freeze can only save a SINGLE missed day. A two-day gap is a real reset.
+  const missed = dayDiff(s.lastPostDate, today) - 1; // days fully skipped
+  if (missed !== 1) return false;
+
+  if (!freezeAvailable(s)) return false;
+
+  // Consume the freeze: pretend the user posted yesterday.
+  s.lastPostDate   = yesterday;
+  s.lastFreezeDate = yesterday;
+  // Reflect the saved day in the rolling-7 history so the dots look right.
+  if (Array.isArray(s.history) && s.history.length === 7) {
+    s.history = [...s.history.slice(1), true];
+  }
+  saveStreak(s);
+  state.streak = s;
+  return true;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -3530,12 +3627,16 @@ function closeModal(e) {
 
 function renderStreak() {
   const streak = state.streak;
-  // hub compact stat
-  const snEl = document.getElementById('streakNum');
-  if (snEl) snEl.textContent = streak.current;
+  // hub compact stat — number goes into the inner span so we don't clobber
+  // the sibling snowflake icon.
+  const snVal = document.getElementById('streakNumVal');
+  if (snVal) snVal.textContent = streak.current;
   // profile
   const psEl = document.getElementById('profileStreak');
   if (psEl) psEl.textContent = streak.current;
+  // freeze indicator
+  const freezeEl = document.getElementById('streakFreezeIcon');
+  if (freezeEl) freezeEl.hidden = !freezeRecentlyUsed(streak);
   // fire dots
   const d2 = document.getElementById('streakDots2');
   if (d2) {
@@ -3687,6 +3788,9 @@ function showToast(msg) {
 function init() {
   initOnboarding();
   initNotifications();
+  // Run freeze check BEFORE first streak render so the snowflake (if it
+  // just auto-activated) shows on the very first paint.
+  applyStreakFreezeIfNeeded();
   renderStreak();
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
