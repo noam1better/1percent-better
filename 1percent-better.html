@@ -1143,12 +1143,25 @@
 
   .ob-slides {
     flex: 1;
+    /* THE FIX for "Continue button cut off on small phones":
+       Flex children default to min-height: auto, which means this scroll
+       container would otherwise grow to fit its intrinsic content height
+       and push the dots/footer below the visible viewport. Setting
+       min-height: 0 lets the flex layout allocate it only the leftover
+       space, so its own overflow-y: auto can actually engage. */
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
   }
+  /* Same trick for the inline-styled #obSlideContent — its inline
+     `min-height: 300px` is otherwise a hard floor that breaks shrinking
+     on landscape iPhone SE. The CSS rule wins over an inline style for
+     this property because the inline value is `min-height: 300px` (not
+     marked !important) and our selector is more specific via the id. */
+  #obSlideContent { min-height: 0 !important; }
 
   .ob-slide {
     display: none;
@@ -1218,6 +1231,38 @@
     background: none; border: none; cursor: pointer;
     color: var(--muted2); font-size: 14px;
     font-family: 'Heebo', sans-serif; padding: 6px;
+  }
+
+  /* Short viewports (e.g. iPhone SE 1/2, landscape phones): compact the
+     slide header so the language grid + Continue button fit without the
+     user having to scroll to find Continue. The slide content is
+     rendered inline by JS, so we override its inline font sizes here.
+     Selectors target #obSlideContent's direct children by index. */
+  @media (max-height: 700px) {
+    #obSlideContent { padding: 12px 24px 8px !important; }
+    /* Emoji (1st child div) */
+    #obSlideContent > div:nth-child(1) {
+      font-size: 38px !important;
+      margin-bottom: 6px !important;
+    }
+    /* Slide title (2nd child div) */
+    #obSlideContent > div:nth-child(2) {
+      font-size: 22px !important;
+      margin-bottom: 6px !important;
+    }
+    /* Slide body / description (3rd child div) */
+    #obSlideContent > div:nth-child(3) {
+      font-size: 12px !important;
+      margin-bottom: 10px !important;
+    }
+    /* Tighter language tile rows so 7 items in 2 cols fit comfortably. */
+    #obLangGrid > div {
+      padding: 8px 8px !important;
+    }
+    .ob-footer {
+      padding: 10px 24px calc(12px + env(safe-area-inset-bottom, 12px));
+    }
+    .ob-dots { padding: 10px 0 8px; }
   }
 
   /* Name input slide */
