@@ -2164,7 +2164,14 @@
       <div style="width:38px;"></div>
     </div>
 
-    <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFileChange(event)" />
+    <!-- Camera + gallery picker. NO `capture` attribute on purpose:
+         - On iOS Safari the user gets the native action sheet (Take Photo /
+           Photo Library / Choose File) — which is what they expect.
+         - On Android Chrome the user can pick between Camera and Files.
+         With capture="environment" the picker is forced into camera-only,
+         which contradicts the "or choose from gallery" copy below. -->
+    <input type="file" id="fileInput" accept="image/*,image/heic,image/heif"
+           onchange="handleFileChange(event)" />
 
     <!-- DROP / CAMERA AREA -->
     <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
@@ -3244,50 +3251,130 @@ function refreshTip(context) {
    5. CAMERA / FILE UPLOAD LOGIC
 ═══════════════════════════════════════════════════════ */
 
+/** True if the file is in Apple's HEIC/HEIF format. iOS Safari can render
+ *  these natively but most other browsers can't — including Android Chrome
+ *  and Firebase Storage's default preview tooling. Reject early so the
+ *  user gets a clear message instead of a broken image cross-device. */
+function isHeic(file) {
+  const t = (file.type || '').toLowerCase();
+  if (t === 'image/heic' || t === 'image/heif') return true;
+  // iOS sometimes leaves type empty; sniff the filename as a fallback.
+  const n = (file.name || '').toLowerCase();
+  return n.endsWith('.heic') || n.endsWith('.heif');
+}
+
+/** File extension derived from MIME type, NOT from filename. iOS often
+ *  hands us a name with no extension (e.g. "image"), which produced
+ *  invalid Storage paths like proofs/uid/123.image. */
+function extFromMime(mime) {
+  switch ((mime || '').toLowerCase()) {
+    case 'image/jpeg': return 'jpg';
+    case 'image/jpg':  return 'jpg';
+    case 'image/png':  return 'png';
+    case 'image/webp': return 'webp';
+    case 'image/gif':  return 'gif';
+    default:           return 'jpg';   // safest default — we'll have downscaled to JPEG by then
+  }
+}
+
+/** Downscale an image File to fit within `maxDim` pixels on its longest
+ *  edge and re-encode as a JPEG Blob. Saves both bandwidth (Firebase
+ *  Storage upload) and disk (we no longer store multi-MB base64 strings
+ *  in localStorage and blow the quota).
+ *
+ *  Falls back to the original file if anything goes wrong — we'd rather
+ *  ship a heavy original than block the user from posting. */
+async function downscaleImage(file, maxDim = 1600, quality = 0.85) {
+  if (typeof createImageBitmap !== 'function' || !file.type.startsWith('image/')) {
+    return file;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale  = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width  * scale);
+    const h = Math.round(bitmap.height * scale);
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close && bitmap.close();
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', quality));
+    if (!blob) return file;
+    // Preserve the original name root but force a .jpg extension.
+    const base = (file.name || 'photo').replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+  } catch (e) {
+    console.warn('[upload] downscale failed, using original', e);
+    return file;
+  }
+}
+
 /**
- * Handles camera/file input change event.
- * Uses <input type="file" accept="image/*" capture="environment">
- * to trigger native camera on mobile.
+ * Handles camera/file input change event. Validates, rejects HEIC with a
+ * clear message, downscales to ~1600px JPEG, then shows the preview.
  */
-function handleFileChange(event) {
-  const file = event.target.files[0];
+async function handleFileChange(event) {
+  const file = event.target.files && event.target.files[0];
   if (!file) return;
+  const isHe = currentLang === 'he';
 
-  // Validate: must be an image
+  // Reject HEIC up-front — cross-browser rendering is broken otherwise.
+  if (isHeic(file)) {
+    showToast(isHe
+      ? '⚠ פורמט HEIC לא נתמך. כבה "יעילות גבוהה" בהגדרות המצלמה ב-iOS'
+      : '⚠ HEIC isn\'t supported. Turn off "High Efficiency" in iOS Camera settings (Settings → Camera → Formats → Most Compatible).');
+    event.target.value = '';
+    return;
+  }
+
   if (!file.type.startsWith('image/')) {
-    showToast('⚠ Please upload an image file');
+    showToast(isHe ? '⚠ אנא העלה קובץ תמונה' : '⚠ Please upload an image file');
+    event.target.value = '';
+    return;
+  }
+  if (file.size > 25 * 1024 * 1024) {   // raised — we downscale before upload
+    showToast(isHe ? '⚠ תמונה גדולה מדי (מקסימום 25MB)' : '⚠ Image too large (max 25MB)');
+    event.target.value = '';
     return;
   }
 
-  // Validate: max 10MB
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('⚠ Image too large (max 10MB)');
-    return;
-  }
+  // Downscale to ~1600px JPEG. This solves three problems at once:
+  // (1) Firebase Storage upload is fast, (2) the preview data URL fits
+  // in localStorage, (3) the produced file always has a known MIME type
+  // and a clean .jpg extension for the Storage path.
+  const compact = await downscaleImage(file);
+  state.currentFile = compact;
 
-  state.currentFile = file;
-
-  // Read & preview using FileReader API
+  // Render preview from the compact file.
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = document.getElementById('previewImg');
-    img.src = e.target.result;
-
-    // Show preview, hide upload area
-    document.getElementById('uploadArea').style.display = 'none';
+    if (img) img.src = e.target.result;
+    const ua = document.getElementById('uploadArea');
+    if (ua) ua.style.display = 'none';
     const preview = document.getElementById('previewSection');
-    preview.classList.add('visible');
+    if (preview) preview.classList.add('visible');
   };
-  reader.readAsDataURL(file);
+  reader.onerror = () => {
+    showToast(isHe ? 'שגיאה בקריאת הקובץ' : 'Could not read that file');
+    event.target.value = '';
+  };
+  reader.readAsDataURL(compact);
 }
 
 function retake() {
-  // Reset to upload state
   state.currentFile = null;
-  document.getElementById('fileInput').value = '';
-  document.getElementById('captionInput').value = '';
-  document.getElementById('uploadArea').style.display = '';
-  document.getElementById('previewSection').classList.remove('visible');
+  const fi = document.getElementById('fileInput');
+  if (fi) fi.value = '';
+  const cap = document.getElementById('captionInput');
+  if (cap) cap.value = '';
+  const ua = document.getElementById('uploadArea');
+  if (ua) ua.style.display = '';
+  const preview = document.getElementById('previewSection');
+  if (preview) preview.classList.remove('visible');
+  // Drop the data URL so it isn't held in memory across screens.
+  const img = document.getElementById('previewImg');
+  if (img) img.src = '';
 }
 
 /**
@@ -3300,7 +3387,14 @@ function postProof() {
     return;
   }
 
-  // Simulate saving proof post
+  // Prefer the uploaded Firebase URL (set by the postProof patch below)
+  // over the in-memory data URL. Data URLs are 200-400KB each AFTER
+  // downscaling; 50 of them in 1pb_posts blows past the localStorage
+  // quota and silently breaks the local feed.
+  const imageUrl = state._uploadedPhotoUrl
+                 || document.getElementById('previewImg')?.src
+                 || '';
+
   const post = {
     id: 'post_' + Date.now(),
     userId: 'noam',
@@ -3308,7 +3402,7 @@ function postProof() {
     userInitial: 'N',
     groupId: 'running',
     groupName: 'Running',
-    imageUrl: document.getElementById('previewImg').src,
+    imageUrl,
     caption: document.getElementById('captionInput').value || "Proved it. One more day. 💪",
     streakDay: state.streak.current + 1,
     aiTip: getRandomTip('running'),
@@ -3316,11 +3410,23 @@ function postProof() {
     likes: 0,
   };
 
-  // Save to localStorage
+  // Save to localStorage — cap at 20 entries and evict oldest entries
+  // until the write succeeds, so a near-quota state can't permanently
+  // break local posts.
   const posts = safeParse(localStorage.getItem('1pb_posts'), []);
   posts.unshift(post);
-  try { localStorage.setItem('1pb_posts', JSON.stringify(posts.slice(0, 50))); }
-  catch (e) { console.warn('[postProof] localStorage write failed', e); }
+  let trimmed = posts.slice(0, 20);
+  while (trimmed.length > 0) {
+    try { localStorage.setItem('1pb_posts', JSON.stringify(trimmed)); break; }
+    catch (e) {
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        trimmed = trimmed.slice(0, Math.max(1, trimmed.length - 5));
+        continue;
+      }
+      console.warn('[postProof] localStorage write failed', e);
+      break;
+    }
+  }
 
   // Mark today as done
   incrementStreak();
@@ -7128,10 +7234,13 @@ async function loadPostsFromFirestore() {
 async function uploadProofPhoto(file) {
   if (!fbStorage || !currentUser || !file) return null;
   try {
-    const ext  = file.name.split('.').pop() || 'jpg';
+    const ext  = extFromMime(file.type);
     const path = `proofs/${currentUser.uid}/${Date.now()}.${ext}`;
     const ref  = fbStorage.ref(path);
-    const snap = await ref.put(file);
+    // Pass explicit metadata: Firebase otherwise guesses content-type
+    // from the path extension, which fails for files iOS hands us with
+    // no extension on the original name.
+    const snap = await ref.put(file, { contentType: file.type || `image/${ext}` });
     return await snap.ref.getDownloadURL();
   } catch(e) {
     console.warn('[Storage] Upload failed:', e);
@@ -7168,19 +7277,30 @@ recordActivity = function(xpGained) {
   syncActivityDay(key, entry);
 };
 
-/* Patch: postProof → upload image to Storage first */
-const _origHandleFileChange = handleFileChange;
-handleFileChange = async function(event) {
-  _origHandleFileChange(event);
-  // Storage upload happens in postProof below
-};
+/* Patch: postProof → upload image to Storage first.
+   handleFileChange is no longer wrapped here — the downscale/HEIC logic
+   already lives in the base implementation. */
 
 const _origPostProof = postProof;
 postProof = async function() {
-  // Upload photo to Firebase Storage before posting
+  const isHe = currentLang === 'he';
+  state._uploadedPhotoUrl = null;
+
+  // Upload to Storage *before* the local post is saved, so the local
+  // post can reference the cloud URL instead of a fat base64 data URL.
   if (state.currentFile && isFirebaseConfigured() && currentUser) {
-    showToast(currentLang === 'he' ? '⏳ מעלה תמונה...' : '⏳ Uploading photo...');
+    const btn = document.querySelector('.btn-post');
+    if (btn) btn.disabled = true;
+    showToast(isHe ? '⏳ מעלה תמונה...' : '⏳ Uploading photo...');
     state._uploadedPhotoUrl = await uploadProofPhoto(state.currentFile);
+    if (btn) btn.disabled = false;
+    if (!state._uploadedPhotoUrl) {
+      // Surface failure instead of silently posting a photo-less proof.
+      showToast(isHe
+        ? 'ההעלאה נכשלה. בדוק את חיבור הרשת ונסה שוב'
+        : 'Upload failed. Check your connection and try again.');
+      return;
+    }
   }
 
   // Then call original postProof logic
