@@ -1633,6 +1633,75 @@
   .hub-stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .08em; }
   [dir="rtl"] .hub-stat-label { letter-spacing: 0; text-transform: none; }
 
+  /* ── WEEKLY RECAP CARD ──────────────────────────────
+     Shown on Sundays (dismissible per week). Visually distinct from
+     the regular stat cards: green-accented border + glow so it reads
+     as a "moment", not a permanent dashboard widget. */
+  .recap-card {
+    position: relative;
+    margin: 16px 20px 12px;
+    padding: 18px 18px 16px;
+    background: linear-gradient(135deg, rgba(0,255,135,.08), rgba(0,200,255,.04));
+    border: 1px solid rgba(0,255,135,.30);
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 1px rgba(0,255,135,.04), 0 8px 24px rgba(0,255,135,.06);
+  }
+  .recap-card[hidden] { display: none; }
+  .recap-dismiss {
+    position: absolute; top: 6px; right: 8px;
+    background: none; border: none; color: var(--muted2);
+    font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px;
+    border-radius: 8px;
+  }
+  [dir="rtl"] .recap-dismiss { right: auto; left: 8px; }
+  .recap-dismiss:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .recap-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px; padding-right: 28px;
+  }
+  [dir="rtl"] .recap-head { padding-right: 0; padding-left: 28px; }
+  .recap-tag {
+    font-family: var(--font-head);
+    font-size: 13px; letter-spacing: .12em;
+    color: var(--green);
+  }
+  [dir="rtl"] .recap-tag { letter-spacing: 0; }
+  .recap-range {
+    font-size: 11px; color: var(--muted2);
+  }
+  .recap-stats {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .recap-stat {
+    flex: 1; text-align: center;
+    background: var(--bg1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 6px;
+  }
+  .recap-stat-val {
+    font-family: var(--font-head);
+    font-size: 26px; line-height: 1;
+  }
+  .recap-stat-val.green { color: var(--green); }
+  .recap-stat-val.blue  { color: var(--blue);  }
+  .recap-stat-val.gold  { color: #fbbf24;       }
+  .recap-stat-lbl {
+    font-size: 10px; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-top: 4px;
+  }
+  [dir="rtl"] .recap-stat-lbl { letter-spacing: 0; text-transform: none; }
+  .recap-share-btn {
+    width: 100%; padding: 12px;
+    background: var(--green); color: #000;
+    border: none; border-radius: 12px;
+    font-family: var(--font-head); font-size: 15px;
+    font-weight: 800; letter-spacing: .04em;
+    cursor: pointer; transition: opacity .15s, transform .1s;
+  }
+  .recap-share-btn:hover  { opacity: .92; }
+  .recap-share-btn:active { transform: scale(.98); }
+  .recap-share-btn[disabled] { opacity: .5; cursor: wait; }
+
   /* ── STREAK FREEZE ICON ─────────────────────────────
      Sized in em so it tracks the streak number; visible on dark and
      light themes; subtle pulse to draw the eye without being noisy. */
@@ -1891,6 +1960,32 @@
         </div>
       </div>
       <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
+    </div>
+
+    <!-- WEEKLY RECAP (shown on Sundays, dismissible) -->
+    <div id="recapCard" class="recap-card" hidden>
+      <button class="recap-dismiss" id="recapDismiss" onclick="dismissWeeklyRecap()" aria-label="Dismiss">×</button>
+      <div class="recap-head">
+        <span class="recap-tag" id="recapTag">WEEKLY RECAP</span>
+        <span class="recap-range" id="recapRange"></span>
+      </div>
+      <div class="recap-stats">
+        <div class="recap-stat">
+          <div class="recap-stat-val green" id="recapXp">0</div>
+          <div class="recap-stat-lbl" id="recapXpLbl">XP earned</div>
+        </div>
+        <div class="recap-stat">
+          <div class="recap-stat-val blue" id="recapDays">0</div>
+          <div class="recap-stat-lbl" id="recapDaysLbl">Days active</div>
+        </div>
+        <div class="recap-stat">
+          <div class="recap-stat-val gold" id="recapStreak">0</div>
+          <div class="recap-stat-lbl" id="recapStreakLbl">Longest streak</div>
+        </div>
+      </div>
+      <button class="recap-share-btn" id="recapShareBtn" onclick="shareWeeklyRecap()">
+        <span id="recapShareLbl">📤 Share my week</span>
+      </button>
     </div>
 
     <!-- LEVEL / XP -->
@@ -3792,6 +3887,7 @@ function init() {
   // just auto-activated) shows on the very first paint.
   applyStreakFreezeIfNeeded();
   renderStreak();
+  renderWeeklyRecap();
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
   if (_savedName) {
@@ -5741,6 +5837,218 @@ async function copyShareText() {
     showToast(isHe ? '✓ הטקסט הועתק' : '✓ Text copied');
   } catch {
     showToast(isHe ? '⚠ לא הצליח להעתיק' : '⚠ Copy failed');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   WEEKLY RECAP — shareable image card
+   - In-app card appears on Sundays summarizing the trailing 7 days
+     (XP, days active, longest streak). Dismissible per week.
+   - Share button generates a 1080×1080 PNG on demand via <canvas>,
+     then either invokes navigator.share({ files: [...] }) on mobile
+     or downloads the file as a fallback.
+   - Image branding is always dark/green regardless of the user's
+     UI theme — it's a marketing artifact, not a UI surface.
+═══════════════════════════════════════════════════════ */
+
+const RECAP_CANVAS_SIZE = 1080;
+const RECAP_DISMISS_KEY = '1pb_recap_dismissed';
+
+function isSunday(d = new Date()) { return d.getDay() === 0; }
+
+/** Returns aggregated stats for the trailing 7 days ending today (inclusive). */
+function weeklyRecapStats() {
+  const log = (typeof getActivityLog === 'function') ? getActivityLog() : {};
+  const today = new Date();
+  let xp = 0, daysActive = 0;
+  const start = new Date(today); start.setDate(today.getDate() - 6);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const entry = log[dateKey(d)];
+    if (entry && entry.done > 0) {
+      daysActive++;
+      xp += (entry.xp || 0);
+    }
+  }
+  const longest = (state.streak && state.streak.longest) || 0;
+  return { xp, daysActive, longest, weekStart: dateKey(start), weekEnd: dateKey(today) };
+}
+
+/** "May 5 – May 11" / "5 במאי – 11 במאי" — locale-friendly short range. */
+function formatRecapRange(weekStart, weekEnd, lang) {
+  const start = new Date(weekStart + 'T12:00:00');
+  const end   = new Date(weekEnd   + 'T12:00:00');
+  const locales = { he: 'he-IL', ar: 'ar', es: 'es-ES', fr: 'fr-FR', ru: 'ru-RU', pt: 'pt-BR', en: 'en-US' };
+  const locale = locales[lang] || 'en-US';
+  const opts = { month: 'short', day: 'numeric' };
+  try {
+    return `${start.toLocaleDateString(locale, opts)} – ${end.toLocaleDateString(locale, opts)}`;
+  } catch (_) {
+    return `${weekStart} – ${weekEnd}`;
+  }
+}
+
+/** Show the in-app card if today is Sunday and the user hasn't dismissed
+ *  this week's recap. Safe to call repeatedly. */
+function renderWeeklyRecap() {
+  const card = document.getElementById('recapCard');
+  if (!card) return;
+  if (!isSunday()) { card.hidden = true; return; }
+
+  const dismissedKey = localStorage.getItem(RECAP_DISMISS_KEY);
+  const todayKeyStr  = todayKey();
+  if (dismissedKey === todayKeyStr) { card.hidden = true; return; }
+
+  const s = weeklyRecapStats();
+  const isHe = currentLang === 'he';
+  const isAr = currentLang === 'ar';
+
+  // Localized labels — keep it short, the layout is tight.
+  const txt = {
+    tag:        isHe ? 'סיכום שבועי' : isAr ? 'ملخص الأسبوع' : 'WEEKLY RECAP',
+    xpLbl:      isHe ? 'XP השבוע'    : isAr ? 'XP هذا الأسبوع' : 'XP earned',
+    daysLbl:    isHe ? 'ימים פעילים' : isAr ? 'أيام نشطة'     : 'Days active',
+    streakLbl:  isHe ? 'רצף הכי ארוך' : isAr ? 'أطول سلسلة'    : 'Longest streak',
+    shareBtn:   isHe ? '📤 שתף את השבוע' : isAr ? '📤 شارك أسبوعك' : '📤 Share my week',
+  };
+
+  document.getElementById('recapTag').textContent       = txt.tag;
+  document.getElementById('recapRange').textContent     = formatRecapRange(s.weekStart, s.weekEnd, currentLang);
+  document.getElementById('recapXp').textContent        = s.xp;
+  document.getElementById('recapDays').textContent      = `${s.daysActive}/7`;
+  document.getElementById('recapStreak').textContent    = s.longest;
+  document.getElementById('recapXpLbl').textContent     = txt.xpLbl;
+  document.getElementById('recapDaysLbl').textContent   = txt.daysLbl;
+  document.getElementById('recapStreakLbl').textContent = txt.streakLbl;
+  document.getElementById('recapShareLbl').textContent  = txt.shareBtn;
+
+  card.hidden = false;
+}
+
+function dismissWeeklyRecap() {
+  localStorage.setItem(RECAP_DISMISS_KEY, todayKey());
+  const card = document.getElementById('recapCard');
+  if (card) card.hidden = true;
+}
+
+/** Draw the share image to a 1080² canvas. Returns a Promise<Blob>. */
+async function generateRecapImage(stats) {
+  // Wait for web fonts so Bebas Neue / Heebo render correctly instead
+  // of silently falling back to a sans-serif (which looks off-brand).
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) { /* ignore */ }
+  }
+
+  const size = RECAP_CANVAS_SIZE;
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = size;
+  const ctx = cv.getContext('2d');
+
+  // Background — dark gradient, brand-side regardless of UI theme.
+  const bg = ctx.createLinearGradient(0, 0, size, size);
+  bg.addColorStop(0,  '#050505');
+  bg.addColorStop(.5, '#0a0f0c');
+  bg.addColorStop(1,  '#040806');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, size, size);
+
+  // Soft green radial accent in the top-right corner.
+  const glow = ctx.createRadialGradient(size * .85, size * .15, 10, size * .85, size * .15, size * .55);
+  glow.addColorStop(0,  'rgba(0, 255, 135, .25)');
+  glow.addColorStop(.6, 'rgba(0, 255, 135, .05)');
+  glow.addColorStop(1,  'rgba(0, 255, 135, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
+
+  // Top accent line.
+  ctx.fillStyle = 'rgba(0, 255, 135, .35)';
+  ctx.fillRect(80, 90, 80, 3);
+
+  // Logo — "1% BETTER".
+  ctx.fillStyle = '#f0f0f0';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '700 64px "Bebas Neue", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  const logoY = 170;
+  ctx.fillText('1%', 80, logoY);
+  const oneWidth = ctx.measureText('1%').width;
+  ctx.fillStyle = '#00ff87';
+  ctx.fillText('BETTER', 80 + oneWidth + 16, logoY);
+
+  // "WEEKLY RECAP" tag — top right.
+  ctx.fillStyle = '#00ff87';
+  ctx.font = '600 24px "Bebas Neue", system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('WEEKLY RECAP', size - 80, logoY);
+
+  // Date range — under the logo.
+  ctx.fillStyle = '#888';
+  ctx.font = '500 28px "DM Sans", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(formatRecapRange(stats.weekStart, stats.weekEnd, currentLang), 80, logoY + 50);
+
+  // Three big stats — vertical stack, center column.
+  const drawStat = (value, label, y, color) => {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = color;
+    ctx.font = '700 156px "Bebas Neue", system-ui, sans-serif';
+    ctx.fillText(String(value), size / 2, y);
+    ctx.fillStyle = '#bbb';
+    ctx.font = '500 26px "DM Sans", system-ui, sans-serif';
+    ctx.fillText(label.toUpperCase(), size / 2, y + 38);
+  };
+  drawStat(stats.xp,                 'XP earned',      400, '#00ff87');
+  drawStat(`${stats.daysActive}/7`,  'Days active',    600, '#00b4ff');
+  drawStat(stats.longest,            'Longest streak', 800, '#fbbf24');
+
+  // Footer accent line + tagline.
+  ctx.fillStyle = 'rgba(0, 255, 135, .25)';
+  ctx.fillRect(80, size - 130, size - 160, 1);
+  ctx.fillStyle = '#888';
+  ctx.font = '500 22px "DM Sans", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Do tasks. Make progress. Prove it.', 80, size - 88);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#666';
+  ctx.fillText('better-de9aa.web.app', size - 80, size - 88);
+
+  return await new Promise(resolve => cv.toBlob(resolve, 'image/png'));
+}
+
+async function shareWeeklyRecap() {
+  const btn = document.getElementById('recapShareBtn');
+  const isHe = currentLang === 'he';
+  if (btn) btn.disabled = true;
+  try {
+    const stats = weeklyRecapStats();
+    const blob  = await generateRecapImage(stats);
+    if (!blob) throw new Error('Image generation failed');
+
+    const file = new File([blob], `1pb-weekly-${stats.weekEnd}.png`, { type: 'image/png' });
+    const shareText = isHe
+      ? `הסיכום השבועי שלי ב-1% Better: ${stats.xp} XP · ${stats.daysActive}/7 ימים · רצף הכי ארוך ${stats.longest}`
+      : `My week on 1% Better: ${stats.xp} XP · ${stats.daysActive}/7 days · longest streak ${stats.longest}`;
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: '1% Better — Weekly Recap', text: shareText });
+      showToast(isHe ? '✓ שותף!' : '✓ Shared!');
+    } else {
+      // Fallback — trigger a download. Works on every browser, including
+      // desktop Safari, Firefox without file-share support, and any
+      // environment where canShare returns false for files.
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(isHe ? '✓ הורד למכשיר' : '✓ Downloaded');
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;  // user cancelled
+    console.warn('[recap] share failed', err);
+    showToast(isHe ? 'שיתוף נכשל' : 'Share failed');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
