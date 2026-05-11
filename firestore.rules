@@ -11,6 +11,16 @@ service cloud.firestore {
       match /activity/{date} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
+
+      // AI weekly review sub-collection
+      // - Owner can read their own reviews (offline persistence relies on this).
+      // - Writes are server-only (Cloud Function uses admin SDK which bypasses
+      //   rules); we deny client writes so a malicious client can't fabricate
+      //   reviews or burn through the API quota.
+      match /aiReviews/{weekId} {
+        allow read:  if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
     }
 
     // ── POSTS (Community Feed) ──────────────────────────

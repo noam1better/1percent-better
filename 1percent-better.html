@@ -30,6 +30,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -1633,6 +1634,67 @@
   .hub-stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .08em; }
   [dir="rtl"] .hub-stat-label { letter-spacing: 0; text-transform: none; }
 
+  /* ── AI COACH CARD ──────────────────────────────────
+     Pinned at the top of the hub. Hidden until we have content (loading
+     state OR a real review). Stays-out-of-the-way visual treatment so it
+     doesn't compete with the streak/XP cards. */
+  .coach-card {
+    margin: 16px 20px 12px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(0,140,255,.10), rgba(0,200,100,.06));
+    border: 1px solid rgba(0,200,255,.18);
+    border-radius: var(--radius);
+    position: relative;
+  }
+  .coach-card[hidden] { display: none; }
+  .coach-card-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .coach-card-emoji  { font-size: 22px; line-height: 1; flex-shrink: 0; }
+  .coach-card-titles { flex: 1; min-width: 0; }
+  .coach-card-title  {
+    font-family: var(--font-head); font-size: 14px; letter-spacing: .04em;
+    color: var(--text); text-transform: uppercase;
+  }
+  [dir="rtl"] .coach-card-title { letter-spacing: 0; text-transform: none; }
+  .coach-card-week   { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+  .coach-card-refresh {
+    background: none; border: none; color: var(--muted2);
+    font-size: 18px; padding: 2px 6px; cursor: pointer; line-height: 1;
+    border-radius: 8px;
+  }
+  .coach-card-refresh:hover  { color: var(--text); background: rgba(255,255,255,.04); }
+  .coach-card-refresh[disabled] { opacity: .4; cursor: wait; }
+  .coach-card-body {
+    font-size: 14px; line-height: 1.55; color: var(--text);
+    white-space: pre-wrap;             /* preserve paragraph breaks from Claude */
+    word-wrap: break-word;
+  }
+  .coach-card-body.is-loading {
+    color: var(--muted2); font-style: italic;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .coach-card-body.is-loading::before {
+    content: ''; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(0,200,255,.3); border-top-color: var(--blue);
+    animation: coachSpin .8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes coachSpin { to { transform: rotate(360deg); } }
+  .coach-card-foot {
+    margin-top: 10px; font-size: 10px; color: var(--muted);
+    display: flex; gap: 6px; align-items: center;
+  }
+  .coach-card-foot[hidden] { display: none; }
+  .coach-card-foot .coach-offline {
+    background: rgba(255,180,0,.12); color: #ffb400;
+    padding: 2px 8px; border-radius: 99px; font-weight: 600;
+  }
+  body.light .coach-card {
+    background: linear-gradient(135deg, rgba(0,140,255,.06), rgba(0,200,100,.04));
+    border-color: rgba(0,140,255,.18);
+  }
+
   /* ── STREAK FREEZE ICON ─────────────────────────────
      Sized in em so it tracks the streak number; visible on dark and
      light themes; subtle pulse to draw the eye without being noisy. */
@@ -1891,6 +1953,21 @@
         </div>
       </div>
       <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
+    </div>
+
+    <!-- AI COACH WEEKLY REVIEW -->
+    <div id="coachCard" class="coach-card" hidden>
+      <div class="coach-card-head">
+        <span class="coach-card-emoji">🧭</span>
+        <div class="coach-card-titles">
+          <div class="coach-card-title" id="coachCardTitle">Weekly Coach</div>
+          <div class="coach-card-week"  id="coachCardWeek"></div>
+        </div>
+        <button class="coach-card-refresh" id="coachCardRefresh"
+                onclick="refreshWeeklyReview()" aria-label="Refresh review" hidden>↻</button>
+      </div>
+      <div class="coach-card-body" id="coachCardBody"></div>
+      <div class="coach-card-foot" id="coachCardFoot" hidden></div>
     </div>
 
     <!-- LEVEL / XP -->
@@ -6503,7 +6580,7 @@ const FIREBASE_CONFIG = {
 };
 
 /* ── Init Firebase (only if config is set) ── */
-let fb = null, fbAuth = null, fbDB = null, fbStorage = null;
+let fb = null, fbAuth = null, fbDB = null, fbStorage = null, fbFunctions = null;
 let currentUser = null;
 
 function isFirebaseConfigured() {
@@ -6520,6 +6597,7 @@ function isFirebaseConfigured() {
     fbAuth    = firebase.auth();
     fbDB      = firebase.firestore();
     fbStorage = firebase.storage();
+    fbFunctions = firebase.app().functions('us-central1');
 
     // Offline persistence
     fbDB.enablePersistence({ synchronizeTabs: true })
@@ -6710,6 +6788,11 @@ async function onUserSignedIn(user) {
   // initApp → init → initOnboarding will show or hide the onboarding panel
   // based on the (now-correct) localStorage state.
   initApp();
+
+  // Fire and forget — coach card paints itself when ready. Network errors
+  // / generation failures hide the card silently rather than blocking the
+  // rest of the hub.
+  loadWeeklyReview();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -6807,6 +6890,140 @@ async function loadPostsFromFirestore() {
     console.warn('[Firestore] Posts load failed:', e);
     return null;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   AI COACH — weekly personalized review
+   - Doc ID is "Monday of the user's local week" (YYYY-MM-DD), so a new
+     week is detected automatically when the user opens the app.
+   - Firestore offline persistence (enabled at init) serves the cached
+     doc when offline; we surface that with a small "Offline" pill.
+   - Generation is server-side via the generateWeeklyReview Cloud
+     Function. The client never sees the Anthropic API key.
+═══════════════════════════════════════════════════════ */
+function weekIdForToday() {
+  const d = new Date();
+  const day = d.getDay();                  // 0 = Sunday, 1 = Monday, ...
+  const offsetToMonday = (day === 0) ? -6 : (1 - day);
+  d.setDate(d.getDate() + offsetToMonday);
+  return dateKey(d);                       // YYYY-MM-DD in local time
+}
+
+function _coachEls() {
+  return {
+    card:  document.getElementById('coachCard'),
+    body:  document.getElementById('coachCardBody'),
+    week:  document.getElementById('coachCardWeek'),
+    title: document.getElementById('coachCardTitle'),
+    foot:  document.getElementById('coachCardFoot'),
+  };
+}
+
+function _coachI18n() {
+  const isHe = currentLang === 'he';
+  const isAr = currentLang === 'ar';
+  return {
+    title:    isHe ? 'מאמן השבוע' : isAr ? 'مدرب الأسبوع'   : 'Weekly Coach',
+    loading:  isHe ? 'יוצר סקירה אישית...' : isAr ? 'يتم إنشاء مراجعتك...' : 'Generating your weekly review…',
+    weekPre:  isHe ? 'שבוע מתחיל ב' : isAr ? 'الأسبوع الذي يبدأ في' : 'Week of',
+    offline:  isHe ? 'לא מקוון'   : isAr ? 'دون اتصال'    : 'Offline',
+    cached:   isHe ? 'מציג גרסה שמורה' : isAr ? 'عرض النسخة المخزّنة' : 'showing cached version',
+  };
+}
+
+function renderCoachCard(review, opts = {}) {
+  const el = _coachEls();
+  if (!el.card) return;
+  const t = _coachI18n();
+  el.title.textContent = t.title;
+
+  if (opts.loading) {
+    el.body.className   = 'coach-card-body is-loading';
+    el.body.textContent = t.loading;
+    el.week.textContent = opts.weekId ? `${t.weekPre} ${opts.weekId}` : '';
+    el.foot.hidden = true;
+    el.card.hidden = false;
+    return;
+  }
+
+  el.body.className   = 'coach-card-body';
+  // textContent only — Claude returns plain text per the system prompt,
+  // and even if it didn't we never want HTML execution from a model
+  // response in a user-controllable context.
+  el.body.textContent = (review && review.text) || '';
+  el.week.textContent = review && review.weekId ? `${t.weekPre} ${review.weekId}` : '';
+
+  if (opts.servedFromCache && !navigator.onLine) {
+    el.foot.hidden = false;
+    el.foot.innerHTML = '';
+    const pill = document.createElement('span');
+    pill.className = 'coach-offline';
+    pill.textContent = t.offline;
+    el.foot.appendChild(pill);
+    el.foot.appendChild(document.createTextNode(' ' + t.cached));
+  } else {
+    el.foot.hidden = true;
+  }
+  el.card.hidden = false;
+}
+
+function hideCoachCard() {
+  const el = _coachEls();
+  if (el.card) el.card.hidden = true;
+}
+
+async function loadWeeklyReview() {
+  if (!isFirebaseConfigured() || !currentUser || !fbDB) {
+    hideCoachCard();
+    return;
+  }
+
+  const weekId  = weekIdForToday();
+  const reviews = fbDB.collection('users').doc(currentUser.uid)
+                      .collection('aiReviews');
+
+  // 1) Try the current week's doc. With offline persistence, this hits the
+  //    local cache automatically when the network is unavailable.
+  let snap = null;
+  try { snap = await reviews.doc(weekId).get(); }
+  catch (e) { console.warn('[coach] current-week read failed', e); }
+
+  if (snap && snap.exists) {
+    renderCoachCard(snap.data(), { servedFromCache: snap.metadata && snap.metadata.fromCache });
+    return;
+  }
+
+  // 2) No doc for this week yet. If we're online, ask the Cloud Function
+  //    to generate one. If we're offline, fall back to the most recent
+  //    cached review we have (so the user still sees something useful).
+  if (!navigator.onLine || !fbFunctions) {
+    let latest = null;
+    try {
+      const allSnap = await reviews.get();
+      allSnap.forEach(d => {
+        if (!latest || d.id > latest.id) latest = d;
+      });
+    } catch (e) { console.warn('[coach] fallback list failed', e); }
+    if (latest) renderCoachCard(latest.data(), { servedFromCache: true });
+    else        hideCoachCard();
+    return;
+  }
+
+  renderCoachCard(null, { loading: true, weekId });
+  try {
+    const callable = fbFunctions.httpsCallable('generateWeeklyReview');
+    const res = await callable({ weekId, lang: currentLang });
+    renderCoachCard(res.data, { servedFromCache: false });
+  } catch (e) {
+    console.warn('[coach] generate failed', e);
+    hideCoachCard();
+  }
+}
+
+// Manual-refresh hook (button is hidden by default; this is exported so it
+// can be wired up later — e.g. a long-press on the card).
+async function refreshWeeklyReview() {
+  await loadWeeklyReview();
 }
 
 /* ═══════════════════════════════════════════════════════
