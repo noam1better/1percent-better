@@ -1568,6 +1568,106 @@
   }
   .notif-time-input:focus { border-color: rgba(0,180,255,.4); }
 
+  /* Section heading inside the settings list (used by Iron Will). */
+  .settings-section-title {
+    font-family: var(--font-head);
+    font-size: 14px;
+    letter-spacing: .12em;
+    color: var(--muted2);
+    text-transform: uppercase;
+    padding: 22px 20px 8px;
+  }
+  [dir="rtl"] .settings-section-title { letter-spacing: 0; text-transform: none; }
+
+  /* ══ IRON WILL OVERLAY ══════════════════════════════
+     Full-viewport, opaque, very high z-index so it sits above
+     everything (auth screen, onboarding, share sheet, toasts).
+     No close button, no escape — the only exit is typing the
+     dismiss phrase correctly. */
+  .iw-overlay {
+    position: fixed; inset: 0;
+    z-index: 99999;
+    background: radial-gradient(circle at 50% 30%, #1a0a0a 0%, #050202 70%);
+    color: #f0f0f0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top,  0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+    overflow: hidden;
+    animation: iwPulseBg 1.4s ease-in-out infinite;
+  }
+  .iw-overlay[hidden] { display: none; }
+  @keyframes iwPulseBg {
+    0%, 100% { background: radial-gradient(circle at 50% 30%, #1a0a0a 0%, #050202 70%); }
+    50%      { background: radial-gradient(circle at 50% 30%, #2a0e0e 0%, #050202 70%); }
+  }
+  .iw-clock {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: clamp(72px, 22vw, 144px);
+    line-height: 1;
+    letter-spacing: .04em;
+    color: #ff3860;
+    text-shadow: 0 0 32px rgba(255, 56, 96, .35);
+    margin-bottom: 8px;
+  }
+  .iw-label {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 18px; letter-spacing: .3em;
+    color: #ff3860;
+    margin-bottom: 36px;
+  }
+  .iw-instruct {
+    font-size: 14px; color: #888;
+    margin-bottom: 10px;
+  }
+  .iw-target {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: clamp(22px, 5.5vw, 30px);
+    letter-spacing: .04em;
+    color: var(--green);
+    padding: 12px 18px;
+    border: 1px solid rgba(0,255,135,.30);
+    border-radius: 12px;
+    background: rgba(0,255,135,.05);
+    margin-bottom: 18px;
+    max-width: 90vw;
+    word-break: break-word;
+  }
+  .iw-input {
+    width: min(90vw, 420px);
+    padding: 14px 16px;
+    background: #1a1a1a;
+    border: 1.5px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;     /* >=16px keeps iOS from zooming the viewport */
+    font-family: inherit;
+    text-align: center;
+    outline: none;
+    transition: border-color .2s, transform .12s;
+  }
+  .iw-input:focus { border-color: rgba(0,255,135,.5); }
+  .iw-input.iw-wrong {
+    border-color: rgba(255,56,96,.7);
+    animation: iwShake .35s;
+  }
+  @keyframes iwShake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+  .iw-hint {
+    margin-top: 14px;
+    font-size: 12px; color: #555;
+    min-height: 16px;
+  }
+  /* No-snooze: lock body scroll while the overlay is open. */
+  body.iw-active { overflow: hidden; }
+
   /* Smart permission modal */
   .notif-modal-overlay {
     position: fixed; inset: 0; z-index: 400;
@@ -2597,6 +2697,43 @@
         <div class="settings-row-body">
           <div class="settings-row-title" id="lbl-test-notif">Send Test Notification</div>
           <div class="settings-row-sub" id="lbl-test-notif-sub">Preview what notifications look like</div>
+        </div>
+        <span style="color:var(--muted);font-size:18px;">›</span>
+      </div>
+
+      <!-- ── IRON WILL ALARM ───────────────────────────── -->
+      <div class="settings-section-title" id="lbl-iron-will-title">Iron Will Alarm</div>
+      <div class="settings-row">
+        <div class="settings-row-icon" style="background:rgba(255,56,96,.15);color:#ff3860;">🛎️</div>
+        <div class="settings-row-body">
+          <div class="settings-row-title" id="lbl-iron-will">No-Snooze Alarm</div>
+          <div class="settings-row-sub" id="lbl-iron-will-sub">Fires when the app is open. Dismiss only by typing your motto.</div>
+        </div>
+        <div class="toggle-wrap"><button class="toggle" id="tog-iron-will" onclick="toggleIronWill(this)"></button></div>
+      </div>
+      <div class="settings-row" id="ironWillDetails" hidden>
+        <div class="settings-row-icon blue">⏰</div>
+        <div class="settings-row-body">
+          <div class="settings-row-title" id="lbl-iron-will-time">Alarm time</div>
+          <div class="settings-row-sub" id="lbl-iron-will-time-sub">Local time, every day</div>
+          <input type="time" class="notif-time-input" id="ironWillTime" value="06:30" onchange="saveIronWill()" />
+        </div>
+      </div>
+      <div class="settings-row" id="ironWillSentenceRow" hidden style="align-items:flex-start;">
+        <div class="settings-row-icon" style="background:rgba(0,255,135,.15);color:var(--green);">✍️</div>
+        <div class="settings-row-body">
+          <div class="settings-row-title" id="lbl-iron-will-sentence">Dismiss phrase</div>
+          <div class="settings-row-sub" id="lbl-iron-will-sentence-sub">Type this exactly to silence the alarm</div>
+          <input type="text" class="notif-time-input" style="width:100%;font-family:inherit;font-size:14px;"
+                 id="ironWillSentence" maxlength="80"
+                 placeholder="I am 1% better today" onchange="saveIronWill()" />
+        </div>
+      </div>
+      <div class="settings-row" style="cursor:pointer;" onclick="testIronWillAlarm()" id="ironWillTestRow" hidden>
+        <div class="settings-row-icon gold">▶️</div>
+        <div class="settings-row-body">
+          <div class="settings-row-title" id="lbl-iron-will-test">Test the alarm now</div>
+          <div class="settings-row-sub" id="lbl-iron-will-test-sub">Make sure the dismiss phrase works for you</div>
         </div>
         <span style="color:var(--muted);font-size:18px;">›</span>
       </div>
@@ -4039,6 +4176,8 @@ function init() {
   applyStreakFreezeIfNeeded();
   renderStreak();
   renderWeeklyRecap();
+  renderIronWillSettings();
+  startIronWillScheduler();
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
   if (_savedName) {
@@ -5821,6 +5960,263 @@ function sendTestNotification() {
   showToast(isHe ? '📨 התראת בדיקה נשלחה' : '📨 Test notification sent');
 }
 
+/* ═══════════════════════════════════════════════════════
+   IRON WILL ALARM
+   - In-app only. Fires when the app is open and the local clock
+     reaches the user's chosen time. Also fires if the user opens
+     the app within a grace window after the scheduled time.
+   - No snooze, no close button. Only exit: type the dismiss
+     phrase verbatim (case-insensitive, whitespace-normalised).
+   - Audible via Web Audio (no asset file required); vibrates on
+     supported devices; locks body scroll while open.
+   - State lives in 1pb_iron_will and syncs to Firestore alongside
+     the rest of the user doc via syncUserToFirestore().
+═══════════════════════════════════════════════════════ */
+
+const IRON_WILL_KEY      = '1pb_iron_will';
+const IRON_WILL_GRACE_MS = 4 * 60 * 60 * 1000;  // fire up to 4h late if app opens within window
+const IRON_WILL_TICK_MS  = 30 * 1000;           // poll every 30s while app is open
+
+let _iwTickHandle = null;
+let _iwAudio      = null;   // { ctx, osc, gain, vibInterval }
+let _iwLastShown  = null;   // YYYY-MM-DD of the date we already fired for in this session
+
+function loadIronWill() {
+  const fallback = {
+    enabled:        false,
+    time:           '06:30',                  // HH:MM, 24h, local
+    sentence:       'I am 1% better today',
+    lastFiredDate:  null,                     // YYYY-MM-DD of the last successful dismiss
+  };
+  const parsed = safeParse(localStorage.getItem(IRON_WILL_KEY), null);
+  return parsed ? { ...fallback, ...parsed } : fallback;
+}
+
+function saveIronWillState(state) {
+  localStorage.setItem(IRON_WILL_KEY, JSON.stringify(state));
+  if (typeof syncUserToFirestore === 'function' &&
+      typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ ironWill: state });
+  }
+}
+
+/** Strip all non-essential characters before comparing the user's input
+ *  to the target sentence. Punctuation differences, double spaces, and
+ *  case shouldn't punish someone who just woke up. */
+function normalizeIronWillText(s) {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[\s ]+/g, ' ')
+    .replace(/[.,!?;:'"`’]+/g, '')
+    .trim();
+}
+
+/** Decide whether the alarm should fire RIGHT NOW. Considers:
+ *   - enabled flag
+ *   - scheduled time vs current local time
+ *   - 4h grace window so reopening the app at 09:30 still fires the 06:30 alarm
+ *   - dedupe via lastFiredDate so we never fire twice on the same calendar day */
+function ironWillShouldFire(state, now = new Date()) {
+  if (!state.enabled) return false;
+  const today = todayKey();
+  if (state.lastFiredDate === today)        return false;
+  if (_iwLastShown === today)               return false;
+
+  const [hh, mm] = (state.time || '06:30').split(':').map(n => parseInt(n, 10));
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return false;
+
+  const scheduled = new Date(now);
+  scheduled.setHours(hh, mm, 0, 0);
+
+  // Don't fire before the scheduled time, and don't fire if we're past the
+  // 4h grace window (the user clearly skipped this morning; we won't ambush
+  // them with the alarm at 8pm).
+  const delta = now - scheduled;
+  return delta >= 0 && delta <= IRON_WILL_GRACE_MS;
+}
+
+/** Start a quiet rising-falling tone via Web Audio. No asset file needed
+ *  and works on iOS Safari as long as the alarm fires from a user-
+ *  navigated tab (true in our case — the app is open). */
+function ironWillStartAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.0001;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+
+    // Pulse the volume so it sounds like an alarm, not a held tone.
+    const t0 = ctx.currentTime;
+    const pulse = (t) => {
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    };
+    for (let i = 0; i < 20; i++) pulse(t0 + i * 0.6);
+
+    _iwAudio = { ctx, osc, gain };
+
+    // Vibrate alongside the tone (Android only — iOS Safari ignores it).
+    if (navigator.vibrate) {
+      try { navigator.vibrate([400, 200, 400, 200, 400]); } catch (_) {}
+      _iwAudio.vibInterval = setInterval(() => {
+        try { navigator.vibrate([400, 200, 400]); } catch (_) {}
+      }, 3000);
+    }
+  } catch (e) {
+    console.warn('[iron-will] audio start failed', e);
+  }
+}
+
+function ironWillStopAudio() {
+  if (!_iwAudio) return;
+  try { _iwAudio.osc.stop(); } catch (_) {}
+  try { _iwAudio.ctx.close(); } catch (_) {}
+  if (_iwAudio.vibInterval) clearInterval(_iwAudio.vibInterval);
+  if (navigator.vibrate) { try { navigator.vibrate(0); } catch (_) {} }
+  _iwAudio = null;
+}
+
+function showIronWillOverlay(state, opts = {}) {
+  const overlay = document.getElementById('ironWillOverlay');
+  if (!overlay) return;
+  const isHe = currentLang === 'he';
+  const isAr = currentLang === 'ar';
+
+  // Localised microcopy. Headline stays English ("IRON WILL") for brand.
+  const labelTxt    = 'IRON WILL';
+  const instructTxt = isHe ? 'הקלד בדיוק כדי לבטל:'
+                    : isAr ? 'اكتب هذا بالضبط للإلغاء:'
+                    : 'Type this exactly to dismiss:';
+
+  const clock = state.time || '06:30';
+  document.getElementById('iwClock').textContent  = clock;
+  document.getElementById('iwLabel').textContent  = labelTxt;
+  document.getElementById('iwInstruct').textContent = instructTxt;
+  document.getElementById('iwTarget').textContent = state.sentence || 'I am 1% better today';
+
+  const input = document.getElementById('iwInput');
+  input.value = '';
+  input.classList.remove('iw-wrong');
+  document.getElementById('iwHint').textContent = '';
+
+  overlay.hidden = false;
+  document.body.classList.add('iw-active');
+
+  // Mark this date as "shown" so a re-render or auth flap doesn't double-
+  // fire mid-session. We only persist lastFiredDate when the user
+  // actually dismisses successfully.
+  _iwLastShown = todayKey();
+
+  // Defer focus + audio start so Safari accepts the AudioContext.
+  setTimeout(() => {
+    input.focus();
+    if (!opts.silent) ironWillStartAudio();
+  }, 50);
+}
+
+function hideIronWillOverlay() {
+  const overlay = document.getElementById('ironWillOverlay');
+  if (overlay) overlay.hidden = true;
+  document.body.classList.remove('iw-active');
+  ironWillStopAudio();
+}
+
+/** Called on every keystroke in the dismiss input. Compares the
+ *  normalised values; on match, closes the overlay and persists today
+ *  as the lastFiredDate so we won't fire again until tomorrow. */
+function ironWillCheck() {
+  const state  = loadIronWill();
+  const target = normalizeIronWillText(state.sentence || 'I am 1% better today');
+  const input  = document.getElementById('iwInput');
+  const typed  = normalizeIronWillText(input.value);
+  const isHe   = currentLang === 'he';
+
+  if (typed.length === 0) {
+    input.classList.remove('iw-wrong');
+    document.getElementById('iwHint').textContent = '';
+    return;
+  }
+
+  if (typed === target) {
+    // Win.
+    state.lastFiredDate = todayKey();
+    saveIronWillState(state);
+    hideIronWillOverlay();
+    showToast(isHe ? '✓ קמת. כל הכבוד.' : '✓ Up. Well done.');
+    return;
+  }
+
+  // Soft hint when the user is close — same length but a few chars off.
+  if (typed.length >= target.length && typed !== target) {
+    input.classList.add('iw-wrong');
+    document.getElementById('iwHint').textContent = isHe
+      ? 'כמעט. כתוב בדיוק.'
+      : 'Close. Type it exactly.';
+    setTimeout(() => input.classList.remove('iw-wrong'), 400);
+  }
+}
+
+/** Poll loop: every 30s, see if today's alarm should fire. */
+function startIronWillScheduler() {
+  if (_iwTickHandle) clearInterval(_iwTickHandle);
+  const tick = () => {
+    const state = loadIronWill();
+    if (ironWillShouldFire(state)) showIronWillOverlay(state);
+  };
+  tick();  // immediate check so app-open during the grace window fires right away
+  _iwTickHandle = setInterval(tick, IRON_WILL_TICK_MS);
+}
+
+/* ── Settings UI handlers ── */
+function toggleIronWill(btn) {
+  const state = loadIronWill();
+  state.enabled = !state.enabled;
+  btn.classList.toggle('on', state.enabled);
+  saveIronWillState(state);
+  renderIronWillSettings();
+}
+
+function saveIronWill() {
+  const state = loadIronWill();
+  state.time     = document.getElementById('ironWillTime').value || '06:30';
+  const sentence = document.getElementById('ironWillSentence').value.trim();
+  if (sentence) state.sentence = sentence;
+  saveIronWillState(state);
+}
+
+function testIronWillAlarm() {
+  const state = loadIronWill();
+  // Don't burn today's lastFiredDate on a test — pass {silent:false} so
+  // audio plays, but the success path won't persist anything because we
+  // pass a clone with lastFiredDate already set to today.
+  showIronWillOverlay({ ...state, lastFiredDate: state.lastFiredDate }, { silent: false });
+}
+
+function renderIronWillSettings() {
+  const state = loadIronWill();
+  const tog   = document.getElementById('tog-iron-will');
+  if (tog) tog.classList.toggle('on', !!state.enabled);
+  const timeInp = document.getElementById('ironWillTime');
+  if (timeInp) timeInp.value = state.time || '06:30';
+  const sentenceInp = document.getElementById('ironWillSentence');
+  if (sentenceInp) sentenceInp.value = state.sentence || 'I am 1% better today';
+
+  // Hide the time/sentence/test rows when the alarm is disabled.
+  ['ironWillDetails','ironWillSentenceRow','ironWillTestRow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !state.enabled;
+  });
+}
+
 /* Init notifications on app load */
 function initNotifications() {
   updateNotifPermissionUI();
@@ -7127,7 +7523,7 @@ async function doForgotPassword() {
    doesn't inherit the previous user's onboarding flag, name, streak, etc. */
 const PER_USER_KEYS = [
   '1pb_onboarded', '1pb_name', '1pb_xp', '1pb_streak', '1pb_habits',
-  '1pb_activity', '1pb_posts', '1pb_uid',
+  '1pb_activity', '1pb_posts', '1pb_uid', '1pb_iron_will',
 ];
 
 async function doSignOut() {
@@ -7196,6 +7592,7 @@ async function loadUserFromFirestore(uid) {
       if (d.onboarded) localStorage.setItem('1pb_onboarded', '1');
       if (d.lang)      localStorage.setItem('1pb_lang',      d.lang);
       if (d.theme)     localStorage.setItem('1pb_theme',     d.theme);
+      if (d.ironWill)  localStorage.setItem(IRON_WILL_KEY,   JSON.stringify(d.ironWill));
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
@@ -7528,5 +7925,19 @@ if (!isFirebaseConfigured()) {
 //                          → if not signed in: showAuthScreen (already visible by default)
 
 </script>
+
+<!-- ══════════════════════════════════════════════
+     IRON WILL ALARM — full-screen, no-snooze, type-to-dismiss
+══════════════════════════════════════════════ -->
+<div id="ironWillOverlay" class="iw-overlay" hidden aria-modal="true" role="dialog">
+  <div class="iw-clock" id="iwClock">06:30</div>
+  <div class="iw-label" id="iwLabel">IRON WILL</div>
+  <div class="iw-instruct" id="iwInstruct">Type this exactly to dismiss:</div>
+  <div class="iw-target" id="iwTarget"></div>
+  <input type="text" class="iw-input" id="iwInput" autocomplete="off" autocorrect="off"
+         autocapitalize="off" spellcheck="false"
+         oninput="ironWillCheck()" />
+  <div class="iw-hint" id="iwHint"></div>
+</div>
 </body>
 </html>
