@@ -1884,6 +1884,172 @@
   .primary-cta .cta-arrow { font-size: 20px; }
   body.light .primary-cta { background: #00c070; }
 
+  /* ── WORKOUT CTA (secondary button, opens camera screen) ── */
+  .workout-cta {
+    margin: 0 20px 16px;
+    width: calc(100% - 40px);
+    padding: 14px 18px;
+    background: var(--bg1);
+    color: var(--text);
+    border: 1px solid rgba(0,255,135,.30);
+    border-radius: 14px;
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    letter-spacing: .04em;
+    font-size: 17px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .workout-cta:hover  { border-color: rgba(0,255,135,.55); background: rgba(0,255,135,.04); }
+  .workout-cta:active { transform: scale(.98); }
+  .workout-cta .cta-arrow { margin-left: auto; color: var(--green); }
+  [dir="rtl"] .workout-cta .cta-arrow { margin-left: 0; margin-right: auto; }
+
+  /* ── MORNING ROUTINE PILL ────────────────────────────
+     Shown when alarm OR workout for today is missing. Hidden once both
+     are complete. Tappable — jumps to settings where the alarm config
+     lives. */
+  .routine-pill {
+    margin: 4px 20px 12px;
+    padding: 8px 14px;
+    background: rgba(255, 180, 0, .10);
+    border: 1px solid rgba(255, 180, 0, .35);
+    border-radius: 99px;
+    color: #ffb400;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .routine-pill[hidden] { display: none; }
+  .routine-pill:hover { background: rgba(255,180,0,.18); }
+  .routine-pill-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ffb400;
+    box-shadow: 0 0 6px rgba(255,180,0,.6);
+    animation: routinePulse 1.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes routinePulse {
+    0%, 100% { opacity: .55; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.25); }
+  }
+
+  /* ── WORKOUT SCREEN (camera + pose overlay) ──────────
+     Edge-to-edge — the screen-active flexbox wrapper is bypassed by
+     position:absolute on the inner pieces so the camera fills the
+     viewport on mobile. */
+  #screen-workout {
+    position: relative;
+    padding: 0;
+    background: #000;
+    height: 100vh; height: 100dvh;
+    overflow: hidden;
+  }
+  .pose-video, .pose-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    /* Mirror the front camera so the user sees themselves naturally.
+       Note: the canvas overlay coords also need mirroring to stay aligned. */
+    transform: scaleX(-1);
+  }
+  .pose-canvas { pointer-events: none; }
+  .workout-topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px;
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
+    z-index: 5;
+  }
+  .workout-exit {
+    width: 38px; height: 38px;
+    background: rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 50%;
+    color: #fff; font-size: 22px; line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+  .workout-title {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 18px; letter-spacing: .14em;
+    color: #fff;
+    flex: 1;
+  }
+  .workout-fps {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px; color: rgba(255,255,255,.55);
+  }
+  .workout-counter {
+    position: absolute;
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    left: 0; right: 0;
+    text-align: center;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .workout-count {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: clamp(80px, 22vw, 144px);
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 24px rgba(0, 255, 135, .45), 0 4px 16px rgba(0,0,0,.6);
+  }
+  .workout-state {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 18px; letter-spacing: .3em;
+    color: rgba(255,255,255,.7);
+    margin-top: 4px;
+  }
+  .workout-state.is-down { color: #ff3860; }
+  .workout-state.is-up   { color: #00ff87; }
+  .workout-loading {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.85);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px;
+    z-index: 6;
+  }
+  .workout-loading[hidden] { display: none; }
+  .workout-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,.15);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: coachSpin .8s linear infinite;
+  }
+  .workout-error {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.92);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; text-align: center;
+    z-index: 7;
+    font-size: 15px;
+  }
+  .workout-error[hidden] { display: none; }
+  .workout-controls {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    padding: 0 20px;
+    display: flex; justify-content: center;
+    z-index: 5;
+  }
+  .workout-finish {
+    width: 100%; max-width: 320px;
+    padding: 16px;
+    background: var(--green); color: #000;
+    border: none; border-radius: 14px;
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 18px; letter-spacing: .12em;
+    cursor: pointer;
+  }
+  .workout-finish:active { transform: scale(.97); }
+  /* When the screen is active the global .screen class hides everything
+     else; nothing further needed. */
+
   /* ── DAILY CHALLENGE ──────────────────────────────── */
   .daily-challenge {
     margin: 0 20px 16px;
@@ -2175,10 +2341,23 @@
       </div>
     </div>
 
+    <!-- MORNING ROUTINE STATUS (hidden when both pieces done for today) -->
+    <div id="routinePill" class="routine-pill" hidden onclick="navigate('settings')">
+      <span class="routine-pill-dot"></span>
+      <span id="routinePillText">Morning routine: incomplete</span>
+    </div>
+
     <!-- PRIMARY CTA -->
     <button class="primary-cta" id="primaryCTA" onclick="openGroupPicker()">
       <span>🚀</span>
       <span id="lbl-primary-cta">התחל משימה</span>
+      <span class="cta-arrow">←</span>
+    </button>
+
+    <!-- WORKOUT CTA (camera rep counter) -->
+    <button class="workout-cta" id="workoutCTA" onclick="startWorkout('pushup')">
+      <span>📷</span>
+      <span id="lbl-workout-cta">Start Workout · Push-ups</span>
       <span class="cta-arrow">←</span>
     </button>
 
@@ -2347,6 +2526,29 @@
         <div class="ai-tip-label" id="lbl-before-post">Before You Post</div>
         <div class="ai-tip-text" id="aiTipUpload">Loading...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ WORKOUT SCREEN (camera + pose) ══════════════ -->
+  <div class="screen" id="screen-workout">
+    <video id="poseVideo" class="pose-video" playsinline muted autoplay></video>
+    <canvas id="poseCanvas" class="pose-canvas"></canvas>
+    <div class="workout-topbar">
+      <button class="workout-exit" onclick="exitWorkout()" aria-label="Exit workout">×</button>
+      <div class="workout-title" id="workoutTitle">PUSH-UPS</div>
+      <div class="workout-fps" id="workoutFps"></div>
+    </div>
+    <div class="workout-counter">
+      <div class="workout-count"  id="workoutCount">0</div>
+      <div class="workout-state"  id="workoutState">READY</div>
+    </div>
+    <div class="workout-loading" id="workoutLoading">
+      <div class="workout-spinner"></div>
+      <div id="workoutLoadingTxt">Loading pose model…</div>
+    </div>
+    <div class="workout-error" id="workoutError" hidden></div>
+    <div class="workout-controls">
+      <button class="workout-finish" id="workoutFinishBtn" onclick="finishWorkout()">Finish</button>
     </div>
   </div>
 
@@ -3657,6 +3859,11 @@ function navigate(screen) {
   const fab = document.getElementById('fabBtn');
   if (fab) fab.style.display = (screen === 'hub') ? '' : 'none';
 
+  // The workout screen is a full-bleed camera view; hide the navbar so it
+  // doesn't cover the camera or the Finish button.
+  const nav = document.querySelector('.navbar');
+  if (nav) nav.style.display = (screen === 'workout') ? 'none' : '';
+
   // Refresh tip on each navigation
   if (screen === 'hub') refreshTip('hub');
   if (screen === 'upload') refreshTip('upload');
@@ -4178,6 +4385,7 @@ function init() {
   renderWeeklyRecap();
   renderIronWillSettings();
   startIronWillScheduler();
+  renderRoutinePill();
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
   if (_savedName) {
@@ -5978,15 +6186,70 @@ const IRON_WILL_GRACE_MS = 4 * 60 * 60 * 1000;  // fire up to 4h late if app ope
 const IRON_WILL_TICK_MS  = 30 * 1000;           // poll every 30s while app is open
 
 let _iwTickHandle = null;
-let _iwAudio      = null;   // { ctx, osc, gain, vibInterval }
+let _iwAudio      = null;   // { ctx, osc, gain, pulseInterval, vibInterval }
 let _iwLastShown  = null;   // YYYY-MM-DD of the date we already fired for in this session
+let _iwTestMode   = false;  // when true, dismissal does NOT burn today's lastFiredDate
+
+/* Discipline-quote pool — same length-ish quotes so the dismiss task is
+   consistently demanding without being unfair. Picked deterministically
+   per day so a reload mid-alarm doesn't roll a new (easier) quote. */
+const IRON_WILL_QUOTES = {
+  en: [
+    "Discipline equals freedom",
+    "Pain is temporary quitting is forever",
+    "The body achieves what the mind believes",
+    "You are what you do every day",
+    "Suffer now and live the rest of your life as a champion",
+    "Wake up with determination go to bed with satisfaction",
+    "The only bad workout is the one that did not happen",
+    "Your future is created by what you do today",
+    "Be stronger than your strongest excuse",
+    "Small daily improvements compound into stunning results",
+    "Hard choices easy life easy choices hard life",
+    "Do something today your future self will thank you for",
+  ],
+  he: [
+    "משמעת שווה חופש",
+    "כאב זמני ויתור הוא לנצח",
+    "הגוף משיג את מה שהמוח מאמין",
+    "אתה מה שאתה עושה כל יום",
+    "סבול עכשיו וחיה כאלוף",
+    "התעורר בנחישות לך לישון בשביעות רצון",
+    "האימון הגרוע היחיד הוא זה שלא קרה",
+    "העתיד שלך נוצר ממה שתעשה היום",
+    "תהיה חזק יותר מהתירוץ הכי חזק שלך",
+    "שיפורים קטנים כל יום מצטברים לתוצאות מדהימות",
+    "בחירות קשות חיים קלים בחירות קלות חיים קשים",
+    "עשה היום משהו שאתה של מחר יודה לך עליו",
+  ],
+  ar: [
+    "الانضباط يساوي الحرية",
+    "الألم مؤقت لكن الاستسلام للأبد",
+    "الجسد يحقق ما يؤمن به العقل",
+    "أنت ما تفعله كل يوم",
+    "تعب اليوم راحة الغد",
+  ],
+};
+
+/* Tiny deterministic hash → so today's quote is the same on every device
+   for the same user/day. */
+function _iwQuoteHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function getDailyDisciplineQuote(lang, dayKey) {
+  const pool = IRON_WILL_QUOTES[lang] || IRON_WILL_QUOTES.en;
+  return pool[_iwQuoteHash(dayKey || todayKey()) % pool.length];
+}
 
 function loadIronWill() {
   const fallback = {
     enabled:        false,
     time:           '06:30',                  // HH:MM, 24h, local
-    sentence:       'I am 1% better today',
     lastFiredDate:  null,                     // YYYY-MM-DD of the last successful dismiss
+    todayQuote:     null,                     // cached: today's chosen quote
+    quoteDate:      null,                     // date the cached quote is for
   };
   const parsed = safeParse(localStorage.getItem(IRON_WILL_KEY), null);
   return parsed ? { ...fallback, ...parsed } : fallback;
@@ -6037,14 +6300,17 @@ function ironWillShouldFire(state, now = new Date()) {
   return delta >= 0 && delta <= IRON_WILL_GRACE_MS;
 }
 
-/** Start a quiet rising-falling tone via Web Audio. No asset file needed
- *  and works on iOS Safari as long as the alarm fires from a user-
- *  navigated tab (true in our case — the app is open). */
+/** Start an alarm tone that LOOPS until ironWillStopAudio() is called.
+ *  Previously this scheduled a fixed number of pulses (~12s) and fell
+ *  silent; per the Discipline alarm spec the sound must stay active
+ *  until the user types the quote. Implemented as a self-rearming
+ *  setInterval so the AudioContext doesn't accumulate hundreds of
+ *  pre-scheduled events. */
 function ironWillStartAudio() {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    const ctx = new AC();
+    const ctx  = new AC();
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -6053,18 +6319,19 @@ function ironWillStartAudio() {
     osc.connect(gain).connect(ctx.destination);
     osc.start();
 
-    // Pulse the volume so it sounds like an alarm, not a held tone.
-    const t0 = ctx.currentTime;
-    const pulse = (t) => {
+    // One pulse "now" — short fade in, fade out, total ~500ms.
+    const pulseNow = () => {
+      const t = ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(0.0001, t);
       gain.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
     };
-    for (let i = 0; i < 20; i++) pulse(t0 + i * 0.6);
+    pulseNow();
+    const pulseInterval = setInterval(pulseNow, 600);
 
-    _iwAudio = { ctx, osc, gain };
+    _iwAudio = { ctx, osc, gain, pulseInterval };
 
-    // Vibrate alongside the tone (Android only — iOS Safari ignores it).
     if (navigator.vibrate) {
       try { navigator.vibrate([400, 200, 400, 200, 400]); } catch (_) {}
       _iwAudio.vibInterval = setInterval(() => {
@@ -6078,11 +6345,40 @@ function ironWillStartAudio() {
 
 function ironWillStopAudio() {
   if (!_iwAudio) return;
+  if (_iwAudio.pulseInterval) clearInterval(_iwAudio.pulseInterval);
+  if (_iwAudio.vibInterval)   clearInterval(_iwAudio.vibInterval);
   try { _iwAudio.osc.stop(); } catch (_) {}
   try { _iwAudio.ctx.close(); } catch (_) {}
-  if (_iwAudio.vibInterval) clearInterval(_iwAudio.vibInterval);
   if (navigator.vibrate) { try { navigator.vibrate(0); } catch (_) {} }
   _iwAudio = null;
+}
+
+/* ── Focus mode ──────────────────────────────────────
+   Try to keep the user from walking away from the alarm. The browser
+   doesn't let a page truly block close, but we can:
+     (1) trigger a beforeunload confirmation dialog on desktop & Android
+         Chrome (iOS Safari ignores this on mobile by design);
+     (2) resume the AudioContext if it was suspended while the tab was
+         backgrounded, so coming back doesn't leave the alarm silent.
+   The dismiss flow is still the only way to permanently end the alarm —
+   even if the user kills the tab, the scheduler will re-fire on next
+   open within the 4h grace window. */
+function _iwBeforeUnload(e) { e.preventDefault(); e.returnValue = ''; return ''; }
+function _iwVisibility() {
+  if (document.hidden) return;
+  // User returned to the tab. Resume audio if it got suspended (mobile
+  // Safari and some Androids suspend AudioContexts in background tabs).
+  if (_iwAudio && _iwAudio.ctx && _iwAudio.ctx.state === 'suspended') {
+    _iwAudio.ctx.resume().catch(() => {});
+  }
+}
+function ironWillFocusOn()  {
+  window.addEventListener('beforeunload', _iwBeforeUnload);
+  document.addEventListener('visibilitychange', _iwVisibility);
+}
+function ironWillFocusOff() {
+  window.removeEventListener('beforeunload', _iwBeforeUnload);
+  document.removeEventListener('visibilitychange', _iwVisibility);
 }
 
 function showIronWillOverlay(state, opts = {}) {
@@ -6097,11 +6393,21 @@ function showIronWillOverlay(state, opts = {}) {
                     : isAr ? 'اكتب هذا بالضبط للإلغاء:'
                     : 'Type this exactly to dismiss:';
 
+  // Resolve today's quote. Cached on state so a reload mid-alarm shows
+  // the same quote (no "reroll for an easier one" workaround).
+  const today = todayKey();
+  if (!state.todayQuote || state.quoteDate !== today) {
+    state.todayQuote = getDailyDisciplineQuote(currentLang, today);
+    state.quoteDate  = today;
+    if (!opts.test) saveIronWillState(state);    // don't dirty storage on test
+  }
+  const target = state.todayQuote;
+
   const clock = state.time || '06:30';
-  document.getElementById('iwClock').textContent  = clock;
-  document.getElementById('iwLabel').textContent  = labelTxt;
+  document.getElementById('iwClock').textContent    = clock;
+  document.getElementById('iwLabel').textContent    = labelTxt;
   document.getElementById('iwInstruct').textContent = instructTxt;
-  document.getElementById('iwTarget').textContent = state.sentence || 'I am 1% better today';
+  document.getElementById('iwTarget').textContent   = target;
 
   const input = document.getElementById('iwInput');
   input.value = '';
@@ -6110,16 +6416,15 @@ function showIronWillOverlay(state, opts = {}) {
 
   overlay.hidden = false;
   document.body.classList.add('iw-active');
-
-  // Mark this date as "shown" so a re-render or auth flap doesn't double-
-  // fire mid-session. We only persist lastFiredDate when the user
-  // actually dismisses successfully.
   _iwLastShown = todayKey();
+  _iwTestMode  = !!opts.test;
 
-  // Defer focus + audio start so Safari accepts the AudioContext.
+  // Engage focus warn + audio. Defer so iOS Safari accepts the
+  // AudioContext on the user-gesture-derived activation chain.
   setTimeout(() => {
     input.focus();
     if (!opts.silent) ironWillStartAudio();
+    ironWillFocusOn();
   }, 50);
 }
 
@@ -6128,6 +6433,8 @@ function hideIronWillOverlay() {
   if (overlay) overlay.hidden = true;
   document.body.classList.remove('iw-active');
   ironWillStopAudio();
+  ironWillFocusOff();
+  _iwTestMode = false;
 }
 
 /** Called on every keystroke in the dismiss input. Compares the
@@ -6135,7 +6442,12 @@ function hideIronWillOverlay() {
  *  as the lastFiredDate so we won't fire again until tomorrow. */
 function ironWillCheck() {
   const state  = loadIronWill();
-  const target = normalizeIronWillText(state.sentence || 'I am 1% better today');
+  // The dismiss task is the day's discipline quote, not a fixed sentence.
+  const today  = todayKey();
+  const quote  = (state.todayQuote && state.quoteDate === today)
+                 ? state.todayQuote
+                 : getDailyDisciplineQuote(currentLang, today);
+  const target = normalizeIronWillText(quote);
   const input  = document.getElementById('iwInput');
   const typed  = normalizeIronWillText(input.value);
   const isHe   = currentLang === 'he';
@@ -6147,9 +6459,13 @@ function ironWillCheck() {
   }
 
   if (typed === target) {
-    // Win.
-    state.lastFiredDate = todayKey();
-    saveIronWillState(state);
+    // Win. In test mode, don't burn today's lastFiredDate (otherwise the
+    // user would test the alarm and accidentally silence the real one).
+    if (!_iwTestMode) {
+      state.lastFiredDate = today;
+      saveIronWillState(state);
+      if (typeof markMorningRoutine === 'function') markMorningRoutine('alarm', true);
+    }
     hideIronWillOverlay();
     showToast(isHe ? '✓ קמת. כל הכבוד.' : '✓ Up. Well done.');
     return;
@@ -6187,18 +6503,16 @@ function toggleIronWill(btn) {
 
 function saveIronWill() {
   const state = loadIronWill();
-  state.time     = document.getElementById('ironWillTime').value || '06:30';
-  const sentence = document.getElementById('ironWillSentence').value.trim();
-  if (sentence) state.sentence = sentence;
+  state.time = document.getElementById('ironWillTime').value || '06:30';
   saveIronWillState(state);
 }
 
 function testIronWillAlarm() {
   const state = loadIronWill();
-  // Don't burn today's lastFiredDate on a test — pass {silent:false} so
-  // audio plays, but the success path won't persist anything because we
-  // pass a clone with lastFiredDate already set to today.
-  showIronWillOverlay({ ...state, lastFiredDate: state.lastFiredDate }, { silent: false });
+  // Test fires the same overlay (audio, quote, beforeunload) but its
+  // dismissal does NOT persist lastFiredDate or tick the morning
+  // routine, so the real morning alarm still fires.
+  showIronWillOverlay(state, { silent: false, test: true });
 }
 
 function renderIronWillSettings() {
@@ -6207,14 +6521,380 @@ function renderIronWillSettings() {
   if (tog) tog.classList.toggle('on', !!state.enabled);
   const timeInp = document.getElementById('ironWillTime');
   if (timeInp) timeInp.value = state.time || '06:30';
-  const sentenceInp = document.getElementById('ironWillSentence');
-  if (sentenceInp) sentenceInp.value = state.sentence || 'I am 1% better today';
 
-  // Hide the time/sentence/test rows when the alarm is disabled.
-  ['ironWillDetails','ironWillSentenceRow','ironWillTestRow'].forEach(id => {
+  // The dismiss-phrase row is hidden — the daily discipline quote replaces it.
+  const sentenceRow = document.getElementById('ironWillSentenceRow');
+  if (sentenceRow) sentenceRow.hidden = true;
+
+  // Hide the time/test rows when the alarm is disabled.
+  ['ironWillDetails','ironWillTestRow'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.hidden = !state.enabled;
   });
+}
+
+/* ═══════════════════════════════════════════════════════
+   POSE WORKOUT — push-up rep counter via MediaPipe
+   - Lazy-loaded from CDN on first use so the ~6 MB model isn't
+     downloaded by users who never open the workout screen.
+   - State machine: ready → down → up → count, with frame-debounce
+     and a 500ms refractory to defeat jitter at the top of the rep.
+   - Inference loop is decoupled from render: we run at ~20 FPS for
+     pose, but rAF the count/state DOM updates so the UI stays smooth.
+═══════════════════════════════════════════════════════ */
+
+/* Tuning constants. Calibrated on a typical front-camera setup; if a
+   user is too far / too close the model may need different thresholds. */
+const PU_DOWN_DEG     = 95;     // elbow angle BELOW this counts as "down"
+const PU_UP_DEG       = 155;    // elbow angle ABOVE this counts as "up"
+const PU_FRAMES_STABLE = 3;     // require this many consecutive frames before transitioning
+const PU_REFRACTORY_MS = 500;   // ignore further counts for this long after counting
+const PU_INFER_FPS    = 20;     // detection rate; rendering is independent
+
+/* MediaPipe handles. Held at module scope so re-entries don't
+   re-download the model. */
+let _pose = {
+  landmarker:    null,           // PoseLandmarker instance
+  loading:       null,           // Promise while loading
+  stream:        null,           // MediaStream from getUserMedia
+  rafId:         null,           // requestAnimationFrame handle
+  inferTimer:    null,           // pacing for detection
+  active:        false,
+  exercise:      'pushup',
+  reps:          0,
+  state:         'ready',        // 'ready' | 'down' | 'up'
+  downFrames:    0,
+  upFrames:      0,
+  lastCountAt:   0,
+  startedAt:     0,
+  lastFrameTime: 0,
+  fpsAvg:        0,
+};
+
+/** Compute the angle (degrees) at vertex `b` formed by a→b→c in 2D. */
+function angleDeg(a, b, c) {
+  const abx = a.x - b.x, aby = a.y - b.y;
+  const cbx = c.x - b.x, cby = c.y - b.y;
+  const dot = abx * cbx + aby * cby;
+  const mag = Math.hypot(abx, aby) * Math.hypot(cbx, cby);
+  if (mag === 0) return 0;
+  const cos = Math.max(-1, Math.min(1, dot / mag));
+  return Math.acos(cos) * 180 / Math.PI;
+}
+
+/** Lazy-load MediaPipe Tasks Vision from CDN. Resolves to a configured
+ *  PoseLandmarker. Cached so the second workout is instant. */
+async function loadPoseModel() {
+  if (_pose.landmarker) return _pose.landmarker;
+  if (_pose.loading)    return _pose.loading;
+
+  _pose.loading = (async () => {
+    const VER = '0.10.14';
+    const mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/vision_bundle.mjs`);
+    const { PoseLandmarker, FilesetResolver } = mod;
+    const vision = await FilesetResolver.forVisionTasks(
+      `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`
+    );
+    const lm = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      numPoses: 1,
+    });
+    _pose.landmarker = lm;
+    return lm;
+  })();
+  return _pose.loading;
+}
+
+async function startWorkout(exercise = 'pushup') {
+  navigate('workout');
+  const errEl  = document.getElementById('workoutError');
+  const loadEl = document.getElementById('workoutLoading');
+  const loadTxt = document.getElementById('workoutLoadingTxt');
+  const cntEl  = document.getElementById('workoutCount');
+  const stEl   = document.getElementById('workoutState');
+  if (errEl)  errEl.hidden  = true;
+  if (loadEl) loadEl.hidden = false;
+  if (cntEl)  cntEl.textContent = '0';
+  if (stEl)   { stEl.textContent = 'READY'; stEl.className = 'workout-state'; }
+
+  // Reset state machine.
+  _pose.exercise    = exercise;
+  _pose.reps        = 0;
+  _pose.state       = 'ready';
+  _pose.downFrames  = 0;
+  _pose.upFrames    = 0;
+  _pose.lastCountAt = 0;
+  _pose.startedAt   = Date.now();
+
+  try {
+    // 1) Request camera. Front camera so the user can see themselves.
+    if (loadTxt) loadTxt.textContent = 'Requesting camera…';
+    _pose.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+    const v = document.getElementById('poseVideo');
+    v.srcObject = _pose.stream;
+    await v.play();
+
+    // 2) Load model (lazy). Cached across sessions in the SW so subsequent
+    //    starts only pay network for the .task file once.
+    if (loadTxt) loadTxt.textContent = 'Loading pose model…';
+    await loadPoseModel();
+
+    // 3) Match canvas size to displayed video so overlay lands correctly.
+    const cv = document.getElementById('poseCanvas');
+    cv.width  = v.videoWidth  || 640;
+    cv.height = v.videoHeight || 480;
+
+    if (loadEl) loadEl.hidden = true;
+    _pose.active = true;
+    runPoseLoop();
+  } catch (e) {
+    console.warn('[workout] start failed:', e);
+    stopWorkoutInternals();
+    if (errEl) {
+      errEl.hidden = false;
+      errEl.textContent = (e && e.name === 'NotAllowedError')
+        ? 'Camera permission denied. Enable it in browser settings and try again.'
+        : 'Could not start the camera. ' + (e && e.message || '');
+    }
+    if (loadEl) loadEl.hidden = true;
+  }
+}
+
+function stopWorkoutInternals() {
+  _pose.active = false;
+  if (_pose.rafId)      cancelAnimationFrame(_pose.rafId);
+  _pose.rafId = null;
+  if (_pose.inferTimer) clearInterval(_pose.inferTimer);
+  _pose.inferTimer = null;
+  if (_pose.stream) {
+    _pose.stream.getTracks().forEach(t => t.stop());
+    _pose.stream = null;
+  }
+  const v = document.getElementById('poseVideo');
+  if (v) v.srcObject = null;
+}
+
+function exitWorkout() {
+  stopWorkoutInternals();
+  navigate('hub');
+}
+
+function finishWorkout() {
+  const reps = _pose.reps;
+  const durSec = Math.round((Date.now() - _pose.startedAt) / 1000);
+  const exercise = _pose.exercise;
+  stopWorkoutInternals();
+
+  // Persist locally + sync via the user doc on Firestore.
+  const log = safeParse(localStorage.getItem('1pb_workouts'), []);
+  log.unshift({ exercise, reps, durSec, at: Date.now(), date: todayKey() });
+  try { localStorage.setItem('1pb_workouts', JSON.stringify(log.slice(0, 100))); }
+  catch (_) {}
+
+  // Reward + routine tick — only if the user actually did at least 1 rep.
+  if (reps >= 1) {
+    if (typeof gainXP === 'function') gainXP(Math.min(50, 5 + reps));
+    markMorningRoutine('workout', true);
+  }
+
+  const isHe = currentLang === 'he';
+  showToast(isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`);
+  navigate('hub');
+}
+
+/** Push-up state machine. Returns true if a rep was counted this frame. */
+function pushupTick(landmarks) {
+  // MediaPipe pose indices: 11 L-shoulder, 12 R-shoulder, 13 L-elbow,
+  // 14 R-elbow, 15 L-wrist, 16 R-wrist. Each has .visibility ∈ [0,1].
+  const lS = landmarks[11], rS = landmarks[12];
+  const lE = landmarks[13], rE = landmarks[14];
+  const lW = landmarks[15], rW = landmarks[16];
+  if (!lS || !rS || !lE || !rE || !lW || !rW) return false;
+
+  // Use whichever side is more visible — handles the user being slightly
+  // off-axis to the camera.
+  const lVis = (lS.visibility + lE.visibility + lW.visibility) / 3;
+  const rVis = (rS.visibility + rE.visibility + rW.visibility) / 3;
+  const use  = lVis >= rVis ? [lS, lE, lW] : [rS, rE, rW];
+  if (Math.min(use[0].visibility, use[1].visibility, use[2].visibility) < 0.5) {
+    // Not enough confidence to count this frame — but don't reset the
+    // state machine, the user might just have a poor angle for a moment.
+    return false;
+  }
+
+  const elbow = angleDeg(use[0], use[1], use[2]);
+
+  if (elbow < PU_DOWN_DEG) {
+    _pose.downFrames++;
+    _pose.upFrames = 0;
+    if (_pose.downFrames >= PU_FRAMES_STABLE) {
+      _pose.state = 'down';
+    }
+  } else if (elbow > PU_UP_DEG) {
+    _pose.upFrames++;
+    _pose.downFrames = 0;
+    if (_pose.upFrames >= PU_FRAMES_STABLE) {
+      // Count only on a real down→up transition AND past refractory.
+      const now = performance.now();
+      if (_pose.state === 'down' && now - _pose.lastCountAt > PU_REFRACTORY_MS) {
+        _pose.reps++;
+        _pose.lastCountAt = now;
+        _pose.state = 'up';
+        return true;
+      }
+      _pose.state = 'up';
+    }
+  } else {
+    // In between thresholds: don't reset counters, just drift.
+  }
+  return false;
+}
+
+/** Render loop. rAF for video draw + DOM updates; pose inference paced
+ *  to PU_INFER_FPS via a setInterval so we don't melt the phone. */
+function runPoseLoop() {
+  const v   = document.getElementById('poseVideo');
+  const cv  = document.getElementById('poseCanvas');
+  const cnt = document.getElementById('workoutCount');
+  const st  = document.getElementById('workoutState');
+  const fps = document.getElementById('workoutFps');
+  if (!v || !cv) return;
+  const ctx = cv.getContext('2d');
+
+  let lastReps  = -1;
+  let lastState = '';
+  let lastLandmarks = null;
+  let frameCt = 0;
+  let fpsT0   = performance.now();
+
+  // ── inference paced loop ─────────────────────────────────
+  _pose.inferTimer = setInterval(async () => {
+    if (!_pose.active || !_pose.landmarker || v.readyState < 2) return;
+    try {
+      const res = await _pose.landmarker.detectForVideo(v, performance.now());
+      const lms = res && res.landmarks && res.landmarks[0];
+      if (lms) {
+        lastLandmarks = lms;
+        if (_pose.exercise === 'pushup') {
+          if (pushupTick(lms) && navigator.vibrate) {
+            try { navigator.vibrate(40); } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[workout] detect error', e);
+    }
+  }, Math.round(1000 / PU_INFER_FPS));
+
+  // ── render loop ──────────────────────────────────────────
+  const render = () => {
+    if (!_pose.active) return;
+    _pose.rafId = requestAnimationFrame(render);
+
+    if (lastLandmarks) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.save();
+      ctx.lineWidth = 4;
+      // Highlight the tracking arm in green; rest in subtle white.
+      const pts = lastLandmarks;
+      const drawLine = (a, b, color) => {
+        if (!a || !b) return;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(a.x * cv.width, a.y * cv.height);
+        ctx.lineTo(b.x * cv.width, b.y * cv.height);
+        ctx.stroke();
+      };
+      const green = '#00ff87', white = 'rgba(255,255,255,.55)';
+      drawLine(pts[11], pts[13], green);    // L shoulder→elbow
+      drawLine(pts[13], pts[15], green);    // L elbow→wrist
+      drawLine(pts[12], pts[14], green);    // R shoulder→elbow
+      drawLine(pts[14], pts[16], green);    // R elbow→wrist
+      drawLine(pts[11], pts[12], white);    // shoulders
+      drawLine(pts[23], pts[24], white);    // hips
+      drawLine(pts[11], pts[23], white);    // torso L
+      drawLine(pts[12], pts[24], white);    // torso R
+      ctx.restore();
+    }
+
+    if (_pose.reps !== lastReps) {
+      lastReps = _pose.reps;
+      if (cnt) cnt.textContent = lastReps;
+    }
+    if (_pose.state !== lastState) {
+      lastState = _pose.state;
+      if (st) {
+        st.textContent = lastState.toUpperCase();
+        st.className   = 'workout-state ' + (lastState === 'down' ? 'is-down'
+                                          :  lastState === 'up'   ? 'is-up' : '');
+      }
+    }
+
+    frameCt++;
+    const now = performance.now();
+    if (now - fpsT0 > 1000) {
+      _pose.fpsAvg = Math.round(frameCt * 1000 / (now - fpsT0));
+      if (fps) fps.textContent = `${_pose.fpsAvg} fps`;
+      fpsT0 = now; frameCt = 0;
+    }
+  };
+  _pose.rafId = requestAnimationFrame(render);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MORNING ROUTINE STATE
+   - Tracks alarm + workout completion for today.
+   - Auto-resets when todayKey() changes (no manual cron).
+═══════════════════════════════════════════════════════ */
+
+const MORNING_ROUTINE_KEY = '1pb_morning_routine';
+
+function loadMorningRoutine() {
+  const fallback = { date: todayKey(), alarm: false, workout: false };
+  const parsed   = safeParse(localStorage.getItem(MORNING_ROUTINE_KEY), null);
+  if (!parsed || parsed.date !== todayKey()) return fallback;
+  return { ...fallback, ...parsed, date: todayKey() };
+}
+function saveMorningRoutine(state) {
+  localStorage.setItem(MORNING_ROUTINE_KEY, JSON.stringify(state));
+  if (typeof syncUserToFirestore === 'function' &&
+      typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ morningRoutine: state });
+  }
+}
+function markMorningRoutine(part, done) {
+  const s = loadMorningRoutine();
+  if (s[part] === done) return;
+  s[part] = done;
+  saveMorningRoutine(s);
+  renderRoutinePill();
+}
+function renderRoutinePill() {
+  const pill = document.getElementById('routinePill');
+  if (!pill) return;
+  const s = loadMorningRoutine();
+  const iw = loadIronWill();
+  // If the user hasn't enabled the alarm AND hasn't done a workout, we
+  // still show the pill so they're nudged toward setting up the routine.
+  const needsAlarm   = !s.alarm;
+  const needsWorkout = !s.workout;
+  if (!needsAlarm && !needsWorkout) { pill.hidden = true; return; }
+
+  const isHe = currentLang === 'he';
+  const labels = [];
+  if (needsAlarm)   labels.push(isHe ? 'אזעקה' : 'Alarm');
+  if (needsWorkout) labels.push(isHe ? 'אימון' : 'Workout');
+  const txt = document.getElementById('routinePillText');
+  if (txt) txt.textContent = (isHe ? 'שגרת בוקר: ' : 'Morning routine: ') + labels.join(' · ');
+  pill.hidden = false;
 }
 
 /* Init notifications on app load */
@@ -7524,6 +8204,7 @@ async function doForgotPassword() {
 const PER_USER_KEYS = [
   '1pb_onboarded', '1pb_name', '1pb_xp', '1pb_streak', '1pb_habits',
   '1pb_activity', '1pb_posts', '1pb_uid', '1pb_iron_will',
+  '1pb_morning_routine', '1pb_workouts',
 ];
 
 async function doSignOut() {
