@@ -6540,7 +6540,13 @@ function toggleIronWill(btn) {
 
 function saveIronWill() {
   const state = loadIronWill();
-  state.time = document.getElementById('ironWillTime').value || '06:30';
+  // <input type="time"> on modern browsers always returns "" or HH:MM,
+  // but programmatic writes (or a stray paste on old browsers) could
+  // poison state.time and crash the scheduler. The scheduler already
+  // has a NaN guard downstream, but it's cleaner to reject bad input
+  // here so the persisted state stays clean.
+  const raw = document.getElementById('ironWillTime').value || '';
+  state.time = /^([01]\d|2[0-3]):[0-5]\d$/.test(raw) ? raw : '06:30';
   saveIronWillState(state);
 }
 
@@ -8110,7 +8116,16 @@ function isFirebaseConfigured() {
     fbDB      = firebase.firestore();
     fbStorage = firebase.storage();
 
-    // Offline persistence
+    // Offline persistence.
+    // NOTE: enablePersistence() is deprecated in Firebase v10 (the modular
+    // SDK replaces it with `persistentLocalCache` on initializeFirestore).
+    // We're on the compat SDK here, where it still works — just logs a
+    // deprecation warning. When migrating to the modular SDK, swap to:
+    //   import { initializeFirestore, persistentLocalCache,
+    //            persistentMultipleTabManager } from 'firebase/firestore';
+    //   const db = initializeFirestore(app, {
+    //     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    //   });
     fbDB.enablePersistence({ synchronizeTabs: true })
       .catch(e => console.warn('[Firestore] Persistence:', e.code));
 
