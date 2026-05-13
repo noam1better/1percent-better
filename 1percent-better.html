@@ -3846,6 +3846,16 @@ function postProof() {
    6. NAVIGATION
 ═══════════════════════════════════════════════════════ */
 function navigate(screen) {
+  // If the user is leaving the workout screen via any path (navbar tap,
+  // FAB, programmatic navigate), tear the camera/inference down so we
+  // don't leak GPU/CPU/battery in the background. exitWorkout() also
+  // calls navigate('hub'), which is fine — stopWorkoutInternals is
+  // idempotent.
+  if (state.currentScreen === 'workout' && screen !== 'workout' &&
+      typeof stopWorkoutInternals === 'function') {
+    stopWorkoutInternals();
+  }
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -6687,16 +6697,27 @@ function exitWorkout() {
 }
 
 function finishWorkout() {
-  const reps = _pose.reps;
-  const durSec = Math.round((Date.now() - _pose.startedAt) / 1000);
+  const reps     = _pose.reps;
+  const durSec   = Math.round((Date.now() - _pose.startedAt) / 1000);
   const exercise = _pose.exercise;
   stopWorkoutInternals();
 
-  // Persist locally + sync via the user doc on Firestore.
+  // Persist locally — bounded slice so a long history doesn't bloat the
+  // user doc beyond Firestore's 1MB limit (100 workouts ≈ 5-10KB).
   const log = safeParse(localStorage.getItem('1pb_workouts'), []);
   log.unshift({ exercise, reps, durSec, at: Date.now(), date: todayKey() });
-  try { localStorage.setItem('1pb_workouts', JSON.stringify(log.slice(0, 100))); }
+  const trimmed = log.slice(0, 100);
+  try { localStorage.setItem('1pb_workouts', JSON.stringify(trimmed)); }
   catch (_) {}
+
+  // Sync to Firestore so the next device the user signs in on still
+  // sees this session. The previous version only persisted locally,
+  // which lost data on cache clear / cross-device.
+  if (typeof syncUserToFirestore === 'function' &&
+      typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ workouts: trimmed });
+  }
 
   // Reward + routine tick — only if the user actually did at least 1 rep.
   if (reps >= 1) {
@@ -8209,10 +8230,53 @@ const PER_USER_KEYS = [
 
 async function doSignOut() {
   if (!isFirebaseConfigured()) return;
+  // Tear down all the per-session resources BEFORE we wipe the user's
+  // localStorage. Otherwise running timers/audio/streams keep firing
+  // against the now-empty state, and the next user on this device
+  // inherits the previous user's running detection loop / scheduler.
+  resetPerUserRuntime();
   PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
   await fbAuth.signOut();
   // Reset in-memory onboarding flow so the next sign-in re-renders cleanly.
   obStep = 0; obHabits = []; obXP = 0; obInteracted = false;
+}
+
+/** Stop everything that's tied to the *currently signed-in user*: the
+ *  Iron Will scheduler + audio overlay, the workout camera + inference
+ *  loop, and any cached in-memory state objects that mirror per-user
+ *  data. Called from doSignOut and from onUserSignedIn before the new
+ *  user's data is loaded. Safe to call repeatedly. */
+function resetPerUserRuntime() {
+  // Iron Will scheduler + active overlay.
+  if (_iwTickHandle) { clearInterval(_iwTickHandle); _iwTickHandle = null; }
+  _iwLastShown = null;
+  _iwTestMode  = false;
+  if (typeof hideIronWillOverlay === 'function') {
+    const overlay = document.getElementById('ironWillOverlay');
+    if (overlay && !overlay.hidden) hideIronWillOverlay();
+  }
+
+  // Workout camera + inference. stopWorkoutInternals stops the stream,
+  // RAF, inference timer, and flips _pose.active to false.
+  if (typeof stopWorkoutInternals === 'function') stopWorkoutInternals();
+  // Reset the rep counter and exercise state so a new user doesn't see
+  // the previous user's last count flash before init() repaints.
+  _pose.reps        = 0;
+  _pose.state       = 'ready';
+  _pose.downFrames  = 0;
+  _pose.upFrames    = 0;
+  _pose.lastCountAt = 0;
+
+  // In-memory mirrors of localStorage. After this returns, callers
+  // either wipe localStorage (doSignOut) or pull fresh data from
+  // Firestore (onUserSignedIn) — either way the next read of these
+  // fields will hit the new data.
+  if (state) {
+    state.streak    = { current: 0, longest: 0, lastPostDate: '', history: [false,false,false,false,false,false,false], lastFreezeDate: null };
+    state.xp        = 0;
+    state.feedPosts = [];
+    state.todayDone = false;
+  }
 }
 
 /* Offline / dev mode — skip auth */
@@ -8228,11 +8292,17 @@ async function onUserSignedIn(user) {
   hideAuthScreen();
 
   // If this is a different user than last sign-in on this device, drop the
-  // previous user's local cache so we don't carry over their onboarded
-  // flag, streak, name, etc.
+  // previous user's local cache AND in-memory mirrors so we don't carry
+  // over their onboarded flag, streak, name, running scheduler, etc.
   const prevUid = localStorage.getItem('1pb_uid');
   if (prevUid && prevUid !== user.uid) {
+    resetPerUserRuntime();
     PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
+  } else if (!prevUid) {
+    // First sign-in on this device: still reset runtime so a leftover
+    // pose detection loop / alarm scheduler from a prior anonymous
+    // session can't survive into the authenticated one.
+    resetPerUserRuntime();
   }
   localStorage.setItem('1pb_uid', user.uid);
 
@@ -8242,6 +8312,15 @@ async function onUserSignedIn(user) {
 
   // Load user data from Firestore (authoritative source for onboarded flag).
   await loadUserFromFirestore(user.uid);
+
+  // Reload the in-memory state object from the freshly-hydrated
+  // localStorage. Otherwise init() will read state.streak / state.xp
+  // that were captured at page load and may belong to a different user.
+  if (state) {
+    state.streak    = loadStreak();
+    state.xp        = (loadXP && loadXP().total) || 0;
+    state.todayDone = checkTodayDone();
+  }
 
   // initApp → init → initOnboarding will show or hide the onboarding panel
   // based on the (now-correct) localStorage state.
@@ -8266,14 +8345,16 @@ async function loadUserFromFirestore(uid) {
     const doc = await fbDB.collection('users').doc(uid).get();
     if (doc.exists) {
       const d = doc.data();
-      if (d.name)      localStorage.setItem('1pb_name',      d.name);
-      if (d.xp)        localStorage.setItem('1pb_xp',        JSON.stringify(d.xp));
-      if (d.streak)    localStorage.setItem('1pb_streak',    JSON.stringify(d.streak));
-      if (d.habits)    localStorage.setItem('1pb_habits',    JSON.stringify(d.habits));
-      if (d.onboarded) localStorage.setItem('1pb_onboarded', '1');
-      if (d.lang)      localStorage.setItem('1pb_lang',      d.lang);
-      if (d.theme)     localStorage.setItem('1pb_theme',     d.theme);
-      if (d.ironWill)  localStorage.setItem(IRON_WILL_KEY,   JSON.stringify(d.ironWill));
+      if (d.name)           localStorage.setItem('1pb_name',           d.name);
+      if (d.xp)             localStorage.setItem('1pb_xp',             JSON.stringify(d.xp));
+      if (d.streak)         localStorage.setItem('1pb_streak',         JSON.stringify(d.streak));
+      if (d.habits)         localStorage.setItem('1pb_habits',         JSON.stringify(d.habits));
+      if (d.onboarded)      localStorage.setItem('1pb_onboarded',      '1');
+      if (d.lang)           localStorage.setItem('1pb_lang',           d.lang);
+      if (d.theme)          localStorage.setItem('1pb_theme',          d.theme);
+      if (d.ironWill)       localStorage.setItem(IRON_WILL_KEY,        JSON.stringify(d.ironWill));
+      if (d.morningRoutine) localStorage.setItem(MORNING_ROUTINE_KEY,  JSON.stringify(d.morningRoutine));
+      if (d.workouts)       localStorage.setItem('1pb_workouts',       JSON.stringify(d.workouts));
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
