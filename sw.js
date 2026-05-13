@@ -2,8 +2,18 @@
 // 1% Better — Service Worker v1.0
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME   = '1pb-v1';
-const OFFLINE_URL  = '/offline.html';
+const CACHE_NAME      = '1pb-v2';        // bumped: cross-origin caching scheme changed
+const ASSET_CACHE     = '1pb-assets-v2';  // long-lived cache for MediaPipe model/wasm/js
+const OFFLINE_URL     = '/offline.html';
+
+// Cross-origin hosts whose responses we DO want to cache: the MediaPipe
+// loader/wasm from jsDelivr and the pose-landmarker model from Google's
+// public bucket. Everything else (Firebase APIs, fonts, etc.) we skip so
+// we don't accidentally cache short-lived API responses.
+const CACHEABLE_CROSS_ORIGINS = [
+  'cdn.jsdelivr.net',
+  'storage.googleapis.com',
+];
 
 const PRE_CACHE = [
   '/1percent-better.html',
@@ -32,44 +42,68 @@ self.addEventListener('install', event => {
 });
 
 // ── ACTIVATE ─────────────────────────────────────
-// Delete old caches when a new SW takes over
+// Delete old caches when a new SW takes over. Keep both the app shell
+// cache and the long-lived asset cache so the MediaPipe model survives
+// across SW updates.
 self.addEventListener('activate', event => {
+  const keep = new Set([CACHE_NAME, ASSET_CACHE]);
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
 // ── FETCH ─────────────────────────────────────────
-// Strategy: Cache-first for app shell, network-first for API calls
+// Strategy:
+//   - Same-origin GETs   → stale-while-revalidate against CACHE_NAME.
+//   - Whitelisted cross-origin (MediaPipe CDN + model bucket) → cache-first
+//     against ASSET_CACHE. These assets are content-addressed by version
+//     in the URL so they're safe to cache indefinitely; saves a ~6MB
+//     model re-download every time the user opens the workout screen.
+//   - Other cross-origin (Firebase APIs, fonts, analytics) → skip the SW
+//     entirely so we don't accidentally cache short-lived responses.
 self.addEventListener('fetch', event => {
   const { request } = event;
+  if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin requests (e.g. Google Fonts)
-  if (request.method !== 'GET') return;
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) {
+    if (!CACHEABLE_CROSS_ORIGINS.includes(url.hostname)) return;
+    event.respondWith(
+      caches.open(ASSET_CACHE).then(cache =>
+        cache.match(request).then(hit => {
+          if (hit) return hit;
+          return fetch(request, { mode: 'cors', credentials: 'omit' })
+            .then(resp => {
+              // Cache only successful, non-opaque responses. Opaque
+              // (no-cors) responses can't be inspected and would also
+              // poison the cache if the origin later returned an error.
+              if (resp && resp.status === 200 && resp.type !== 'opaque') {
+                cache.put(request, resp.clone());
+              }
+              return resp;
+            })
+            .catch(() => Response.error());
+        })
+      )
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) {
-        // Serve from cache, but refresh in background (stale-while-revalidate)
-        const fetchPromise = fetch(request).then(response => {
+        // Serve from cache, refresh in background (stale-while-revalidate).
+        fetch(request).then(response => {
           if (response && response.status === 200) {
             caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
           }
-          return response;
-        }).catch(() => {}); // ignore network errors silently
+        }).catch(() => {});
         return cached;
       }
 
-      // Not in cache — fetch from network, cache it, return it
       return fetch(request).then(response => {
         if (!response || response.status !== 200 || response.type === 'opaque') {
           return response;
@@ -78,8 +112,8 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         return response;
       }).catch(() => {
-        // Offline fallback — only for navigations; other request types should
-        // surface the network error so the page can react appropriately.
+        // Offline fallback — only for navigations; other request types
+        // should surface the network error so the page can react.
         if (request.mode === 'navigate') {
           return caches.match(OFFLINE_URL)
             .then(r => r || caches.match('/1percent-better.html'));

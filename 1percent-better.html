@@ -6293,6 +6293,17 @@ function normalizeIronWillText(s) {
  *   - dedupe via lastFiredDate so we never fire twice on the same calendar day */
 function ironWillShouldFire(state, now = new Date()) {
   if (!state.enabled) return false;
+
+  // Don't ambush the user during onboarding or the auth flow — both are
+  // already full-screen takeovers and the alarm overlay on top would
+  // either look broken or block sign-in entirely. We just defer; the
+  // grace window (4h) is wide enough that the user will still hit the
+  // alarm after they finish onboarding / signing in.
+  const ob   = document.getElementById('onboarding');
+  const auth = document.getElementById('authScreen');
+  if (ob   && !ob.classList.contains('hidden'))   return false;
+  if (auth && !auth.classList.contains('hidden')) return false;
+
   const today = todayKey();
   if (state.lastFiredDate === today)        return false;
   if (_iwLastShown === today)               return false;
@@ -6382,11 +6393,16 @@ function _iwVisibility() {
     _iwAudio.ctx.resume().catch(() => {});
   }
 }
+let _iwFocusOn = false;
 function ironWillFocusOn()  {
+  if (_iwFocusOn) return;
+  _iwFocusOn = true;
   window.addEventListener('beforeunload', _iwBeforeUnload);
   document.addEventListener('visibilitychange', _iwVisibility);
 }
 function ironWillFocusOff() {
+  if (!_iwFocusOn) return;
+  _iwFocusOn = false;
   window.removeEventListener('beforeunload', _iwBeforeUnload);
   document.removeEventListener('visibilitychange', _iwVisibility);
 }
@@ -6424,17 +6440,28 @@ function showIronWillOverlay(state, opts = {}) {
   input.classList.remove('iw-wrong');
   document.getElementById('iwHint').textContent = '';
 
-  overlay.hidden = false;
-  document.body.classList.add('iw-active');
+  // Set the session-dedupe flag BEFORE the overlay becomes visible. If the
+  // 30s scheduler tick fires in the same tick as the overlay paint,
+  // _iwLastShown must already be today or it'll fire a second overlay.
   _iwLastShown = todayKey();
   _iwTestMode  = !!opts.test;
+  overlay.hidden = false;
+  document.body.classList.add('iw-active');
 
-  // Engage focus warn + audio. Defer so iOS Safari accepts the
-  // AudioContext on the user-gesture-derived activation chain.
+  // Attach focus-mode listeners SYNCHRONOUSLY. Previously these were
+  // inside the same 50ms setTimeout as audio start; if the user
+  // dismissed within 50ms the focusOff in hideIronWillOverlay would run
+  // first and remove nothing, then focusOn would attach the listener
+  // and leak across navigations. Idempotent: focusOn checks _iwFocusOn
+  // before attaching twice.
+  ironWillFocusOn();
+
+  // Defer ONLY the focus + audio start. iOS Safari sometimes rejects an
+  // AudioContext that's instantiated on the same microtask as a click
+  // handler; a 50ms tick keeps that activation chain intact.
   setTimeout(() => {
     input.focus();
     if (!opts.silent) ironWillStartAudio();
-    ironWillFocusOn();
   }, 50);
 }
 
@@ -6598,7 +6625,7 @@ async function loadPoseModel() {
   if (_pose.landmarker) return _pose.landmarker;
   if (_pose.loading)    return _pose.loading;
 
-  _pose.loading = (async () => {
+  const p = (async () => {
     const VER = '0.10.14';
     const mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/vision_bundle.mjs`);
     const { PoseLandmarker, FilesetResolver } = mod;
@@ -6616,7 +6643,13 @@ async function loadPoseModel() {
     _pose.landmarker = lm;
     return lm;
   })();
-  return _pose.loading;
+  // If the load rejects (network blip, model URL temporarily down, etc.)
+  // we MUST clear _pose.loading — otherwise every subsequent retry just
+  // re-awaits the same already-rejected promise and the user is locked
+  // out of the workout until full page reload.
+  p.catch(() => { if (_pose.loading === p) _pose.loading = null; });
+  _pose.loading = p;
+  return p;
 }
 
 async function startWorkout(exercise = 'pushup') {
@@ -8104,6 +8137,17 @@ let obInteracted = false; // true once user clicked continue at least once
 function showAuthScreen() {
   // Never interrupt the user if they're mid-onboarding
   if (obInteracted) return;
+
+  // If the Iron Will alarm is currently ringing (e.g. a token refresh
+  // failed mid-alarm) the dismiss flow can't persist anything anyway —
+  // the user is no longer authenticated. Close the overlay + stop the
+  // audio first; otherwise the auth screen would appear UNDER the
+  // overlay and the alarm would keep ringing for the signed-out state.
+  if (document.body.classList.contains('iw-active') &&
+      typeof hideIronWillOverlay === 'function') {
+    hideIronWillOverlay();
+  }
+
   document.getElementById('authScreen')?.classList.remove('hidden');
   document.getElementById('onboarding')?.classList.add('hidden');
   document.getElementById('app').style.display = 'none';
@@ -8227,6 +8271,23 @@ const PER_USER_KEYS = [
   '1pb_activity', '1pb_posts', '1pb_uid', '1pb_iron_will',
   '1pb_morning_routine', '1pb_workouts',
 ];
+// Prefixes for per-day keys (e.g. 1pb_qtasks_2026-05-11, 1pb_dc_2026-05-11).
+// These accumulate one entry per day and would otherwise leak across users
+// on the same device. Wiped alongside PER_USER_KEYS.
+const PER_USER_KEY_PREFIXES = ['1pb_qtasks_', '1pb_dc_'];
+
+function wipePerUserStorage() {
+  PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
+  // Iterate a snapshot of the keys — removeItem mutates localStorage and
+  // index-based iteration would skip entries otherwise.
+  const all = [];
+  for (let i = 0; i < localStorage.length; i++) all.push(localStorage.key(i));
+  all.forEach(k => {
+    if (k && PER_USER_KEY_PREFIXES.some(p => k.startsWith(p))) {
+      localStorage.removeItem(k);
+    }
+  });
+}
 
 async function doSignOut() {
   if (!isFirebaseConfigured()) return;
@@ -8235,7 +8296,7 @@ async function doSignOut() {
   // against the now-empty state, and the next user on this device
   // inherits the previous user's running detection loop / scheduler.
   resetPerUserRuntime();
-  PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
+  wipePerUserStorage();
   await fbAuth.signOut();
   // Reset in-memory onboarding flow so the next sign-in re-renders cleanly.
   obStep = 0; obHabits = []; obXP = 0; obInteracted = false;
@@ -8297,7 +8358,7 @@ async function onUserSignedIn(user) {
   const prevUid = localStorage.getItem('1pb_uid');
   if (prevUid && prevUid !== user.uid) {
     resetPerUserRuntime();
-    PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
+    wipePerUserStorage();
   } else if (!prevUid) {
     // First sign-in on this device: still reset runtime so a leftover
     // pose detection loop / alarm scheduler from a prior anonymous
