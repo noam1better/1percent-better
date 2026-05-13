@@ -1904,6 +1904,78 @@
   .workout-cta:active { transform: scale(.98); }
   .workout-cta .cta-arrow { margin-left: auto; color: var(--green); }
   [dir="rtl"] .workout-cta .cta-arrow { margin-left: 0; margin-right: auto; }
+  /* Boxing variant — red accent so the two CTAs are visually distinct. */
+  .workout-cta-boxing { border-color: rgba(255,56,96,.32); }
+  .workout-cta-boxing:hover { border-color: rgba(255,56,96,.6); background: rgba(255,56,96,.04); }
+  .workout-cta-boxing .cta-arrow { color: #ff3860; }
+
+  /* ── BOXING HUD overlay ────────────────────────────
+     Sits above the camera under the topbar. Shown only while
+     _pose.exercise === 'boxing' (toggled in startWorkout). */
+  .boxing-hud {
+    position: absolute;
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    left: 16px; right: 16px;
+    z-index: 4;
+    display: flex; align-items: center; gap: 12px;
+    pointer-events: none;
+  }
+  .boxing-hud[hidden] { display: none; }
+  .boxing-enemy {
+    font-size: 40px; line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,.6));
+    transition: transform .12s;
+  }
+  .boxing-enemy.is-hit { animation: enemyHit .25s; }
+  @keyframes enemyHit {
+    0%   { transform: scale(1)    rotate(0deg); }
+    30%  { transform: scale(1.25) rotate(-8deg); filter: drop-shadow(0 0 14px rgba(255,56,96,.8)); }
+    100% { transform: scale(1)    rotate(0deg); }
+  }
+  .boxing-hp-wrap {
+    position: relative; flex: 1; height: 22px;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 11px;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+  }
+  .boxing-hp-fill {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, #ff3860 0%, #ffb400 70%, #ff3860 100%);
+    transition: width .18s ease-out;
+  }
+  .boxing-hp-text {
+    position: relative; line-height: 22px; text-align: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  }
+
+  /* Full-screen punch flash. Triggered by toggling data-side="left"|"right"
+     plus a transient .is-active class. CSS animation handles the fade. */
+  .punch-flash {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+  }
+  .punch-flash.is-active {
+    animation: punchFlash .22s ease-out;
+  }
+  .punch-flash[data-side="left"].is-active {
+    background: radial-gradient(circle at 25% 50%,
+      rgba(255,56,96,.55) 0%, rgba(255,56,96,.15) 35%, transparent 60%);
+  }
+  .punch-flash[data-side="right"].is-active {
+    background: radial-gradient(circle at 75% 50%,
+      rgba(0,200,255,.55) 0%, rgba(0,200,255,.15) 35%, transparent 60%);
+  }
+  @keyframes punchFlash {
+    0%   { opacity: 0;   }
+    20%  { opacity: 1;   }
+    100% { opacity: 0;   }
+  }
 
   /* ── MORNING ROUTINE PILL ────────────────────────────
      Shown when alarm OR workout for today is missing. Hidden once both
@@ -2361,6 +2433,13 @@
       <span class="cta-arrow">←</span>
     </button>
 
+    <!-- BOXING CTA (RPG-style punch tracker) -->
+    <button class="workout-cta workout-cta-boxing" id="boxingCTA" onclick="startWorkout('boxing')">
+      <span>🥊</span>
+      <span id="lbl-boxing-cta">Boxing · Jabs & Crosses</span>
+      <span class="cta-arrow">←</span>
+    </button>
+
     <!-- DAILY CHALLENGE -->
     <div class="daily-challenge">
       <div class="dc-label" id="lbl-daily-challenge-badge">⚡ אתגר יומי</div>
@@ -2538,10 +2617,22 @@
       <div class="workout-title" id="workoutTitle">PUSH-UPS</div>
       <div class="workout-fps" id="workoutFps"></div>
     </div>
+    <!-- Boxing-only HUD (hidden during push-up mode) -->
+    <div class="boxing-hud" id="boxingHud" hidden>
+      <div class="boxing-enemy" id="boxingEnemy">😈</div>
+      <div class="boxing-hp-wrap">
+        <div class="boxing-hp-fill" id="boxingHpFill" style="width:100%"></div>
+        <div class="boxing-hp-text"><span id="boxingHpCur">100</span> / <span id="boxingHpMax">100</span></div>
+      </div>
+    </div>
+
     <div class="workout-counter">
       <div class="workout-count"  id="workoutCount">0</div>
       <div class="workout-state"  id="workoutState">READY</div>
     </div>
+
+    <!-- Punch hit flash — full-screen overlay tinted left/right by which arm fired -->
+    <div class="punch-flash" id="punchFlash" data-side=""></div>
     <div class="workout-loading" id="workoutLoading">
       <div class="workout-spinner"></div>
       <div id="workoutLoadingTxt">Loading pose model…</div>
@@ -6603,16 +6694,34 @@ let _pose = {
   rafId:         null,           // requestAnimationFrame handle
   inferTimer:    null,           // pacing for detection
   active:        false,
-  exercise:      'pushup',
+  exercise:      'pushup',       // 'pushup' | 'boxing'
   reps:          0,
-  state:         'ready',        // 'ready' | 'down' | 'up'
+  state:         'ready',        // pushup: 'ready'|'down'|'up'
   downFrames:    0,
   upFrames:      0,
   lastCountAt:   0,
   startedAt:     0,
   lastFrameTime: 0,
   fpsAvg:        0,
+  boxing:        null,           // populated by startWorkout('boxing')
 };
+
+/** Build a fresh boxing state. Called from startWorkout so a new
+ *  session always starts at full HP and zero pending XP. */
+function makeBoxingState() {
+  return {
+    arms: {
+      left:  { state: 'guard', lastPunchAt: 0 },
+      right: { state: 'guard', lastPunchAt: 0 },
+    },
+    enemyMaxHp:  BOXING_ENEMY_HP,
+    enemyHp:     BOXING_ENEMY_HP,
+    enemyEmoji:  BOXING_EMOJIS[0],
+    defeats:     0,
+    totalDamage: 0,
+    pendingXp:   0,
+  };
+}
 
 /** Compute the angle (degrees) at vertex `b` formed by a→b→c in 2D. */
 function angleDeg(a, b, c) {
@@ -6678,6 +6787,15 @@ async function startWorkout(exercise = 'pushup') {
   _pose.upFrames    = 0;
   _pose.lastCountAt = 0;
   _pose.startedAt   = Date.now();
+  _pose.boxing      = (exercise === 'boxing') ? makeBoxingState() : null;
+
+  // UI mode — title, boxing HUD visibility, initial state pill.
+  const titleEl = document.getElementById('workoutTitle');
+  const hudEl   = document.getElementById('boxingHud');
+  if (titleEl) titleEl.textContent = (exercise === 'boxing') ? 'BOXING' : 'PUSH-UPS';
+  if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
+  if (stEl)    stEl.textContent    = (exercise === 'boxing') ? 'GUARD' : 'READY';
+  if (exercise === 'boxing') renderBoxingHud();
 
   try {
     // 1) Request camera. Front camera so the user can see themselves.
@@ -6728,6 +6846,12 @@ function stopWorkoutInternals() {
   }
   const v = document.getElementById('poseVideo');
   if (v) v.srcObject = null;
+  // Hide the boxing HUD on exit so re-entering the screen (push-ups
+  // next time) doesn't briefly flash a stale HP bar.
+  const hud = document.getElementById('boxingHud');
+  if (hud) hud.hidden = true;
+  const flash = document.getElementById('punchFlash');
+  if (flash) flash.classList.remove('is-active');
 }
 
 function exitWorkout() {
@@ -6739,33 +6863,55 @@ function finishWorkout() {
   const reps     = _pose.reps;
   const durSec   = Math.round((Date.now() - _pose.startedAt) / 1000);
   const exercise = _pose.exercise;
+  // Snapshot boxing extras BEFORE stopWorkoutInternals (which doesn't
+  // currently clear _pose.boxing, but a future change might).
+  const boxingSnap = (exercise === 'boxing' && _pose.boxing)
+    ? { defeats: _pose.boxing.defeats, totalDamage: _pose.boxing.totalDamage,
+        pendingXp: _pose.boxing.pendingXp }
+    : null;
   stopWorkoutInternals();
 
   // Persist locally — bounded slice so a long history doesn't bloat the
   // user doc beyond Firestore's 1MB limit (100 workouts ≈ 5-10KB).
+  const entry = { exercise, reps, durSec, at: Date.now(), date: todayKey() };
+  if (boxingSnap) {
+    entry.defeats     = boxingSnap.defeats;
+    entry.totalDamage = boxingSnap.totalDamage;
+  }
   const log = safeParse(localStorage.getItem('1pb_workouts'), []);
-  log.unshift({ exercise, reps, durSec, at: Date.now(), date: todayKey() });
+  log.unshift(entry);
   const trimmed = log.slice(0, 100);
   try { localStorage.setItem('1pb_workouts', JSON.stringify(trimmed)); }
   catch (_) {}
 
-  // Sync to Firestore so the next device the user signs in on still
-  // sees this session. The previous version only persisted locally,
-  // which lost data on cache clear / cross-device.
   if (typeof syncUserToFirestore === 'function' &&
       typeof isFirebaseConfigured === 'function' &&
       isFirebaseConfigured() && currentUser) {
     syncUserToFirestore({ workouts: trimmed });
   }
 
-  // Reward + routine tick — only if the user actually did at least 1 rep.
+  // XP: push-ups = small bonus scaled by reps (capped). Boxing = sum of
+  // banked pendingXp (1/punch + 25/defeat). Either way we apply it as a
+  // single gainXP call so the level-up modal fires at most once.
+  let xp = 0;
   if (reps >= 1) {
-    if (typeof gainXP === 'function') gainXP(Math.min(50, 5 + reps));
+    xp = boxingSnap
+      ? Math.min(200, boxingSnap.pendingXp)
+      : Math.min(50, 5 + reps);
+    if (typeof gainXP === 'function') gainXP(xp);
     markMorningRoutine('workout', true);
   }
 
   const isHe = currentLang === 'he';
-  showToast(isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`);
+  let msg;
+  if (boxingSnap) {
+    msg = isHe
+      ? `✓ ${reps} מכות · ${boxingSnap.defeats} אויבים · +${xp} XP`
+      : `✓ ${reps} punches · ${boxingSnap.defeats} KOs · +${xp} XP`;
+  } else {
+    msg = isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`;
+  }
+  showToast(msg);
   navigate('hub');
 }
 
@@ -6817,6 +6963,160 @@ function pushupTick(landmarks) {
   return false;
 }
 
+/* ── Boxing config ───────────────────────────────────
+   Distances are 2D normalized (landmark coords are 0..1 in frame
+   space). A jab from a typical phone-distance away puts the wrist
+   ~0.30-0.40 from the shoulder; guarded hand sits ~0.10-0.15. */
+const PUNCH_EXTEND_DIST     = 0.28;
+const PUNCH_RETRACT_DIST    = 0.18;
+const PUNCH_REFRACTORY_MS   = 220;
+const BOXING_DMG_MIN        = 5;
+const BOXING_DMG_MAX        = 15;
+const BOXING_ENEMY_HP       = 100;
+const BOXING_ENEMY_KILL_XP  = 25;     // bonus banked on defeat (applied at Finish)
+const BOXING_PUNCH_XP       = 1;      // per-punch xp (also banked)
+const BOXING_EMOJIS = ['😈','👹','💀','🤖','👺','🐉','🦖'];
+
+/** Punch detector — per-arm idle/extended state machine, returns the
+ *  array of sides ('left'/'right') that fired a punch this frame. */
+function boxingTick(landmarks) {
+  // 11 L-shoulder, 12 R-shoulder, 15 L-wrist, 16 R-wrist
+  const lS = landmarks[11], rS = landmarks[12];
+  const lW = landmarks[15], rW = landmarks[16];
+  if (!lS || !rS || !lW || !rW) return [];
+
+  const fired = [];
+  const sides = [['left',  lS, lW], ['right', rS, rW]];
+  const now   = performance.now();
+  for (const [side, sh, wr] of sides) {
+    // Confidence gate — don't transition on noisy frames, but don't
+    // reset the arm's state either.
+    if (sh.visibility < 0.5 || wr.visibility < 0.5) continue;
+    const dx = wr.x - sh.x, dy = wr.y - sh.y;
+    const dist = Math.hypot(dx, dy);
+    const arm = _pose.boxing.arms[side];
+
+    if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
+      if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
+        arm.state       = 'extended';
+        arm.lastPunchAt = now;
+        fired.push(side);
+      }
+    } else if (arm.state === 'extended' && dist < PUNCH_RETRACT_DIST) {
+      arm.state = 'guard';
+    }
+  }
+  return fired;
+}
+
+/** Apply game logic for each punch fired this frame: damage, defeat,
+ *  XP banking. Returns the side that triggered the most recent hit
+ *  so callers can paint the visual flash. */
+function applyPunches(sides) {
+  if (!sides || !sides.length) return null;
+  const b = _pose.boxing;
+  for (const side of sides) {
+    const dmg = BOXING_DMG_MIN + Math.floor(Math.random() * (BOXING_DMG_MAX - BOXING_DMG_MIN + 1));
+    b.enemyHp = Math.max(0, b.enemyHp - dmg);
+    b.totalDamage += dmg;
+    b.pendingXp   += BOXING_PUNCH_XP;
+    _pose.reps++;
+    if (b.enemyHp <= 0) {
+      b.defeats++;
+      b.pendingXp += BOXING_ENEMY_KILL_XP;
+      // Respawn next enemy (cycles through the pool, scaling HP slightly).
+      b.enemyEmoji = BOXING_EMOJIS[b.defeats % BOXING_EMOJIS.length];
+      b.enemyMaxHp = BOXING_ENEMY_HP + b.defeats * 25;
+      b.enemyHp    = b.enemyMaxHp;
+    }
+  }
+  return sides[sides.length - 1];
+}
+
+/** Single shared AudioContext for hit sounds. iOS Safari needs it
+ *  resumed from a user gesture; startWorkout (camera permission tap)
+ *  satisfies that, so by the time the first punch lands we're good. */
+let _hitAudioCtx = null;
+function getHitAudioCtx() {
+  if (!_hitAudioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    _hitAudioCtx = new AC();
+  }
+  if (_hitAudioCtx.state === 'suspended') {
+    _hitAudioCtx.resume().catch(() => {});
+  }
+  return _hitAudioCtx;
+}
+
+/** Synthesize a percussive "punch" sound: a fast-decaying sine sweep
+ *  (low thud) mixed with a filtered noise burst (smack). All in-process
+ *  via Web Audio API — no asset files, no <audio> element, so the
+ *  existing CSP (media-src 'self' blob: mediastream:) is irrelevant. */
+function playPunchSound() {
+  const ctx = getHitAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+
+  // Thud: 150Hz → 40Hz exponential drop in 80ms.
+  const osc  = ctx.createOscillator();
+  const oscG = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(150, t0);
+  osc.frequency.exponentialRampToValueAtTime(40, t0 + 0.08);
+  oscG.gain.setValueAtTime(0.45, t0);
+  oscG.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+  osc.connect(oscG).connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + 0.18);
+
+  // Smack: 50ms of low-passed white noise, sharp attack + decay.
+  const len  = Math.floor(ctx.sampleRate * 0.06);
+  const buf  = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+  const flt = ctx.createBiquadFilter();
+  flt.type = 'lowpass';
+  flt.frequency.value = 1800;
+  const noiseG = ctx.createGain();
+  noiseG.gain.setValueAtTime(0.35, t0);
+  noiseG.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+  noise.connect(flt).connect(noiseG).connect(ctx.destination);
+  noise.start(t0);
+}
+
+/** Visual hit flash — toggles a CSS class on the overlay, with the side
+ *  encoded in data-side so the gradient comes from the correct edge. */
+function flashHitEffect(side) {
+  const el = document.getElementById('punchFlash');
+  if (!el) return;
+  el.dataset.side = side || 'left';
+  el.classList.remove('is-active');
+  // Force reflow so the animation re-triggers when fired rapidly.
+  void el.offsetWidth;
+  el.classList.add('is-active');
+  // Also wiggle the enemy.
+  const enemy = document.getElementById('boxingEnemy');
+  if (enemy) {
+    enemy.classList.remove('is-hit');
+    void enemy.offsetWidth;
+    enemy.classList.add('is-hit');
+  }
+}
+
+function renderBoxingHud() {
+  if (!_pose.boxing) return;
+  const cur = document.getElementById('boxingHpCur');
+  const max = document.getElementById('boxingHpMax');
+  const fill = document.getElementById('boxingHpFill');
+  const enemy = document.getElementById('boxingEnemy');
+  if (cur)   cur.textContent  = _pose.boxing.enemyHp;
+  if (max)   max.textContent  = _pose.boxing.enemyMaxHp;
+  if (fill)  fill.style.width = (_pose.boxing.enemyHp / _pose.boxing.enemyMaxHp * 100) + '%';
+  if (enemy) enemy.textContent = _pose.boxing.enemyEmoji;
+}
+
 /** Render loop. rAF for video draw + DOM updates; pose inference paced
  *  to PU_INFER_FPS via a setInterval so we don't melt the phone. */
 function runPoseLoop() {
@@ -6845,6 +7145,19 @@ function runPoseLoop() {
         if (_pose.exercise === 'pushup') {
           if (pushupTick(lms) && navigator.vibrate) {
             try { navigator.vibrate(40); } catch (_) {}
+          }
+        } else if (_pose.exercise === 'boxing') {
+          const fired = boxingTick(lms);
+          if (fired.length) {
+            const lastSide = applyPunches(fired);
+            playPunchSound();
+            flashHitEffect(lastSide);
+            if (navigator.vibrate) {
+              try { navigator.vibrate(25); } catch (_) {}
+            }
+            // Mirror lastCountAt so the FPS / counter render in the render
+            // loop picks up the change immediately on the next frame.
+            _pose.lastCountAt = performance.now();
           }
         }
       }
@@ -6887,6 +7200,10 @@ function runPoseLoop() {
     if (_pose.reps !== lastReps) {
       lastReps = _pose.reps;
       if (cnt) cnt.textContent = lastReps;
+      // Boxing HUD repaints alongside the punch counter so the HP bar
+      // and enemy emoji track the latest hit. Cheap — three textContent
+      // writes + a width assignment, gated on actual change.
+      if (_pose.exercise === 'boxing') renderBoxingHud();
     }
     if (_pose.state !== lastState) {
       lastState = _pose.state;
@@ -8342,6 +8659,10 @@ function resetPerUserRuntime() {
   _pose.downFrames  = 0;
   _pose.upFrames    = 0;
   _pose.lastCountAt = 0;
+  _pose.boxing      = null;
+  // Audio context too — different user = different gesture chain on
+  // iOS. Creating a fresh one on next punch is cheap (~ms).
+  if (_hitAudioCtx) { try { _hitAudioCtx.close(); } catch (_) {} _hitAudioCtx = null; }
 
   // In-memory mirrors of localStorage. After this returns, callers
   // either wipe localStorage (doSignOut) or pull fresh data from
