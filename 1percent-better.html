@@ -370,6 +370,20 @@
 
   /* ── FEED ────────────────────────────────────────── */
   .feed-header { padding: 20px 20px 16px; }
+
+  /* Shared back-arrow for every sub-screen that lacks an in-page back.
+     RTL-aware via transform: scaleX(-1) so "←" reads as "→" in Hebrew
+     without needing a separate glyph or pseudo-element trick. */
+  .screen-back {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted2);
+    font-size: 22px; line-height: 1;
+    padding: 6px 10px; margin: 0;
+    align-self: flex-start;
+    display: inline-block;
+  }
+  .screen-back:hover { color: var(--text); }
+  [dir="rtl"] .screen-back { transform: scaleX(-1); }
   .feed-title { font-family: var(--font-head); font-size: 34px; letter-spacing: .04em; }
   .feed-sub { font-size: 13px; color: var(--muted2); margin-top: 4px; }
 
@@ -2646,6 +2660,7 @@
   <!-- ══════════════ FEED SCREEN ══════════════ -->
   <div class="screen" id="screen-feed">
     <div class="feed-header">
+      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="feed-title" id="lbl-feed-title">Community Feed</div>
       <div class="feed-sub" id="lbl-feed-sub">Real proof. Real progress.</div>
     </div>
@@ -2735,6 +2750,7 @@
   <div class="screen" id="screen-history">
 
     <div class="hist-header">
+      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="hist-title" id="lbl-hist-title">History</div>
       <div class="hist-sub" id="lbl-hist-sub">Your progress over time</div>
     </div>
@@ -2798,6 +2814,7 @@
   <!-- ══════════════ LEARNING PATHS LIST ══════════════ -->
   <div class="screen" id="screen-paths">
     <div class="lp-header">
+      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="lp-title" id="lbl-lp-title">Learning Paths</div>
       <div class="lp-sub" id="lbl-lp-sub">30-day programs. One task a day.</div>
     </div>
@@ -2847,6 +2864,7 @@
   <!-- ══════════════ SETTINGS SCREEN ══════════════ -->
   <div class="screen" id="screen-settings">
     <div class="top-header">
+      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub" style="margin-right:8px;">←</button>
       <div class="logo">1%<span>Better</span></div>
       <div style="font-family:var(--font-head);font-size:13px;letter-spacing:.1em;color:var(--muted2);align-self:center;" id="settingsLangLabel">EN</div>
     </div>
@@ -6736,35 +6754,72 @@ function angleDeg(a, b, c) {
 
 /** Lazy-load MediaPipe Tasks Vision from CDN. Resolves to a configured
  *  PoseLandmarker. Cached so the second workout is instant. */
+/* Hard ceiling for model load. 30s is generous on 3G but still bounded
+   so the UI doesn't appear "stuck on loading" forever. If the user
+   reports a hang, the error path now names which phase failed so we
+   can diagnose from a console paste instead of guessing. */
+const POSE_LOAD_TIMEOUT_MS = 30000;
+
 async function loadPoseModel() {
   if (_pose.landmarker) return _pose.landmarker;
   if (_pose.loading)    return _pose.loading;
 
   const p = (async () => {
     const VER = '0.10.14';
+    console.info('[pose] phase 1/3: importing CDN bundle');
     const mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/vision_bundle.mjs`);
     const { PoseLandmarker, FilesetResolver } = mod;
+
+    console.info('[pose] phase 2/3: resolving WASM fileset');
     const vision = await FilesetResolver.forVisionTasks(
       `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`
     );
-    const lm = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO',
-      numPoses: 1,
-    });
+
+    console.info('[pose] phase 3/3: creating PoseLandmarker (downloads ~6MB model)');
+    let lm;
+    try {
+      lm = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'GPU',
+        },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+      });
+    } catch (gpuErr) {
+      // Some Android browsers report a GPU delegate available but fail
+      // to actually create the WebGL backend (driver bugs, low-end Mali
+      // GPUs, etc.). Retry on CPU before giving up so users on those
+      // devices still get a working — slower — workout.
+      console.warn('[pose] GPU delegate failed, retrying on CPU:', gpuErr);
+      lm = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'CPU',
+        },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+      });
+    }
+    console.info('[pose] ready');
     _pose.landmarker = lm;
     return lm;
   })();
-  // If the load rejects (network blip, model URL temporarily down, etc.)
-  // we MUST clear _pose.loading — otherwise every subsequent retry just
-  // re-awaits the same already-rejected promise and the user is locked
-  // out of the workout until full page reload.
-  p.catch(() => { if (_pose.loading === p) _pose.loading = null; });
-  _pose.loading = p;
-  return p;
+
+  // Race against a wall-clock timeout. Without this, a stalled WASM
+  // download just leaves the loading overlay up forever and the user
+  // has no recourse except reload.
+  const timeout = new Promise((_, rej) =>
+    setTimeout(() => rej(Object.assign(new Error('pose-load-timeout'),
+                                       { phase: 'timeout' })), POSE_LOAD_TIMEOUT_MS)
+  );
+  const raced = Promise.race([p, timeout]);
+
+  // Clear _pose.loading on rejection so a retry doesn't re-await the
+  // already-rejected promise and lock the user out until full reload.
+  raced.catch(() => { if (_pose.loading === p) _pose.loading = null; });
+  _pose.loading = p;       // the underlying loader (so a slow load can finish on retry)
+  return raced;            // but callers wait on the raced version
 }
 
 async function startWorkout(exercise = 'pushup') {
@@ -6822,13 +6877,23 @@ async function startWorkout(exercise = 'pushup') {
     _pose.active = true;
     runPoseLoop();
   } catch (e) {
-    console.warn('[workout] start failed:', e);
+    console.error('[workout] start failed:', e);
     stopWorkoutInternals();
     if (errEl) {
       errEl.hidden = false;
-      errEl.textContent = (e && e.name === 'NotAllowedError')
-        ? 'Camera permission denied. Enable it in browser settings and try again.'
-        : 'Could not start the camera. ' + (e && e.message || '');
+      let msg;
+      if (e && e.name === 'NotAllowedError') {
+        msg = 'Camera permission denied. Enable it in browser settings and try again.';
+      } else if (e && e.name === 'NotFoundError') {
+        msg = 'No camera detected on this device.';
+      } else if (e && (e.message === 'pose-load-timeout' || e.phase === 'timeout')) {
+        msg = 'Pose model took too long to load. Check your connection and try again.';
+      } else if (e && /import|cdn|module/i.test(String(e.message))) {
+        msg = 'Could not load the pose-detection library. Possible CSP / network block — see console.';
+      } else {
+        msg = 'Could not start the workout. ' + (e && e.message || '');
+      }
+      errEl.textContent = msg;
     }
     if (loadEl) loadEl.hidden = true;
   }
@@ -8433,6 +8498,18 @@ function isFirebaseConfigured() {
     fbDB      = firebase.firestore();
     fbStorage = firebase.storage();
 
+    // One-line init banner so config issues are obvious from the console.
+    // If the user pastes this back to us we can verify they're hitting
+    // the right project + bucket without a screenshot.
+    console.info('[1pb] Firebase initialized', {
+      projectId:     FIREBASE_CONFIG.projectId,
+      authDomain:    FIREBASE_CONFIG.authDomain,
+      storageBucket: FIREBASE_CONFIG.storageBucket,
+      authReady:     !!fbAuth,
+      dbReady:       !!fbDB,
+      storageReady:  !!fbStorage,
+    });
+
     // Offline persistence.
     // NOTE: enablePersistence() is deprecated in Firebase v10 (the modular
     // SDK replaces it with `persistentLocalCache` on initializeFirestore).
@@ -8833,18 +8910,61 @@ async function loadPostsFromFirestore() {
  * Returns the download URL, or null if offline/unconfigured.
  */
 async function uploadProofPhoto(file) {
-  if (!fbStorage || !currentUser || !file) return null;
+  if (!fbStorage)   { console.warn('[Storage] no fbStorage instance');   return null; }
+  if (!currentUser) { console.warn('[Storage] no currentUser — sign-in required'); return null; }
+  if (!file)        { console.warn('[Storage] no file given');           return null; }
+
+  const ext  = extFromMime(file.type);
+  const path = `proofs/${currentUser.uid}/${Date.now()}.${ext}`;
+  console.info('[Storage] uploading', { path, size: file.size, type: file.type });
+
   try {
-    const ext  = extFromMime(file.type);
-    const path = `proofs/${currentUser.uid}/${Date.now()}.${ext}`;
     const ref  = fbStorage.ref(path);
     // Pass explicit metadata: Firebase otherwise guesses content-type
     // from the path extension, which fails for files iOS hands us with
     // no extension on the original name.
     const snap = await ref.put(file, { contentType: file.type || `image/${ext}` });
-    return await snap.ref.getDownloadURL();
-  } catch(e) {
-    console.warn('[Storage] Upload failed:', e);
+    const url  = await snap.ref.getDownloadURL();
+    console.info('[Storage] upload OK');
+    return url;
+  } catch (e) {
+    // Surface the actual Firebase error code in BOTH the console AND a
+    // user-facing toast. The previous version swallowed all errors as
+    // a generic "upload failed" which made remote diagnosis impossible.
+    console.error('[Storage] Upload failed', {
+      code:        e && e.code,
+      message:     e && e.message,
+      serverResp:  e && e.serverResponse,
+      raw:         e,
+    });
+    const isHe = currentLang === 'he';
+    let toast;
+    switch (e && e.code) {
+      case 'storage/unauthenticated':
+        toast = isHe ? 'נדרשת התחברות מחדש' : 'Sign in again to upload'; break;
+      case 'storage/unauthorized':
+        toast = isHe ? 'אין הרשאה ל-Storage — בדוק את storage.rules' : 'Storage permission denied — check storage.rules'; break;
+      case 'storage/canceled':
+        toast = isHe ? 'ההעלאה בוטלה' : 'Upload canceled'; break;
+      case 'storage/quota-exceeded':
+        toast = isHe ? 'אחסון מלא בפרויקט' : 'Storage quota full'; break;
+      case 'storage/retry-limit-exceeded':
+        toast = isHe ? 'הרשת איטית מדי — נסה שוב' : 'Network too slow — retry'; break;
+      case 'storage/invalid-argument':
+      case 'storage/no-default-bucket':
+        toast = isHe ? 'תצורת Storage שגויה — בדוק את firebaseConfig' : 'Storage misconfigured — check firebaseConfig'; break;
+      default:
+        // No code OR a low-level network failure (CORS, DNS, offline).
+        // This is exactly the path users saw as "No server connection".
+        if (!navigator.onLine) {
+          toast = isHe ? 'אין חיבור לאינטרנט' : 'No internet connection';
+        } else {
+          toast = isHe
+            ? 'העלאה נכשלה — ייתכן CORS לא מוגדר. פתח DevTools→Console.'
+            : 'Upload failed — likely CORS or network. Check DevTools console for details.';
+        }
+    }
+    if (typeof showToast === 'function') showToast('⚠ ' + toast);
     return null;
   }
 }
