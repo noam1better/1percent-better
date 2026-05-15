@@ -14,6 +14,21 @@ service firebase.storage {
       allow update: if false; // no overwriting
     }
 
+    // ── PROFILE AVATARS ─────────────────────────────────
+    // Any signed-in user can read avatars (so they appear in the feed
+    // and on profile pages). Only the owner can write theirs.
+    // Updates ARE allowed here (unlike proofs) because the file path
+    // is stable (avatar.jpg) and getting overwritten is the expected
+    // behavior when the user changes their photo.
+    match /avatars/{uid}/{fileName} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 2 * 1024 * 1024     // max 2MB after downscale
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     // ── DENY EVERYTHING ELSE ───────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;

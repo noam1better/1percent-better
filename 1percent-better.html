@@ -471,11 +471,50 @@
     display: flex; flex-direction: column; align-items: center; gap: 12px;
   }
   .profile-avatar {
+    position: relative;
     width: 80px; height: 80px; border-radius: 50%;
     background: linear-gradient(135deg, var(--green), var(--blue));
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-head); font-size: 36px; color: #000;
     border: 3px solid rgba(0,255,135,.3);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .profile-avatar > img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Edit-hint chip: tiny pencil bottom-right so users know the avatar
+     is interactive. Hidden via [hidden] while an upload is in flight,
+     replaced by the spinner. */
+  .avatar-edit-hint {
+    position: absolute;
+    right: -2px; bottom: -2px;
+    width: 26px; height: 26px;
+    background: var(--bg); color: var(--green);
+    border: 2px solid var(--bg2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; line-height: 1;
+    pointer-events: none;
+  }
+  .avatar-edit-hint[hidden] { display: none; }
+  /* Loading spinner overlay during avatar upload. */
+  .avatar-loading {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.55);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar-loading[hidden] { display: none; }
+  .avatar-loading::after {
+    content: '';
+    width: 22px; height: 22px;
+    border: 3px solid rgba(255,255,255,.2);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: coachSpin .8s linear infinite;
   }
   .profile-name { font-family: var(--font-head); font-size: 28px; letter-spacing: .04em; }
   .profile-handle { font-size: 13px; color: var(--muted2); }
@@ -2694,7 +2733,11 @@
       <div style="width:38px;"></div>
     </div>
     <div class="profile-hero">
-      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div class="profile-avatar" id="profileAvatar" onclick="pickAndUploadAvatar()" role="button" tabindex="0" aria-label="Change profile photo">
+        <span id="profileAvatarInitial">?</span>
+        <span class="avatar-edit-hint" id="profileAvatarEdit">✎</span>
+        <span class="avatar-loading" id="profileAvatarLoading" hidden></span>
+      </div>
       <div class="profile-name" id="profileName">YOUR NAME</div>
       <div class="profile-handle" id="profileHandle">@user</div>
     </div>
@@ -4510,8 +4553,7 @@ function init() {
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
   if (_savedName) {
-    const _initial = _savedName.charAt(0).toUpperCase();
-    document.querySelectorAll('.avatar,.profile-avatar,#hubAvatar,#profileAvatar').forEach(e=>e.textContent=_initial);
+    paintAvatars();
     const _pn=document.getElementById('profileName'); if(_pn) _pn.textContent=_savedName.toUpperCase();
     const _ph=document.getElementById('profileHandle'); if(_ph) _ph.textContent='@'+_savedName.toLowerCase().replace(/\s+/g,'');
   }
@@ -5233,9 +5275,9 @@ function saveProfile() {
   document.getElementById('profileStreak').textContent = streak;
   document.querySelectorAll('.profile-name').forEach(el => el.textContent = name.toUpperCase());
 
-  // Update avatar initials
-  const initial = name.charAt(0).toUpperCase();
-  document.querySelectorAll('.avatar, .profile-avatar').forEach(el => el.textContent = initial);
+  // Update avatar — paintAvatars reads the (just-saved) name from
+  // localStorage and renders the photo if set, falling back to initial.
+  paintAvatars();
 
   // Update streak state
   state.streak.current = streak;
@@ -5450,9 +5492,7 @@ function renderSavedLogs() {
   // Apply saved name + avatar
   const savedName = localStorage.getItem('1pb_name');
   if (savedName) {
-    const initial = savedName.charAt(0).toUpperCase();
-    document.querySelectorAll('.avatar, .profile-avatar, #hubAvatar, #profileAvatar')
-      .forEach(el => el.textContent = initial);
+    paintAvatars();
     const pn = document.getElementById('profileName');
     if (pn) pn.textContent = savedName.toUpperCase();
     const ph = document.getElementById('profileHandle');
@@ -5998,10 +6038,9 @@ function finishOnboarding() {
   const chip = document.querySelector(`.lang-chip[data-lang="${obLang}"]`);
   if (chip) setLang(obLang, chip);
 
-  // Apply name
-  const initial = name.charAt(0).toUpperCase();
-  document.querySelectorAll('.avatar, .profile-avatar, #hubAvatar, #profileAvatar')
-    .forEach(el => el.textContent = initial);
+  // Apply name (paintAvatars reads name from localStorage, which the
+  // caller has already saved via setItem above).
+  paintAvatars();
   const pn  = document.getElementById('profileName');
   if (pn) pn.textContent = name.toUpperCase();
   const ph  = document.getElementById('profileHandle');
@@ -8712,7 +8751,7 @@ async function doForgotPassword() {
 const PER_USER_KEYS = [
   '1pb_onboarded', '1pb_name', '1pb_xp', '1pb_streak', '1pb_habits',
   '1pb_activity', '1pb_posts', '1pb_uid', '1pb_iron_will',
-  '1pb_morning_routine', '1pb_workouts',
+  '1pb_morning_routine', '1pb_workouts', '1pb_photo',
 ];
 // Prefixes for per-day keys (e.g. 1pb_qtasks_2026-05-11, 1pb_dc_2026-05-11).
 // These accumulate one entry per day and would otherwise leak across users
@@ -8863,6 +8902,16 @@ async function loadUserFromFirestore(uid) {
       if (d.ironWill)       localStorage.setItem(IRON_WILL_KEY,        JSON.stringify(d.ironWill));
       if (d.morningRoutine) localStorage.setItem(MORNING_ROUTINE_KEY,  JSON.stringify(d.morningRoutine));
       if (d.workouts)       localStorage.setItem('1pb_workouts',       JSON.stringify(d.workouts));
+      if (d.photoURL)       localStorage.setItem('1pb_photo',          d.photoURL);
+    }
+    // Firebase Auth has its OWN photoURL on currentUser. If Firestore
+    // didn't have one but Auth does (e.g. Google sign-in profile pic),
+    // fall back to that — and write it back to Firestore so future
+    // loads are consistent.
+    if (!localStorage.getItem('1pb_photo') && currentUser && currentUser.photoURL) {
+      localStorage.setItem('1pb_photo', currentUser.photoURL);
+      try { await fbDB.collection('users').doc(uid)
+        .set({ photoURL: currentUser.photoURL }, { merge: true }); } catch (_) {}
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
@@ -9001,6 +9050,173 @@ async function uploadProofPhoto(file) {
     if (typeof showToast === 'function') showToast('⚠ ' + toast);
     return null;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PROFILE PHOTO (avatar) upload
+   - Picker → 512px downscale → Storage at avatars/{uid}/avatar.jpg
+   - Persists to Firebase Auth (updateProfile) + Firestore + localStorage
+   - paintAvatars() is the single source of truth for any avatar in the
+     DOM, switching between an <img> and the initial-letter fallback.
+═══════════════════════════════════════════════════════ */
+
+/** Render every avatar element (hub + profile + community feed entries)
+ *  based on the current localStorage state. Photo URL takes precedence
+ *  over the initial-letter fallback. */
+function paintAvatars() {
+  const photoURL = localStorage.getItem('1pb_photo');
+  const name     = localStorage.getItem('1pb_name') || '';
+  const initial  = (name.charAt(0) || '?').toUpperCase();
+  // Only accept https URLs — defensive against any non-Firebase value
+  // slipping in (e.g. legacy localStorage on a dev machine).
+  const useUrl = photoURL && /^https:\/\/[^"\s]+$/i.test(photoURL);
+
+  // The profile avatar has a rich structure (initial span, edit hint,
+  // loading spinner) we must NOT clobber. Toggle a child <img> instead.
+  const profileAv = document.getElementById('profileAvatar');
+  if (profileAv) {
+    const initialEl = document.getElementById('profileAvatarInitial');
+    let img = profileAv.querySelector('img');
+    if (useUrl) {
+      if (!img) {
+        img = document.createElement('img');
+        img.alt = '';
+        profileAv.insertBefore(img, profileAv.firstChild);
+      }
+      img.src = photoURL;
+      if (initialEl) initialEl.hidden = true;
+    } else {
+      if (img) img.remove();
+      if (initialEl) { initialEl.hidden = false; initialEl.textContent = initial; }
+    }
+  }
+
+  // Other avatars (hub avatar + any .avatar in dropdowns/quick-actions):
+  // simple — clear contents, append img OR set text.
+  document.querySelectorAll('.avatar, #hubAvatar').forEach(el => {
+    if (el === profileAv || el.id === 'profileAvatar') return;
+    el.innerHTML = '';
+    if (useUrl) {
+      const img = document.createElement('img');
+      img.src = photoURL;
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;';
+      el.appendChild(img);
+    } else {
+      el.textContent = initial;
+    }
+  });
+}
+
+async function uploadAvatar(file) {
+  if (!fbStorage)   { console.warn('[avatar] no fbStorage');             return null; }
+  if (!currentUser) { console.warn('[avatar] sign-in required');         return null; }
+  if (!file)        { console.warn('[avatar] no file given');            return null; }
+
+  // Downscale aggressively — 512px is plenty for the largest avatar
+  // surface (80px @ 3x DPR = 240px actual). Smaller = faster upload +
+  // stays under the 2MB rule cap even for noisy PNGs.
+  const compact = await downscaleImage(file, 512, 0.85);
+  const path = `avatars/${currentUser.uid}/avatar.jpg`;
+  console.info('[avatar] uploading', { path, size: compact.size, type: compact.type });
+
+  try {
+    const ref  = fbStorage.ref(path);
+    const snap = await ref.put(compact, { contentType: 'image/jpeg' });
+    const url  = await snap.ref.getDownloadURL();
+    console.info('[avatar] upload OK');
+    return url;
+  } catch (e) {
+    // Same error-code mapping pattern as uploadProofPhoto so the user
+    // gets a useful toast instead of "No server connection".
+    console.error('[avatar] Upload failed', {
+      code: e && e.code, message: e && e.message,
+      serverResp: e && e.serverResponse, raw: e,
+    });
+    const isHe = currentLang === 'he';
+    let toast;
+    switch (e && e.code) {
+      case 'storage/unauthenticated':
+        toast = isHe ? 'נדרשת התחברות מחדש' : 'Sign in again to upload'; break;
+      case 'storage/unauthorized':
+        toast = isHe ? 'אין הרשאה — בדוק את storage.rules' : 'Permission denied — check storage.rules'; break;
+      case 'storage/canceled':
+        toast = isHe ? 'ההעלאה בוטלה' : 'Upload canceled'; break;
+      case 'storage/quota-exceeded':
+        toast = isHe ? 'אחסון מלא בפרויקט' : 'Storage quota full'; break;
+      case 'storage/retry-limit-exceeded':
+        toast = isHe ? 'הרשת איטית מדי — נסה שוב' : 'Network too slow — retry'; break;
+      case 'storage/invalid-argument':
+      case 'storage/no-default-bucket':
+        toast = isHe ? 'תצורת Storage שגויה' : 'Storage misconfigured — check firebaseConfig'; break;
+      default:
+        if (!navigator.onLine) {
+          toast = isHe ? 'אין חיבור לאינטרנט' : 'No internet connection';
+        } else {
+          toast = isHe
+            ? 'העלאה נכשלה — ייתכן CORS לא מוגדר על הבאקט'
+            : 'Upload failed — likely CORS or network. See console.';
+        }
+    }
+    if (typeof showToast === 'function') showToast('⚠ ' + toast);
+    return null;
+  }
+}
+
+/** Apply a freshly-uploaded URL everywhere it matters: Firebase Auth
+ *  profile (so other Firebase features see it), Firestore user doc (so
+ *  it survives sign-in on another device), localStorage (so the next
+ *  paintAvatars() call sees it), and the DOM (immediate UI update). */
+async function setUserAvatar(url) {
+  if (currentUser && currentUser.updateProfile) {
+    try { await currentUser.updateProfile({ photoURL: url }); }
+    catch (e) { console.warn('[avatar] updateProfile failed', e); }
+  }
+  if (typeof syncUserToFirestore === 'function' &&
+      typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ photoURL: url });
+  }
+  if (url) localStorage.setItem('1pb_photo', url);
+  else     localStorage.removeItem('1pb_photo');
+  paintAvatars();
+}
+
+/** Open a file picker; on selection, run the upload + persist flow. */
+function pickAndUploadAvatar() {
+  if (!currentUser || !fbStorage) {
+    const isHe = currentLang === 'he';
+    showToast(isHe ? 'התחבר כדי להעלות תמונה' : 'Sign in to upload a photo');
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    // Reject HEIC up front (same reasoning as proof upload).
+    if (typeof isHeic === 'function' && isHeic(file)) {
+      const isHe = currentLang === 'he';
+      showToast(isHe
+        ? '⚠ פורמט HEIC לא נתמך — שנה ב-iOS ל-Most Compatible'
+        : '⚠ HEIC not supported. Switch iOS Camera Formats to "Most Compatible".');
+      return;
+    }
+
+    const spinner = document.getElementById('profileAvatarLoading');
+    const hint    = document.getElementById('profileAvatarEdit');
+    if (spinner) spinner.hidden = false;
+    if (hint)    hint.hidden    = true;
+
+    const url = await uploadAvatar(file);
+    if (url) await setUserAvatar(url);
+
+    if (spinner) spinner.hidden = true;
+    if (hint)    hint.hidden    = false;
+  };
+  input.click();
 }
 
 /* ═══════════════════════════════════════════════════════
