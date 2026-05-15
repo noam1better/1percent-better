@@ -2056,7 +2056,9 @@
     color: #fff; font-size: 22px; line-height: 1;
     cursor: pointer;
     backdrop-filter: blur(6px);
+    display: inline-flex; align-items: center; justify-content: center;
   }
+  [dir="rtl"] .workout-exit { transform: scaleX(-1); }
   .workout-title {
     font-family: 'Bebas Neue', system-ui, sans-serif;
     font-size: 18px; letter-spacing: .14em;
@@ -2627,7 +2629,7 @@
     <video id="poseVideo" class="pose-video" playsinline muted autoplay></video>
     <canvas id="poseCanvas" class="pose-canvas"></canvas>
     <div class="workout-topbar">
-      <button class="workout-exit" onclick="exitWorkout()" aria-label="Exit workout">×</button>
+      <button class="workout-exit" onclick="exitWorkout()" aria-label="Back to Hub">←</button>
       <div class="workout-title" id="workoutTitle">PUSH-UPS</div>
       <div class="workout-fps" id="workoutFps"></div>
     </div>
@@ -6823,62 +6825,92 @@ async function loadPoseModel() {
 }
 
 async function startWorkout(exercise = 'pushup') {
-  navigate('workout');
-  const errEl  = document.getElementById('workoutError');
-  const loadEl = document.getElementById('workoutLoading');
-  const loadTxt = document.getElementById('workoutLoadingTxt');
-  const cntEl  = document.getElementById('workoutCount');
-  const stEl   = document.getElementById('workoutState');
-  if (errEl)  errEl.hidden  = true;
-  if (loadEl) loadEl.hidden = false;
-  if (cntEl)  cntEl.textContent = '0';
-  if (stEl)   { stEl.textContent = 'READY'; stEl.className = 'workout-state'; }
-
-  // Reset state machine.
-  _pose.exercise    = exercise;
-  _pose.reps        = 0;
-  _pose.state       = 'ready';
-  _pose.downFrames  = 0;
-  _pose.upFrames    = 0;
-  _pose.lastCountAt = 0;
-  _pose.startedAt   = Date.now();
-  _pose.boxing      = (exercise === 'boxing') ? makeBoxingState() : null;
-
-  // UI mode — title, boxing HUD visibility, initial state pill.
-  const titleEl = document.getElementById('workoutTitle');
-  const hudEl   = document.getElementById('boxingHud');
-  if (titleEl) titleEl.textContent = (exercise === 'boxing') ? 'BOXING' : 'PUSH-UPS';
-  if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
-  if (stEl)    stEl.textContent    = (exercise === 'boxing') ? 'GUARD' : 'READY';
-  if (exercise === 'boxing') renderBoxingHud();
-
+  // Wrap the whole body in a top-level try/catch so any error — even
+  // one we didn't anticipate — gets a full stack dump to the console
+  // and a user-visible message instead of bubbling up as an unhandled
+  // rejection that just kills the workout silently.
+  let phase = 'init';
+  console.info('[workout] start', { exercise });
   try {
-    // 1) Request camera. Front camera so the user can see themselves.
+    navigate('workout');
+
+    // Look up every DOM ref once and guard EACH access. If the workout
+    // screen markup ever changes shape we surface that as a clear error
+    // ("workout DOM not found") instead of a TypeError deeper in.
+    phase = 'dom-lookup';
+    const errEl   = document.getElementById('workoutError');
+    const loadEl  = document.getElementById('workoutLoading');
+    const loadTxt = document.getElementById('workoutLoadingTxt');
+    const cntEl   = document.getElementById('workoutCount');
+    const stEl    = document.getElementById('workoutState');
+    const titleEl = document.getElementById('workoutTitle');
+    const hudEl   = document.getElementById('boxingHud');
+    const v       = document.getElementById('poseVideo');
+    const cv      = document.getElementById('poseCanvas');
+    if (!v || !cv) {
+      throw new Error('workout DOM not found — poseVideo or poseCanvas missing');
+    }
+
+    phase = 'reset-ui';
+    if (errEl)  errEl.hidden  = true;
+    if (loadEl) loadEl.hidden = false;
+    if (cntEl)  cntEl.textContent = '0';
+    if (stEl)   { stEl.textContent = 'READY'; stEl.className = 'workout-state'; }
+
+    phase = 'reset-state';
+    _pose.exercise    = exercise;
+    _pose.reps        = 0;
+    _pose.state       = 'ready';
+    _pose.downFrames  = 0;
+    _pose.upFrames    = 0;
+    _pose.lastCountAt = 0;
+    _pose.startedAt   = Date.now();
+    _pose.boxing      = (exercise === 'boxing') ? makeBoxingState() : null;
+
+    phase = 'ui-mode';
+    if (titleEl) titleEl.textContent = (exercise === 'boxing') ? 'BOXING' : 'PUSH-UPS';
+    if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
+    if (stEl)    stEl.textContent    = (exercise === 'boxing') ? 'GUARD' : 'READY';
+    if (exercise === 'boxing') renderBoxingHud();
+
+    phase = 'camera-request';
     if (loadTxt) loadTxt.textContent = 'Requesting camera…';
     _pose.stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false,
     });
-    const v = document.getElementById('poseVideo');
     v.srcObject = _pose.stream;
     await v.play();
 
-    // 2) Load model (lazy). Cached across sessions in the SW so subsequent
-    //    starts only pay network for the .task file once.
+    phase = 'model-load';
     if (loadTxt) loadTxt.textContent = 'Loading pose model…';
     await loadPoseModel();
 
-    // 3) Match canvas size to displayed video so overlay lands correctly.
-    const cv = document.getElementById('poseCanvas');
+    phase = 'canvas-size';
+    // Match canvas size to displayed video so overlay lands correctly.
     cv.width  = v.videoWidth  || 640;
     cv.height = v.videoHeight || 480;
 
+    phase = 'run';
     if (loadEl) loadEl.hidden = true;
     _pose.active = true;
     runPoseLoop();
+    console.info('[workout] running');
   } catch (e) {
-    console.error('[workout] start failed:', e);
-    stopWorkoutInternals();
+    // Full diagnostic dump. With the phase + stack + serialized error
+    // properties, a user paste-back tells us exactly which step failed
+    // and which property was undefined.
+    console.error('[workout] start failed at phase:', phase, {
+      error: e,
+      name:    e && e.name,
+      message: e && e.message,
+      stack:   e && e.stack,
+      props:   e ? Object.getOwnPropertyNames(e) : null,
+    });
+    if (typeof stopWorkoutInternals === 'function') stopWorkoutInternals();
+
+    const errEl  = document.getElementById('workoutError');
+    const loadEl = document.getElementById('workoutLoading');
     if (errEl) {
       errEl.hidden = false;
       let msg;
@@ -6890,8 +6922,10 @@ async function startWorkout(exercise = 'pushup') {
         msg = 'Pose model took too long to load. Check your connection and try again.';
       } else if (e && /import|cdn|module/i.test(String(e.message))) {
         msg = 'Could not load the pose-detection library. Possible CSP / network block — see console.';
+      } else if (e && /workout DOM not found/.test(String(e.message))) {
+        msg = 'Workout UI failed to mount. Try a hard refresh (clear site data + reload).';
       } else {
-        msg = 'Could not start the workout. ' + (e && e.message || '');
+        msg = `Could not start the workout (at "${phase}"). ${e && e.message || ''}`;
       }
       errEl.textContent = msg;
     }
