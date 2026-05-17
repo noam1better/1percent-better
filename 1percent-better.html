@@ -3353,6 +3353,12 @@
 -->
 
 <script>
+/* App version. Bumped on every code release so we can tell from
+   DevTools console which build is actually running on the device.
+   MUST stay in lockstep with VERSION in sw.js — same string. */
+const APP_VERSION = '1.1.0';
+console.info('[1pb] APP_VERSION =', APP_VERSION);
+
 /* ═══════════════════════════════════════════════════════
    1. DATA SCHEMA
 ═══════════════════════════════════════════════════════ */
@@ -8575,6 +8581,7 @@ function isFirebaseConfigured() {
     // If the user pastes this back to us we can verify they're hitting
     // the right project + bucket without a screenshot.
     console.info('[1pb] Firebase initialized', {
+      appVersion:    APP_VERSION,
       projectId:     FIREBASE_CONFIG.projectId,
       authDomain:    FIREBASE_CONFIG.authDomain,
       storageBucket: FIREBASE_CONFIG.storageBucket,

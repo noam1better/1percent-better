@@ -1,9 +1,13 @@
 // ═══════════════════════════════════════════════
-// 1% Better — Service Worker v1.0
+// 1% Better — Service Worker
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME      = '1pb-v2';        // bumped: cross-origin caching scheme changed
-const ASSET_CACHE     = '1pb-assets-v2';  // long-lived cache for MediaPipe model/wasm/js
+const VERSION         = '1.1.0';
+// Cache names include the VERSION so each version-bump invalidates the
+// previous cache wholesale. Without this, skipWaiting() still leaves
+// the old HTML/JS in the cache and stale content keeps being served.
+const CACHE_NAME      = `1pb-v${VERSION}`;
+const ASSET_CACHE     = `1pb-assets-v${VERSION}`;
 const OFFLINE_URL     = '/offline.html';
 
 // Cross-origin hosts whose responses we DO want to cache: the MediaPipe
@@ -46,13 +50,13 @@ self.addEventListener('install', event => {
 // cache and the long-lived asset cache so the MediaPipe model survives
 // across SW updates.
 self.addEventListener('activate', event => {
+  console.info('[SW] activating v' + VERSION);
   const keep = new Set([CACHE_NAME, ASSET_CACHE]);
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // ── FETCH ─────────────────────────────────────────
