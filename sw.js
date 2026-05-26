@@ -1,20 +1,10 @@
 // ═══════════════════════════════════════════════
-// 1% Better — Service Worker
+// 1% Better — Service Worker v1.0
 // ═══════════════════════════════════════════════
 
-const VERSION         = '1.1.0';
-// Cache names include the VERSION so each version-bump invalidates the
-// previous cache wholesale. Without this, skipWaiting() still leaves
-// the old HTML/JS in the cache and stale content keeps being served.
-const CACHE_NAME      = `1pb-v${VERSION}`;
-const ASSET_CACHE     = `1pb-assets-v${VERSION}`;
-const OFFLINE_URL     = '/offline.html';
-
-// Cross-origin hosts whose responses we DO want to cache: the MediaPipe
-// loader/wasm from jsDelivr and the pose-landmarker model from Google's
-// public bucket. Everything else (Firebase APIs, fonts, etc.) we skip so
-// we don't accidentally cache short-lived API responses.
-const CACHEABLE_CROSS_ORIGINS = [
+const CACHE_NAME = '1pb-v1.1.2-fix';
+const OFFLINE_URL = '/offline.html';
+const ALLOWED_CROSS_ORIGINS = [
   'cdn.jsdelivr.net',
   'storage.googleapis.com',
 ];
@@ -46,78 +36,46 @@ self.addEventListener('install', event => {
 });
 
 // ── ACTIVATE ─────────────────────────────────────
-// Delete old caches when a new SW takes over. Keep both the app shell
-// cache and the long-lived asset cache so the MediaPipe model survives
-// across SW updates.
+// Force-delete ALL caches on activation for clean deployment
 self.addEventListener('activate', event => {
-  console.info('[SW] activating v' + VERSION);
-  const keep = new Set([CACHE_NAME, ASSET_CACHE]);
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys().then(names => {
+      for (let name of names) caches.delete(name);
+    }).then(() => self.clients.claim())
   );
 });
 
 // ── FETCH ─────────────────────────────────────────
-// Strategy:
-//   - Same-origin GETs   → stale-while-revalidate against CACHE_NAME.
-//   - Whitelisted cross-origin (MediaPipe CDN + model bucket) → cache-first
-//     against ASSET_CACHE. These assets are content-addressed by version
-//     in the URL so they're safe to cache indefinitely; saves a ~6MB
-//     model re-download every time the user opens the workout screen.
-//   - Other cross-origin (Firebase APIs, fonts, analytics) → skip the SW
-//     entirely so we don't accidentally cache short-lived responses.
+// Strategy: Cache-first for app shell, network-first for API calls
 self.addEventListener('fetch', event => {
   const { request } = event;
-  if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isAllowedCrossOrigin = ALLOWED_CROSS_ORIGINS.includes(url.host);
 
-  if (url.origin !== self.location.origin) {
-    if (!CACHEABLE_CROSS_ORIGINS.includes(url.hostname)) return;
-    event.respondWith(
-      caches.open(ASSET_CACHE).then(cache =>
-        cache.match(request).then(hit => {
-          if (hit) return hit;
-          return fetch(request, { mode: 'cors', credentials: 'omit' })
-            .then(resp => {
-              // Cache only successful, non-opaque responses. Opaque
-              // (no-cors) responses can't be inspected and would also
-              // poison the cache if the origin later returned an error.
-              if (resp && resp.status === 200 && resp.type !== 'opaque') {
-                cache.put(request, resp.clone());
-              }
-              return resp;
-            })
-            .catch(() => Response.error());
-        })
-      )
-    );
-    return;
-  }
+  if (request.method !== 'GET') return;
+  if (!isSameOrigin && !isAllowedCrossOrigin) return;
 
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) {
-        // Serve from cache, refresh in background (stale-while-revalidate).
-        fetch(request).then(response => {
-          if (response && response.status === 200) {
+        const fetchPromise = fetch(request).then(response => {
+          if (response && (response.status === 200 || response.type === 'opaque')) {
             caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
           }
+          return response;
         }).catch(() => {});
         return cached;
       }
 
       return fetch(request).then(response => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
+        if (!response) return response;
+        if (response.status === 200 || response.type === 'opaque') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         }
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         return response;
       }).catch(() => {
-        // Offline fallback — only for navigations; other request types
-        // should surface the network error so the page can react.
         if (request.mode === 'navigate') {
           return caches.match(OFFLINE_URL)
             .then(r => r || caches.match('/1percent-better.html'));
@@ -125,6 +83,22 @@ self.addEventListener('fetch', event => {
         return Response.error();
       });
     })
+  );
+});
+
+self.addEventListener('message', event => {
+  const data = event.data;
+  if (!data || data.type !== 'CACHE_URLS') return;
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(
+        data.urls.map(url =>
+          cache.add(url).catch(err =>
+            console.warn('[SW] cache-url failed for', url, err)
+          )
+        )
+      )
+    )
   );
 });
 
@@ -174,3 +148,18 @@ async function syncPendingPosts() {
   // Will read pending posts from IndexedDB and send to server
   console.log('[SW] Background sync: sync-posts');
 }
+// --- ACTIVATE: מנקה קאש ישן כדי שהתיקונים יופיעו מיד ---
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', cache);
+            return caches.delete(cache);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});

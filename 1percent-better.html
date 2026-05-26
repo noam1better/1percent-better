@@ -26,10 +26,12 @@
 <title>1% Better</title>
 
 <!-- Firebase SDK v9 compat -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -370,20 +372,6 @@
 
   /* ── FEED ────────────────────────────────────────── */
   .feed-header { padding: 20px 20px 16px; }
-
-  /* Shared back-arrow for every sub-screen that lacks an in-page back.
-     RTL-aware via transform: scaleX(-1) so "←" reads as "→" in Hebrew
-     without needing a separate glyph or pseudo-element trick. */
-  .screen-back {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted2);
-    font-size: 22px; line-height: 1;
-    padding: 6px 10px; margin: 0;
-    align-self: flex-start;
-    display: inline-block;
-  }
-  .screen-back:hover { color: var(--text); }
-  [dir="rtl"] .screen-back { transform: scaleX(-1); }
   .feed-title { font-family: var(--font-head); font-size: 34px; letter-spacing: .04em; }
   .feed-sub { font-size: 13px; color: var(--muted2); margin-top: 4px; }
 
@@ -471,50 +459,11 @@
     display: flex; flex-direction: column; align-items: center; gap: 12px;
   }
   .profile-avatar {
-    position: relative;
     width: 80px; height: 80px; border-radius: 50%;
     background: linear-gradient(135deg, var(--green), var(--blue));
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-head); font-size: 36px; color: #000;
     border: 3px solid rgba(0,255,135,.3);
-    cursor: pointer;
-    overflow: hidden;
-  }
-  .profile-avatar > img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  /* Edit-hint chip: tiny pencil bottom-right so users know the avatar
-     is interactive. Hidden via [hidden] while an upload is in flight,
-     replaced by the spinner. */
-  .avatar-edit-hint {
-    position: absolute;
-    right: -2px; bottom: -2px;
-    width: 26px; height: 26px;
-    background: var(--bg); color: var(--green);
-    border: 2px solid var(--bg2);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; line-height: 1;
-    pointer-events: none;
-  }
-  .avatar-edit-hint[hidden] { display: none; }
-  /* Loading spinner overlay during avatar upload. */
-  .avatar-loading {
-    position: absolute; inset: 0;
-    background: rgba(0,0,0,.55);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .avatar-loading[hidden] { display: none; }
-  .avatar-loading::after {
-    content: '';
-    width: 22px; height: 22px;
-    border: 3px solid rgba(255,255,255,.2);
-    border-top-color: var(--green);
-    border-radius: 50%;
-    animation: coachSpin .8s linear infinite;
   }
   .profile-name { font-family: var(--font-head); font-size: 28px; letter-spacing: .04em; }
   .profile-handle { font-size: 13px; color: var(--muted2); }
@@ -1957,77 +1906,98 @@
   .workout-cta:active { transform: scale(.98); }
   .workout-cta .cta-arrow { margin-left: auto; color: var(--green); }
   [dir="rtl"] .workout-cta .cta-arrow { margin-left: 0; margin-right: auto; }
-  /* Boxing variant — red accent so the two CTAs are visually distinct. */
-  .workout-cta-boxing { border-color: rgba(255,56,96,.32); }
-  .workout-cta-boxing:hover { border-color: rgba(255,56,96,.6); background: rgba(255,56,96,.04); }
-  .workout-cta-boxing .cta-arrow { color: #ff3860; }
 
-  /* ── BOXING HUD overlay ────────────────────────────
-     Sits above the camera under the topbar. Shown only while
-     _pose.exercise === 'boxing' (toggled in startWorkout). */
-  .boxing-hud {
-    position: absolute;
-    top: calc(56px + env(safe-area-inset-top, 0px));
-    left: 16px; right: 16px;
-    z-index: 4;
-    display: flex; align-items: center; gap: 12px;
-    pointer-events: none;
+  .boxing-cta {
+    margin: 0 20px 16px;
+    width: calc(100% - 40px);
+    padding: 14px 18px;
+    background: #ff3860;
+    color: #fff;
+    border-radius: 14px;
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    letter-spacing: .04em;
+    font-size: 17px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    border: 1px solid rgba(255,56,96,.35);
+    transition: transform .15s, background .2s, border-color .2s;
   }
-  .boxing-hud[hidden] { display: none; }
-  .boxing-enemy {
-    font-size: 40px; line-height: 1;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,.6));
-    transition: transform .12s;
+  .boxing-cta:hover { background: #ff4c7f; border-color: rgba(255,56,96,.55); }
+  .boxing-cta:active { transform: scale(.98); }
+  .boxing-cta .cta-arrow { margin-left: auto; color: #ffe4ec; }
+  [dir="rtl"] .boxing-cta .cta-arrow { margin-left: 0; margin-right: auto; }
+
+  .boxing-screen { padding-bottom: 100px; }
+  .boxing-panel {
+    margin: 20px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
   }
-  .boxing-enemy.is-hit { animation: enemyHit .25s; }
-  @keyframes enemyHit {
-    0%   { transform: scale(1)    rotate(0deg); }
-    30%  { transform: scale(1.25) rotate(-8deg); filter: drop-shadow(0 0 14px rgba(255,56,96,.8)); }
-    100% { transform: scale(1)    rotate(0deg); }
+  .boxing-title {
+    font-family: var(--font-head);
+    font-size: 28px;
+    letter-spacing: .04em;
+    margin-bottom: 18px;
   }
-  .boxing-hp-wrap {
-    position: relative; flex: 1; height: 22px;
-    background: rgba(0,0,0,.55);
-    border: 1px solid rgba(255,255,255,.18);
-    border-radius: 11px;
+  .boxing-hp-panel { display: grid; gap: 14px; }
+  .boxing-hp-row { display:flex; align-items:center; gap: 12px; }
+  .hp-card { flex: 1; }
+  .hp-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--muted2); margin-bottom: 8px;
+  }
+  .hp-bar {
+    width: 100%; height: 14px;
+    background: var(--bg3);
+    border-radius: 999px;
     overflow: hidden;
-    backdrop-filter: blur(4px);
+    border: 1px solid var(--border);
   }
-  .boxing-hp-fill {
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, #ff3860 0%, #ffb400 70%, #ff3860 100%);
-    transition: width .18s ease-out;
+  .hp-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #00ff87, #00b4ff);
+    transition: width .3s ease;
   }
-  .boxing-hp-text {
-    position: relative; line-height: 22px; text-align: center;
-    font-family: var(--font-mono, monospace);
-    font-size: 11px; color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  .hp-fill.enemy { background: linear-gradient(90deg, #ff3860, #ff7eb3); }
+  .hp-value {
+    font-size: 12px; color: var(--text); min-width: 46px;
+    text-align: right;
   }
+  .boxing-info {
+    margin: 18px 0 14px;
+    font-size: 14px; color: var(--muted2);
+    line-height: 1.6;
+  }
+  .boxing-hit-btn,
+  .boxing-rest-btn {
+    width: 100%; padding: 16px; border-radius: 14px;
+    font-size: 16px; font-weight: 700; letter-spacing: .04em;
+    transition: transform .15s, opacity .2s;
+  }
+  .boxing-hit-btn {
+    background: #ff3860; color: #fff;
+    border: 1px solid rgba(255,56,96,.35);
+    margin-bottom: 10px;
+  }
+  .boxing-rest-btn {
+    background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .boxing-hit-btn:active,
+  .boxing-rest-btn:active { transform: scale(.98); }
 
-  /* Full-screen punch flash. Triggered by toggling data-side="left"|"right"
-     plus a transient .is-active class. CSS animation handles the fade. */
-  .punch-flash {
-    position: absolute; inset: 0;
-    pointer-events: none;
-    z-index: 3;
-    opacity: 0;
+  .boxing-flash {
+    position: fixed; inset: 0; pointer-events: none;
+    background: rgba(255,56,96,.18); opacity: 0;
+    transition: opacity .2s ease-out;
+    z-index: 250; mix-blend-mode: screen;
   }
-  .punch-flash.is-active {
-    animation: punchFlash .22s ease-out;
-  }
-  .punch-flash[data-side="left"].is-active {
-    background: radial-gradient(circle at 25% 50%,
-      rgba(255,56,96,.55) 0%, rgba(255,56,96,.15) 35%, transparent 60%);
-  }
-  .punch-flash[data-side="right"].is-active {
-    background: radial-gradient(circle at 75% 50%,
-      rgba(0,200,255,.55) 0%, rgba(0,200,255,.15) 35%, transparent 60%);
-  }
-  @keyframes punchFlash {
-    0%   { opacity: 0;   }
-    20%  { opacity: 1;   }
-    100% { opacity: 0;   }
+  .boxing-flash.active { opacity: 1; animation: boxingFlash .25s ease-out; }
+  @keyframes boxingFlash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
   }
 
   /* ── MORNING ROUTINE PILL ────────────────────────────
@@ -2095,9 +2065,7 @@
     color: #fff; font-size: 22px; line-height: 1;
     cursor: pointer;
     backdrop-filter: blur(6px);
-    display: inline-flex; align-items: center; justify-content: center;
   }
-  [dir="rtl"] .workout-exit { transform: scaleX(-1); }
   .workout-title {
     font-family: 'Bebas Neue', system-ui, sans-serif;
     font-size: 18px; letter-spacing: .14em;
@@ -2118,10 +2086,18 @@
   }
   .workout-count {
     font-family: 'Bebas Neue', system-ui, sans-serif;
-    font-size: clamp(80px, 22vw, 144px);
-    line-height: 1;
-    color: #fff;
-    text-shadow: 0 0 24px rgba(0, 255, 135, .45), 0 4px 16px rgba(0,0,0,.6);
+    font-size: clamp(100px, 24vw, 168px);
+    line-height: 0.9;
+    color: #00ff8f;
+    text-shadow: 0 0 28px rgba(0, 255, 135, .55), 0 6px 20px rgba(0,0,0,.7);
+  }
+  .workout-goal {
+    margin-top: 6px;
+    font-family: var(--font-body, system-ui, sans-serif);
+    font-size: 14px;
+    color: rgba(255,255,255,.8);
+    letter-spacing: .08em;
+    text-transform: uppercase;
   }
   .workout-state {
     font-family: 'Bebas Neue', system-ui, sans-serif;
@@ -2147,6 +2123,14 @@
     border-radius: 50%;
     animation: coachSpin .8s linear infinite;
   }
+  .workout-loading-text {
+    font-size: 15px;
+    line-height: 1.4;
+    max-width: min(88vw, 360px);
+    text-align: center;
+    color: rgba(255,255,255,.95);
+    letter-spacing: 0.03em;
+  }
   .workout-error {
     position: absolute; inset: 0;
     background: rgba(0,0,0,.92);
@@ -2166,14 +2150,78 @@
   }
   .workout-finish {
     width: 100%; max-width: 320px;
-    padding: 16px;
-    background: var(--green); color: #000;
-    border: none; border-radius: 14px;
+    padding: 18px 0;
+    background: linear-gradient(180deg, #ff3d65, #c90026);
+    color: #fff;
+    border: none; border-radius: 18px;
     font-family: 'Bebas Neue', system-ui, sans-serif;
-    font-size: 18px; letter-spacing: .12em;
+    font-size: 18px; letter-spacing: .14em;
+    box-shadow: 0 16px 40px rgba(255, 60, 100, .25);
     cursor: pointer;
   }
-  .workout-finish:active { transform: scale(.97); }
+  .workout-finish:active { transform: scale(.98); }
+  .workout-summary {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.92);
+    z-index: 12;
+  }
+  .workout-summary[hidden] { display: none; }
+  .summary-card {
+    width: min(92vw, 400px);
+    background: rgba(10,10,10,.98);
+    border: 1px solid rgba(0,255,135,.2);
+    border-radius: 26px;
+    padding: 32px 24px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+    text-align: center;
+  }
+  .summary-title {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 22px;
+    letter-spacing: .16em;
+    color: #fff;
+    margin-bottom: 18px;
+  }
+  .summary-count {
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 62px;
+    color: #00ff87;
+    margin-bottom: 18px;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,.06);
+    color: rgba(255,255,255,.82);
+    font-size: 15px;
+  }
+  .summary-row:first-of-type { border-top: none; }
+  .summary-row strong {
+    color: #fff;
+    font-weight: 700;
+  }
+  .summary-close {
+    margin-top: 24px;
+    width: 100%; padding: 14px 0;
+    background: #00ff87;
+    color: #000;
+    border: none; border-radius: 14px;
+    font-family: 'Bebas Neue', system-ui, sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .workout-flash {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.22);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease;
+    z-index: 10;
+  }
+  .workout-flash.active { opacity: 1; }
   /* When the screen is active the global .screen class hides everything
      else; nothing further needed. */
 
@@ -2488,12 +2536,23 @@
       <span class="cta-arrow">←</span>
     </button>
 
-    <!-- BOXING CTA (RPG-style punch tracker) -->
-    <button class="workout-cta workout-cta-boxing" id="boxingCTA" onclick="startWorkout('boxing')">
+    <button class="boxing-cta" id="boxingCTA" onclick="startBoxingMode()">
       <span>🥊</span>
-      <span id="lbl-boxing-cta">Boxing · Jabs & Crosses</span>
+      <span id="lbl-boxing-cta">Boxing Mode</span>
       <span class="cta-arrow">←</span>
     </button>
+
+    <!-- Initialize boxing labels on load -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const updateBoxingLabels = () => {
+          const isHe = currentLang === 'he';
+          const boxingBtn = document.getElementById('lbl-boxing-cta');
+          if (boxingBtn) boxingBtn.textContent = isHe ? 'אימון איגרוף' : 'Boxing Mode';
+        };
+        updateBoxingLabels();
+      });
+    </script>
 
     <!-- DAILY CHALLENGE -->
     <div class="daily-challenge">
@@ -2614,6 +2673,36 @@
     <div style="height:100px;"></div>
   </div>
 
+  <div class="screen" id="screen-boxing">
+    <div class="top-header">
+      <button onclick="navigate('hub')" style="color:var(--muted2);font-size:22px;">←</button>
+      <div style="font-family:var(--font-head);font-size:22px;letter-spacing:.04em;" id="boxingScreenTitle">Boxing Mode</div>
+      <div style="width:38px;"></div>
+    </div>
+    <div class="boxing-panel">
+      <div class="boxing-title" id="boxingRoundLabel">Round 1</div>
+      <div class="boxing-hp-panel">
+        <div class="boxing-hp-row">
+          <div class="hp-card">
+            <div class="hp-label" id="playerHpLabel">Player HP</div>
+            <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
+            <div class="hp-value" id="playerHpValue">100%</div>
+          </div>
+        </div>
+        <div class="boxing-hp-row">
+          <div class="hp-card">
+            <div class="hp-label" id="enemyHpLabel">Opponent HP</div>
+            <div class="hp-bar"><div id="enemyHpFill" class="hp-fill enemy"></div></div>
+            <div class="hp-value" id="enemyHpValue">100%</div>
+          </div>
+        </div>
+      </div>
+      <div class="boxing-info" id="boxingMessage">Press hit to start the fight.</div>
+      <button class="boxing-hit-btn" id="boxingHitBtn" onclick="boxingHit()">Hit</button>
+      <button class="boxing-rest-btn" onclick="resetBoxingMode()" id="boxingResetBtnLabel">Reset Fight</button>
+    </div>
+  </div>
+
   <!-- ══════════════ UPLOAD SCREEN ══════════════ -->
   <div class="screen" id="screen-upload">
     <div class="top-header">
@@ -2665,43 +2754,41 @@
 
   <!-- ══════════════ WORKOUT SCREEN (camera + pose) ══════════════ -->
   <div class="screen" id="screen-workout">
-    <video id="poseVideo" class="pose-video" playsinline muted autoplay></video>
+    <video id="videoElement" class="pose-video" playsinline muted autoplay width="640" height="480"></video>
     <canvas id="poseCanvas" class="pose-canvas"></canvas>
     <div class="workout-topbar">
-      <button class="workout-exit" onclick="exitWorkout()" aria-label="Back to Hub">←</button>
+      <button class="workout-exit" onclick="exitWorkout()" aria-label="Exit workout">×</button>
       <div class="workout-title" id="workoutTitle">PUSH-UPS</div>
       <div class="workout-fps" id="workoutFps"></div>
     </div>
-    <!-- Boxing-only HUD (hidden during push-up mode) -->
-    <div class="boxing-hud" id="boxingHud" hidden>
-      <div class="boxing-enemy" id="boxingEnemy">😈</div>
-      <div class="boxing-hp-wrap">
-        <div class="boxing-hp-fill" id="boxingHpFill" style="width:100%"></div>
-        <div class="boxing-hp-text"><span id="boxingHpCur">100</span> / <span id="boxingHpMax">100</span></div>
-      </div>
-    </div>
-
     <div class="workout-counter">
       <div class="workout-count"  id="workoutCount">0</div>
+      <div class="workout-goal" id="workoutGoal">Target: 20 reps</div>
       <div class="workout-state"  id="workoutState">READY</div>
     </div>
-
-    <!-- Punch hit flash — full-screen overlay tinted left/right by which arm fired -->
-    <div class="punch-flash" id="punchFlash" data-side=""></div>
     <div class="workout-loading" id="workoutLoading">
       <div class="workout-spinner"></div>
-      <div id="workoutLoadingTxt">Loading pose model…</div>
+      <div id="workoutLoadingTxt" class="workout-loading-text">Loading pose model… / טוען את מודל התנועה…</div>
     </div>
     <div class="workout-error" id="workoutError" hidden></div>
     <div class="workout-controls">
-      <button class="workout-finish" id="workoutFinishBtn" onclick="finishWorkout()">Finish</button>
+      <button class="workout-finish" id="workoutFinishBtn" onclick="finishWorkout()">Finish Workout</button>
     </div>
+    <div class="workout-summary" id="workoutSummary" hidden>
+      <div class="summary-card">
+        <div class="summary-title" id="summaryTitle">Workout Complete</div>
+        <div class="summary-count" id="summaryCount">0 reps</div>
+        <div class="summary-row"><span>Duration</span><strong id="summaryDuration">0:00</strong></div>
+        <div class="summary-row"><span>Target</span><strong id="summaryTarget">20 reps</strong></div>
+        <button class="summary-close" onclick="closeWorkoutSummary()">Done</button>
+      </div>
+    </div>
+    <div class="workout-flash" id="workoutFlash" aria-hidden="true"></div>
   </div>
 
   <!-- ══════════════ FEED SCREEN ══════════════ -->
   <div class="screen" id="screen-feed">
     <div class="feed-header">
-      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="feed-title" id="lbl-feed-title">Community Feed</div>
       <div class="feed-sub" id="lbl-feed-sub">Real proof. Real progress.</div>
     </div>
@@ -2733,11 +2820,7 @@
       <div style="width:38px;"></div>
     </div>
     <div class="profile-hero">
-      <div class="profile-avatar" id="profileAvatar" onclick="pickAndUploadAvatar()" role="button" tabindex="0" aria-label="Change profile photo">
-        <span id="profileAvatarInitial">?</span>
-        <span class="avatar-edit-hint" id="profileAvatarEdit">✎</span>
-        <span class="avatar-loading" id="profileAvatarLoading" hidden></span>
-      </div>
+      <div class="profile-avatar" id="profileAvatar">?</div>
       <div class="profile-name" id="profileName">YOUR NAME</div>
       <div class="profile-handle" id="profileHandle">@user</div>
     </div>
@@ -2795,7 +2878,6 @@
   <div class="screen" id="screen-history">
 
     <div class="hist-header">
-      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="hist-title" id="lbl-hist-title">History</div>
       <div class="hist-sub" id="lbl-hist-sub">Your progress over time</div>
     </div>
@@ -2859,7 +2941,6 @@
   <!-- ══════════════ LEARNING PATHS LIST ══════════════ -->
   <div class="screen" id="screen-paths">
     <div class="lp-header">
-      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub">←</button>
       <div class="lp-title" id="lbl-lp-title">Learning Paths</div>
       <div class="lp-sub" id="lbl-lp-sub">30-day programs. One task a day.</div>
     </div>
@@ -2909,7 +2990,6 @@
   <!-- ══════════════ SETTINGS SCREEN ══════════════ -->
   <div class="screen" id="screen-settings">
     <div class="top-header">
-      <button class="screen-back" onclick="navigate('hub')" aria-label="Back to Hub" style="margin-right:8px;">←</button>
       <div class="logo">1%<span>Better</span></div>
       <div style="font-family:var(--font-head);font-size:13px;letter-spacing:.1em;color:var(--muted2);align-self:center;" id="settingsLangLabel">EN</div>
     </div>
@@ -3353,12 +3433,7 @@
 -->
 
 <script>
-/* App version. Bumped on every code release so we can tell from
-   DevTools console which build is actually running on the device.
-   MUST stay in lockstep with VERSION in sw.js — same string. */
-const APP_VERSION = '1.1.0';
-console.info('[1pb] APP_VERSION =', APP_VERSION);
-
+console.log('Scripts checking...');
 /* ═══════════════════════════════════════════════════════
    1. DATA SCHEMA
 ═══════════════════════════════════════════════════════ */
@@ -3438,6 +3513,7 @@ const state = {
   activeFilter: 'all',
   feedPosts: generateFeedData(),
   xp: loadXP().total,
+  coins: loadCoins().total,
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -4006,16 +4082,6 @@ function postProof() {
    6. NAVIGATION
 ═══════════════════════════════════════════════════════ */
 function navigate(screen) {
-  // If the user is leaving the workout screen via any path (navbar tap,
-  // FAB, programmatic navigate), tear the camera/inference down so we
-  // don't leak GPU/CPU/battery in the background. exitWorkout() also
-  // calls navigate('hub'), which is fine — stopWorkoutInternals is
-  // idempotent.
-  if (state.currentScreen === 'workout' && screen !== 'workout' &&
-      typeof stopWorkoutInternals === 'function') {
-    stopWorkoutInternals();
-  }
-
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -4052,6 +4118,7 @@ function navigate(screen) {
     }
   }
   if (screen === 'feed')    { renderFeed(); refreshTip('feed'); }
+  if (screen === 'workout') { beginWorkoutSession(); }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -4559,7 +4626,8 @@ function init() {
   // Sync profile name from localStorage on every load
   const _savedName = localStorage.getItem('1pb_name');
   if (_savedName) {
-    paintAvatars();
+    const _initial = _savedName.charAt(0).toUpperCase();
+    document.querySelectorAll('.avatar,.profile-avatar,#hubAvatar,#profileAvatar').forEach(e=>e.textContent=_initial);
     const _pn=document.getElementById('profileName'); if(_pn) _pn.textContent=_savedName.toUpperCase();
     const _ph=document.getElementById('profileHandle'); if(_ph) _ph.textContent='@'+_savedName.toLowerCase().replace(/\s+/g,'');
   }
@@ -4589,6 +4657,24 @@ function loadXP() {
   return { total: 0 };
 }
 function saveXP(xp) { localStorage.setItem('1pb_xp', JSON.stringify(xp)); }
+
+/* Coins: simple local balance stored alongside XP. */
+function loadCoins() {
+  const s = localStorage.getItem('1pb_coins');
+  if (s) return JSON.parse(s);
+  return { total: 0 };
+}
+function saveCoins(coins) { localStorage.setItem('1pb_coins', JSON.stringify(coins)); }
+function addCoins(amount) {
+  const c = loadCoins();
+  c.total = (c.total || 0) + Math.max(0, Math.floor(amount));
+  saveCoins(c);
+  state.coins = c.total;
+  // sync to Firestore if available
+  if (typeof syncUserToFirestore === 'function' && isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ coins: c.total });
+  }
+}
 
 function getLevelFromXP(total) {
   let lvl = 1;
@@ -5259,12 +5345,17 @@ function setLang(lang, chip) {
     }
   });
 
+  // Update boxing button label
+  const boxingBtn = document.getElementById('lbl-boxing-cta');
+  if (boxingBtn) boxingBtn.textContent = lang === 'he' ? 'אימון איגרוף' : 'Boxing Mode';
+
   // Refresh AI tips in the new language
   setTimeout(() => {
     refreshTip('hub');
     refreshTip('upload');
     const feedBody = document.getElementById('feedAiBody');
     if (feedBody) feedBody.innerHTML = getRandomTip('general');
+    updateBoxingLabels();
   }, 120);
 }
 
@@ -5281,9 +5372,9 @@ function saveProfile() {
   document.getElementById('profileStreak').textContent = streak;
   document.querySelectorAll('.profile-name').forEach(el => el.textContent = name.toUpperCase());
 
-  // Update avatar — paintAvatars reads the (just-saved) name from
-  // localStorage and renders the photo if set, falling back to initial.
-  paintAvatars();
+  // Update avatar initials
+  const initial = name.charAt(0).toUpperCase();
+  document.querySelectorAll('.avatar, .profile-avatar').forEach(el => el.textContent = initial);
 
   // Update streak state
   state.streak.current = streak;
@@ -5498,7 +5589,9 @@ function renderSavedLogs() {
   // Apply saved name + avatar
   const savedName = localStorage.getItem('1pb_name');
   if (savedName) {
-    paintAvatars();
+    const initial = savedName.charAt(0).toUpperCase();
+    document.querySelectorAll('.avatar, .profile-avatar, #hubAvatar, #profileAvatar')
+      .forEach(el => el.textContent = initial);
     const pn = document.getElementById('profileName');
     if (pn) pn.textContent = savedName.toUpperCase();
     const ph = document.getElementById('profileHandle');
@@ -6044,9 +6137,10 @@ function finishOnboarding() {
   const chip = document.querySelector(`.lang-chip[data-lang="${obLang}"]`);
   if (chip) setLang(obLang, chip);
 
-  // Apply name (paintAvatars reads name from localStorage, which the
-  // caller has already saved via setItem above).
-  paintAvatars();
+  // Apply name
+  const initial = name.charAt(0).toUpperCase();
+  document.querySelectorAll('.avatar, .profile-avatar, #hubAvatar, #profileAvatar')
+    .forEach(el => el.textContent = initial);
   const pn  = document.getElementById('profileName');
   if (pn) pn.textContent = name.toUpperCase();
   const ph  = document.getElementById('profileHandle');
@@ -6449,17 +6543,6 @@ function normalizeIronWillText(s) {
  *   - dedupe via lastFiredDate so we never fire twice on the same calendar day */
 function ironWillShouldFire(state, now = new Date()) {
   if (!state.enabled) return false;
-
-  // Don't ambush the user during onboarding or the auth flow — both are
-  // already full-screen takeovers and the alarm overlay on top would
-  // either look broken or block sign-in entirely. We just defer; the
-  // grace window (4h) is wide enough that the user will still hit the
-  // alarm after they finish onboarding / signing in.
-  const ob   = document.getElementById('onboarding');
-  const auth = document.getElementById('authScreen');
-  if (ob   && !ob.classList.contains('hidden'))   return false;
-  if (auth && !auth.classList.contains('hidden')) return false;
-
   const today = todayKey();
   if (state.lastFiredDate === today)        return false;
   if (_iwLastShown === today)               return false;
@@ -6549,16 +6632,11 @@ function _iwVisibility() {
     _iwAudio.ctx.resume().catch(() => {});
   }
 }
-let _iwFocusOn = false;
 function ironWillFocusOn()  {
-  if (_iwFocusOn) return;
-  _iwFocusOn = true;
   window.addEventListener('beforeunload', _iwBeforeUnload);
   document.addEventListener('visibilitychange', _iwVisibility);
 }
 function ironWillFocusOff() {
-  if (!_iwFocusOn) return;
-  _iwFocusOn = false;
   window.removeEventListener('beforeunload', _iwBeforeUnload);
   document.removeEventListener('visibilitychange', _iwVisibility);
 }
@@ -6596,28 +6674,17 @@ function showIronWillOverlay(state, opts = {}) {
   input.classList.remove('iw-wrong');
   document.getElementById('iwHint').textContent = '';
 
-  // Set the session-dedupe flag BEFORE the overlay becomes visible. If the
-  // 30s scheduler tick fires in the same tick as the overlay paint,
-  // _iwLastShown must already be today or it'll fire a second overlay.
-  _iwLastShown = todayKey();
-  _iwTestMode  = !!opts.test;
   overlay.hidden = false;
   document.body.classList.add('iw-active');
+  _iwLastShown = todayKey();
+  _iwTestMode  = !!opts.test;
 
-  // Attach focus-mode listeners SYNCHRONOUSLY. Previously these were
-  // inside the same 50ms setTimeout as audio start; if the user
-  // dismissed within 50ms the focusOff in hideIronWillOverlay would run
-  // first and remove nothing, then focusOn would attach the listener
-  // and leak across navigations. Idempotent: focusOn checks _iwFocusOn
-  // before attaching twice.
-  ironWillFocusOn();
-
-  // Defer ONLY the focus + audio start. iOS Safari sometimes rejects an
-  // AudioContext that's instantiated on the same microtask as a click
-  // handler; a 50ms tick keeps that activation chain intact.
+  // Engage focus warn + audio. Defer so iOS Safari accepts the
+  // AudioContext on the user-gesture-derived activation chain.
   setTimeout(() => {
     input.focus();
     if (!opts.silent) ironWillStartAudio();
+    ironWillFocusOn();
   }, 50);
 }
 
@@ -6696,13 +6763,7 @@ function toggleIronWill(btn) {
 
 function saveIronWill() {
   const state = loadIronWill();
-  // <input type="time"> on modern browsers always returns "" or HH:MM,
-  // but programmatic writes (or a stray paste on old browsers) could
-  // poison state.time and crash the scheduler. The scheduler already
-  // has a NaN guard downstream, but it's cleaner to reject bad input
-  // here so the persisted state stays clean.
-  const raw = document.getElementById('ironWillTime').value || '';
-  state.time = /^([01]\d|2[0-3]):[0-5]\d$/.test(raw) ? raw : '06:30';
+  state.time = document.getElementById('ironWillTime').value || '06:30';
   saveIronWillState(state);
 }
 
@@ -6750,6 +6811,18 @@ const PU_FRAMES_STABLE = 3;     // require this many consecutive frames before t
 const PU_REFRACTORY_MS = 500;   // ignore further counts for this long after counting
 const PU_INFER_FPS    = 20;     // detection rate; rendering is independent
 
+/* Boxing tuning constants */
+const BX_VISIBILITY_MIN   = 0.45;  // minimum visibility for shoulder/wrist/hip
+const BX_EXTENDED_MIN     = 0.22;  // normalized shoulder->wrist distance considered an extension
+const BX_GUARD_MAX        = 0.13;  // normalized wrist->nose distance considered 'guard' (close to face)
+const BX_REFRACTORY_MS    = 450;   // ignore further punch counts for this long after counting
+const WORKOUT_TARGET      = 20;    // default goal for repetitions
+
+// User-requested boxing thresholds (simpler names)
+const PUNCH_THRESHOLD     = 0.20;  // activation threshold (dx or dy) for punch
+const GUARD_THRESHOLD     = 0.10;  // threshold (dx and dy) for considering wrist returned to guard
+const MIN_PUNCH_INTERVAL  = 300;   // minimum ms between counted punches (anti-ghosting)
+
 /* MediaPipe handles. Held at module scope so re-entries don't
    re-download the model. */
 let _pose = {
@@ -6759,34 +6832,25 @@ let _pose = {
   rafId:         null,           // requestAnimationFrame handle
   inferTimer:    null,           // pacing for detection
   active:        false,
-  exercise:      'pushup',       // 'pushup' | 'boxing'
+  exercise:      'pushup',
   reps:          0,
-  state:         'ready',        // pushup: 'ready'|'down'|'up'
+  state:         'ready',        // 'ready' | 'down' | 'up'
   downFrames:    0,
   upFrames:      0,
   lastCountAt:   0,
   startedAt:     0,
   lastFrameTime: 0,
   fpsAvg:        0,
-  boxing:        null,           // populated by startWorkout('boxing')
+  lastPunchDist: {},
+  punchActive:   { left: false, right: false },
+  resultsReceivedAt: 0,
+  poseTimeoutId: null,
+  pageLoaded: false,
 };
 
-/** Build a fresh boxing state. Called from startWorkout so a new
- *  session always starts at full HP and zero pending XP. */
-function makeBoxingState() {
-  return {
-    arms: {
-      left:  { state: 'guard', lastPunchAt: 0 },
-      right: { state: 'guard', lastPunchAt: 0 },
-    },
-    enemyMaxHp:  BOXING_ENEMY_HP,
-    enemyHp:     BOXING_ENEMY_HP,
-    enemyEmoji:  BOXING_EMOJIS[0],
-    defeats:     0,
-    totalDamage: 0,
-    pendingXp:   0,
-  };
-}
+window.addEventListener('load', () => {
+  _pose.pageLoaded = true;
+});
 
 /** Compute the angle (degrees) at vertex `b` formed by a→b→c in 2D. */
 function angleDeg(a, b, c) {
@@ -6799,183 +6863,250 @@ function angleDeg(a, b, c) {
   return Math.acos(cos) * 180 / Math.PI;
 }
 
+const POSE_TASK_CDN_VERSION = '0.10.14';
+const POSE_MEDIA_PIPE_VERSION = '0.5.1675106883';
+const POSE_TASK_BUNDLE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${POSE_TASK_CDN_VERSION}/vision_bundle.mjs`;
+const POSE_WASM_ROOT = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${POSE_TASK_CDN_VERSION}/wasm`;
+const POSE_MEDIA_PIPE_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose';
+const POSE_MODEL_TASK = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const SLOW_CDN_THRESHOLD_MS = 1200;
+
+function getCdnHost(url) {
+  try {
+    return new URL(url).host;
+  } catch (err) {
+    return '';
+  }
+}
+
+function warnIfSlowCdn(subject, url, elapsedMs, thresholdMs = SLOW_CDN_THRESHOLD_MS) {
+  const host = getCdnHost(url);
+  if (!host) return;
+  const message = `[CDN] ${subject} from ${host} took ${Math.round(elapsedMs)}ms`;
+  console.log(message);
+  if (elapsedMs >= thresholdMs) {
+    const warning = `[CDN] Slow load detected for ${subject} from ${host} (${Math.round(elapsedMs)}ms).`;
+    console.warn(warning);
+    if (typeof showToast === 'function') showToast(warning);
+  }
+}
+
+function checkForCvOrSlowCdnScripts() {
+  const scripts = Array.from(document.scripts || []);
+  scripts.forEach(script => {
+    if (!script.src) return;
+    if (script.src.includes('/cv.js')) {
+      const host = getCdnHost(script.src);
+      console.warn(`[CDN] Detected cv.js loaded from ${host}: ${script.src}`);
+      if (typeof showToast === 'function') showToast(`⚠ Loading cv.js from ${host} may be slow`);
+    }
+    if (script.src.includes('cdn.jsdelivr.net') || script.src.includes('storage.googleapis.com')) {
+      console.log(`[CDN] External script source detected: ${script.src}`);
+    }
+  });
+}
+
+async function cacheCdnAssetsInWorker(urls) {
+  if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+  try {
+    navigator.serviceWorker.controller.postMessage({ type: 'CACHE_URLS', urls });
+  } catch (err) {
+    console.warn('[POSE] Unable to message service worker for cache', err);
+  }
+}
+
 /** Lazy-load MediaPipe Tasks Vision from CDN. Resolves to a configured
  *  PoseLandmarker. Cached so the second workout is instant. */
-/* Hard ceiling for model load. 30s is generous on 3G but still bounded
-   so the UI doesn't appear "stuck on loading" forever. If the user
-   reports a hang, the error path now names which phase failed so we
-   can diagnose from a console paste instead of guessing. */
-const POSE_LOAD_TIMEOUT_MS = 30000;
-
 async function loadPoseModel() {
   if (_pose.landmarker) return _pose.landmarker;
-  if (_pose.loading)    return _pose.loading;
+  if (_pose.loading) return _pose.loading;
 
-  const p = (async () => {
-    const VER = '0.10.14';
-    console.info('[pose] phase 1/3: importing CDN bundle');
-    const mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/vision_bundle.mjs`);
+  _pose.loading = (async () => {
+    checkForCvOrSlowCdnScripts();
+
+    const startImport = performance.now();
+    const mod = await import(POSE_TASK_BUNDLE);
+    warnIfSlowCdn('vision_bundle.mjs import', POSE_TASK_BUNDLE, performance.now() - startImport);
+
     const { PoseLandmarker, FilesetResolver } = mod;
+    const startWasm = performance.now();
+    let vision;
+    try {
+      vision = await FilesetResolver.forVisionTasks(POSE_WASM_ROOT, {
+        locateFile: (file) => {
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        },
+      });
+    } catch (err) {
+      console.warn('[POSE] locateFile hook failed, falling back to default resolver', err);
+      vision = await FilesetResolver.forVisionTasks(POSE_WASM_ROOT);
+    }
+    warnIfSlowCdn('wasm asset resolver', POSE_WASM_ROOT, performance.now() - startWasm);
 
-    console.info('[pose] phase 2/3: resolving WASM fileset');
-    const vision = await FilesetResolver.forVisionTasks(
-      `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`
+    const startModel = performance.now();
+    const modelLoad = PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: POSE_MODEL_TASK,
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      numPoses: 1,
+      modelComplexity: 0,
+    });
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Model timeout')), 10000)
     );
 
-    console.info('[pose] phase 3/3: creating PoseLandmarker (downloads ~6MB model)');
     let lm;
     try {
-      lm = await PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1,
-      });
-    } catch (gpuErr) {
-      // Some Android browsers report a GPU delegate available but fail
-      // to actually create the WebGL backend (driver bugs, low-end Mali
-      // GPUs, etc.). Retry on CPU before giving up so users on those
-      // devices still get a working — slower — workout.
-      console.warn('[pose] GPU delegate failed, retrying on CPU:', gpuErr);
-      lm = await PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-          delegate: 'CPU',
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1,
-      });
+      lm = await Promise.race([modelLoad, timeout]);
+    } catch (err) {
+      if (err && err.message === 'Model timeout') {
+        alert('Model timeout - please refresh');
+      }
+      _pose.loading = null;
+      throw err;
     }
-    console.info('[pose] ready');
+
+    warnIfSlowCdn('pose_landmarker_lite task', POSE_MODEL_TASK, performance.now() - startModel);
+
+    cacheCdnAssetsInWorker([POSE_TASK_BUNDLE, POSE_WASM_ROOT, POSE_MODEL_TASK]);
+
     _pose.landmarker = lm;
     return lm;
   })();
-
-  // Race against a wall-clock timeout. Without this, a stalled WASM
-  // download just leaves the loading overlay up forever and the user
-  // has no recourse except reload.
-  const timeout = new Promise((_, rej) =>
-    setTimeout(() => rej(Object.assign(new Error('pose-load-timeout'),
-                                       { phase: 'timeout' })), POSE_LOAD_TIMEOUT_MS)
-  );
-  const raced = Promise.race([p, timeout]);
-
-  // Clear _pose.loading on rejection so a retry doesn't re-await the
-  // already-rejected promise and lock the user out until full reload.
-  raced.catch(() => { if (_pose.loading === p) _pose.loading = null; });
-  _pose.loading = p;       // the underlying loader (so a slow load can finish on retry)
-  return raced;            // but callers wait on the raced version
+  return _pose.loading;
 }
 
-async function startWorkout(exercise = 'pushup') {
-  // Wrap the whole body in a top-level try/catch so any error — even
-  // one we didn't anticipate — gets a full stack dump to the console
-  // and a user-visible message instead of bubbling up as an unhandled
-  // rejection that just kills the workout silently.
-  let phase = 'init';
-  console.info('[workout] start', { exercise });
-  try {
-    navigate('workout');
-
-    // Look up every DOM ref once and guard EACH access. If the workout
-    // screen markup ever changes shape we surface that as a clear error
-    // ("workout DOM not found") instead of a TypeError deeper in.
-    phase = 'dom-lookup';
-    const errEl   = document.getElementById('workoutError');
-    const loadEl  = document.getElementById('workoutLoading');
-    const loadTxt = document.getElementById('workoutLoadingTxt');
-    const cntEl   = document.getElementById('workoutCount');
-    const stEl    = document.getElementById('workoutState');
-    const titleEl = document.getElementById('workoutTitle');
-    const hudEl   = document.getElementById('boxingHud');
-    const v       = document.getElementById('poseVideo');
-    const cv      = document.getElementById('poseCanvas');
-    if (!v || !cv) {
-      throw new Error('workout DOM not found — poseVideo or poseCanvas missing');
-    }
-
-    phase = 'reset-ui';
-    if (errEl)  errEl.hidden  = true;
-    if (loadEl) loadEl.hidden = false;
-    if (cntEl)  cntEl.textContent = '0';
-    if (stEl)   { stEl.textContent = 'READY'; stEl.className = 'workout-state'; }
-
-    phase = 'reset-state';
-    _pose.exercise    = exercise;
-    _pose.reps        = 0;
-    _pose.state       = 'ready';
-    _pose.downFrames  = 0;
-    _pose.upFrames    = 0;
-    _pose.lastCountAt = 0;
-    _pose.startedAt   = Date.now();
-    _pose.boxing      = (exercise === 'boxing') ? makeBoxingState() : null;
-
-    phase = 'ui-mode';
-    if (titleEl) titleEl.textContent = (exercise === 'boxing') ? 'BOXING' : 'PUSH-UPS';
-    if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
-    if (stEl)    stEl.textContent    = (exercise === 'boxing') ? 'GUARD' : 'READY';
-    if (exercise === 'boxing') renderBoxingHud();
-
-    phase = 'camera-request';
-    if (loadTxt) loadTxt.textContent = 'Requesting camera…';
-    _pose.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-      audio: false,
-    });
-    v.srcObject = _pose.stream;
-    await v.play();
-
-    phase = 'model-load';
-    if (loadTxt) loadTxt.textContent = 'Loading pose model…';
-    await loadPoseModel();
-
-    phase = 'canvas-size';
-    // Match canvas size to displayed video so overlay lands correctly.
-    cv.width  = v.videoWidth  || 640;
-    cv.height = v.videoHeight || 480;
-
-    phase = 'run';
-    if (loadEl) loadEl.hidden = true;
-    _pose.active = true;
-    runPoseLoop();
-    console.info('[workout] running');
-  } catch (e) {
-    // Full diagnostic dump. With the phase + stack + serialized error
-    // properties, a user paste-back tells us exactly which step failed
-    // and which property was undefined.
-    console.error('[workout] start failed at phase:', phase, {
-      error: e,
-      name:    e && e.name,
-      message: e && e.message,
-      stack:   e && e.stack,
-      props:   e ? Object.getOwnPropertyNames(e) : null,
-    });
-    if (typeof stopWorkoutInternals === 'function') stopWorkoutInternals();
-
-    const errEl  = document.getElementById('workoutError');
-    const loadEl = document.getElementById('workoutLoading');
-    if (errEl) {
-      errEl.hidden = false;
-      let msg;
-      if (e && e.name === 'NotAllowedError') {
-        msg = 'Camera permission denied. Enable it in browser settings and try again.';
-      } else if (e && e.name === 'NotFoundError') {
-        msg = 'No camera detected on this device.';
-      } else if (e && (e.message === 'pose-load-timeout' || e.phase === 'timeout')) {
-        msg = 'Pose model took too long to load. Check your connection and try again.';
-      } else if (e && /import|cdn|module/i.test(String(e.message))) {
-        msg = 'Could not load the pose-detection library. Possible CSP / network block — see console.';
-      } else if (e && /workout DOM not found/.test(String(e.message))) {
-        msg = 'Workout UI failed to mount. Try a hard refresh (clear site data + reload).';
-      } else {
-        msg = `Could not start the workout (at "${phase}"). ${e && e.message || ''}`;
-      }
-      errEl.textContent = msg;
-    }
-    if (loadEl) loadEl.hidden = true;
+function showWorkoutError(message) {
+  const err = document.getElementById('workoutError');
+  if (err) {
+    err.textContent = message || '';
+    err.hidden = !message;
   }
+}
+
+function updateWorkoutStatus(message) {
+  const txt = document.getElementById('workoutLoadingTxt');
+  if (txt) txt.textContent = message;
+}
+
+function handlePoseResults() {
+  if (_pose.resultsReceivedAt) return;
+  _pose.resultsReceivedAt = Date.now();
+  if (_pose.poseTimeoutId) {
+    clearTimeout(_pose.poseTimeoutId);
+    _pose.poseTimeoutId = null;
+  }
+  setWorkoutLoading(false);
+}
+
+function setWorkoutLoading(visible, message) {
+  const loader = document.getElementById('workoutLoading');
+  if (loader) loader.hidden = !visible;
+  if (message) updateWorkoutStatus(message);
+}
+
+function beginWorkoutSession() {
+  if (!_pose.active) return;
+  if (!_pose.pageLoaded) {
+    window.addEventListener('load', () => beginWorkoutSession(), { once: true });
+    return;
+  }
+
+  const isHe = currentLang === 'he';
+  const loadMsg = isHe ? 'טוען את מודל התנועה…' : 'Loading pose model…';
+  setWorkoutLoading(true, loadMsg);
+  showWorkoutError('');
+  _pose.resultsReceivedAt = 0;
+  if (_pose.poseTimeoutId) clearTimeout(_pose.poseTimeoutId);
+
+  _pose.poseTimeoutId = setTimeout(() => {
+    if (!_pose.resultsReceivedAt && _pose.active) {
+      const alertMsg = isHe
+        ? 'לא התקבלו נתוני AI - ייתכן שהאצת חומרה אינה פעילה'
+        : 'No AI data received - possible hardware acceleration issue';
+      alert(alertMsg);
+      updateWorkoutStatus(isHe ? 'אין נתוני AI - בדוק את החומרה' : 'No AI data received - possible hardware acceleration issue');
+    }
+  }, 5000);
+
+  loadPoseModel()
+    .then(() => {
+      if (!_pose.active) return;
+      showWorkoutError('');
+      if (!_pose.resultsReceivedAt) {
+        updateWorkoutStatus(isHe ? 'ממתין לתוצאות מהמודל…' : 'Waiting for AI results…');
+      }
+      runPoseLoop();
+    })
+    .catch(err => {
+      const errMsg = currentLang === 'he'
+        ? 'המודל לא נטען, רענן את הדף'
+        : 'Pose model failed to load, refresh the page';
+      showWorkoutError(`${errMsg}${err && err.message ? ` (${err.message})` : ''}`);
+      updateWorkoutStatus(currentLang === 'he' ? 'שגיאת טעינת מודל' : 'Pose model failed');
+      console.error('[workout] pose init failed', err);
+    });
+}
+
+function startWorkout(exercise = 'pushup') {
+  _pose.exercise = exercise || 'pushup';
+  _pose.reps = 0;
+  _pose.state = 'ready';
+  _pose.downFrames = 0;
+  _pose.upFrames = 0;
+  _pose.lastCountAt = 0;
+  _pose.startedAt = Date.now();
+  _pose.target = WORKOUT_TARGET;
+  _pose.resultsReceivedAt = 0;
+  _pose.rafId = null;
+  _pose.inferTimer = null;
+
+  const title = document.getElementById('workoutTitle');
+  if (title) {
+    const isHe = currentLang === 'he';
+    title.textContent = _pose.exercise === 'boxing'
+      ? (isHe ? 'אימון איגרוף' : 'BOXING')
+      : (isHe ? 'שכיבות שמיכה' : 'PUSH-UPS');
+  }
+  const goalLabel = document.getElementById('workoutGoal');
+  if (goalLabel) {
+    const isHe = currentLang === 'he';
+    goalLabel.textContent = `${isHe ? 'יעד' : 'Target'}: ${_pose.target} reps`;
+  }
+
+  // Ensure any global overlays or upload UI are hidden while the camera runs
+  try {
+    const qa = document.getElementById('qaOverlay'); if (qa) qa.classList.remove('open');
+    const goal = document.getElementById('goalModal'); if (goal) goal.classList.remove('open');
+    hideIronWillOverlay();
+    // disable upload controls while in workout
+    const fi = document.getElementById('fileInput'); if (fi) fi.disabled = true;
+    const ua = document.getElementById('uploadArea'); if (ua) ua.style.display = 'none';
+  } catch(_) {}
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then(stream => {
+      const video = document.getElementById('videoElement');
+      if (video) {
+        video.srcObject = stream;
+        _pose.stream = stream;
+        video.play().catch(err => console.error('Video playback failed:', err));
+        // ensure the camera element is on top of the workout background
+        try { video.style.zIndex = '8'; } catch(_) {}
+        const cv = document.getElementById('poseCanvas'); if (cv) cv.style.zIndex = '9';
+      }
+      _pose.active = true;
+      navigate('workout');
+    })
+    .catch(err => {
+      console.error('Camera request failed:', err);
+      alert(currentLang === 'he'
+        ? 'הבקשה למצלמה נכשלה. בדוק הרשאות ותנסה שוב.'
+        : 'Camera request failed. Check permissions and try again.');
+    });
 }
 
 function stopWorkoutInternals() {
@@ -6984,18 +7115,16 @@ function stopWorkoutInternals() {
   _pose.rafId = null;
   if (_pose.inferTimer) clearInterval(_pose.inferTimer);
   _pose.inferTimer = null;
+  if (_pose.poseTimeoutId) {
+    clearTimeout(_pose.poseTimeoutId);
+    _pose.poseTimeoutId = null;
+  }
   if (_pose.stream) {
     _pose.stream.getTracks().forEach(t => t.stop());
     _pose.stream = null;
   }
-  const v = document.getElementById('poseVideo');
+  const v = document.getElementById('videoElement');
   if (v) v.srcObject = null;
-  // Hide the boxing HUD on exit so re-entering the screen (push-ups
-  // next time) doesn't briefly flash a stale HP bar.
-  const hud = document.getElementById('boxingHud');
-  if (hud) hud.hidden = true;
-  const flash = document.getElementById('punchFlash');
-  if (flash) flash.classList.remove('is-active');
 }
 
 function exitWorkout() {
@@ -7004,59 +7133,55 @@ function exitWorkout() {
 }
 
 function finishWorkout() {
-  const reps     = _pose.reps;
-  const durSec   = Math.round((Date.now() - _pose.startedAt) / 1000);
+  const reps = _pose.reps;
+  const durSec = Math.round((Date.now() - _pose.startedAt) / 1000);
   const exercise = _pose.exercise;
-  // Snapshot boxing extras BEFORE stopWorkoutInternals (which doesn't
-  // currently clear _pose.boxing, but a future change might).
-  const boxingSnap = (exercise === 'boxing' && _pose.boxing)
-    ? { defeats: _pose.boxing.defeats, totalDamage: _pose.boxing.totalDamage,
-        pendingXp: _pose.boxing.pendingXp }
-    : null;
   stopWorkoutInternals();
 
-  // Persist locally — bounded slice so a long history doesn't bloat the
-  // user doc beyond Firestore's 1MB limit (100 workouts ≈ 5-10KB).
-  const entry = { exercise, reps, durSec, at: Date.now(), date: todayKey() };
-  if (boxingSnap) {
-    entry.defeats     = boxingSnap.defeats;
-    entry.totalDamage = boxingSnap.totalDamage;
-  }
+  // Persist locally + sync via the user doc on Firestore.
+  const summary = { exercise, reps, durSec, target: _pose.target || WORKOUT_TARGET, at: Date.now(), date: todayKey() };
   const log = safeParse(localStorage.getItem('1pb_workouts'), []);
-  log.unshift(entry);
-  const trimmed = log.slice(0, 100);
-  try { localStorage.setItem('1pb_workouts', JSON.stringify(trimmed)); }
+  log.unshift(summary);
+  try { localStorage.setItem('1pb_workouts', JSON.stringify(log.slice(0, 100))); }
   catch (_) {}
-
-  if (typeof syncUserToFirestore === 'function' &&
-      typeof isFirebaseConfigured === 'function' &&
-      isFirebaseConfigured() && currentUser) {
-    syncUserToFirestore({ workouts: trimmed });
+  if (typeof syncUserToFirestore === 'function' && isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ lastWorkout: summary });
   }
 
-  // XP: push-ups = small bonus scaled by reps (capped). Boxing = sum of
-  // banked pendingXp (1/punch + 25/defeat). Either way we apply it as a
-  // single gainXP call so the level-up modal fires at most once.
-  let xp = 0;
+  // Reward + routine tick — only if the user actually did at least 1 rep.
   if (reps >= 1) {
-    xp = boxingSnap
-      ? Math.min(200, boxingSnap.pendingXp)
-      : Math.min(50, 5 + reps);
-    if (typeof gainXP === 'function') gainXP(xp);
+    // XP: existing formula
+    const xpEarn = Math.min(50, 5 + reps);
+    if (typeof gainXP === 'function') gainXP(xpEarn);
+    // Coins: reward half a coin per rep (rounded)
+    const coinsEarn = Math.floor(reps * 0.5);
+    addCoins(coinsEarn);
+    state.todayDone = true;
+    incrementStreak();
     markMorningRoutine('workout', true);
+    // Persist activity for the day (activity logging)
+    try {
+      const key = todayKey();
+      const log = JSON.parse(localStorage.getItem('1pb_activity') || '{}');
+      const entry = log[key] || { done: 0, xp: 0 };
+      entry.done = (entry.done || 0) + 1;
+      entry.xp = (entry.xp || 0) + xpEarn;
+      log[key] = entry;
+      localStorage.setItem('1pb_activity', JSON.stringify(log));
+      if (typeof syncUserToFirestore === 'function' && isFirebaseConfigured() && currentUser) {
+        syncActivityDay(key, entry);
+      }
+    } catch (_) {}
   }
 
   const isHe = currentLang === 'he';
-  let msg;
-  if (boxingSnap) {
-    msg = isHe
-      ? `✓ ${reps} מכות · ${boxingSnap.defeats} אויבים · +${xp} XP`
-      : `✓ ${reps} punches · ${boxingSnap.defeats} KOs · +${xp} XP`;
+  if (_pose.exercise === 'boxing') {
+    saveBoxingSummaryToFeed(reps, durSec);
+    showToast(isHe ? `✓ ${reps} אגרופים נשמרו` : `✓ Saved ${reps} punches`);
   } else {
-    msg = isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`;
+    showToast(isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`);
   }
-  showToast(msg);
-  navigate('hub');
+  showWorkoutSummary(summary);
 }
 
 /** Push-up state machine. Returns true if a rep was counted this frame. */
@@ -7107,164 +7232,55 @@ function pushupTick(landmarks) {
   return false;
 }
 
-/* ── Boxing config ───────────────────────────────────
-   Distances are 2D normalized (landmark coords are 0..1 in frame
-   space). A jab from a typical phone-distance away puts the wrist
-   ~0.30-0.40 from the shoulder; guarded hand sits ~0.10-0.15. */
-const PUNCH_EXTEND_DIST     = 0.28;
-const PUNCH_RETRACT_DIST    = 0.18;
-const PUNCH_REFRACTORY_MS   = 220;
-const BOXING_DMG_MIN        = 5;
-const BOXING_DMG_MAX        = 15;
-const BOXING_ENEMY_HP       = 100;
-const BOXING_ENEMY_KILL_XP  = 25;     // bonus banked on defeat (applied at Finish)
-const BOXING_PUNCH_XP       = 1;      // per-punch xp (also banked)
-const BOXING_EMOJIS = ['😈','👹','💀','🤖','👺','🐉','🦖'];
+function punchTick(landmarks) {
+  const left = { shoulder: landmarks[11], wrist: landmarks[15], side: 'left' };
+  const right = { shoulder: landmarks[12], wrist: landmarks[16], side: 'right' };
+  const nose = landmarks[0];
+  if (!nose) return false;
 
-/** Punch detector — per-arm idle/extended state machine, returns the
- *  array of sides ('left'/'right') that fired a punch this frame. */
-function boxingTick(landmarks) {
-  // 11 L-shoulder, 12 R-shoulder, 15 L-wrist, 16 R-wrist
-  const lS = landmarks[11], rS = landmarks[12];
-  const lW = landmarks[15], rW = landmarks[16];
-  if (!lS || !rS || !lW || !rW) return [];
+  const now = performance.now();
+  const centerX = nose.x;
+  let counted = false;
 
-  const fired = [];
-  const sides = [['left',  lS, lW], ['right', rS, rW]];
-  const now   = performance.now();
-  for (const [side, sh, wr] of sides) {
-    // Confidence gate — don't transition on noisy frames, but don't
-    // reset the arm's state either.
-    if (sh.visibility < 0.5 || wr.visibility < 0.5) continue;
-    const dx = wr.x - sh.x, dy = wr.y - sh.y;
-    const dist = Math.hypot(dx, dy);
-    const arm = _pose.boxing.arms[side];
+  for (const hand of [left, right]) {
+    const { shoulder, wrist, side } = hand;
+    if (!shoulder || !wrist) continue;
+    const vis = Math.min(shoulder.visibility, wrist.visibility);
+    if (vis < BX_VISIBILITY_MIN) continue;
 
-    if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
-      if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
-        arm.state       = 'extended';
-        arm.lastPunchAt = now;
-        fired.push(side);
-      }
-    } else if (arm.state === 'extended' && dist < PUNCH_RETRACT_DIST) {
-      arm.state = 'guard';
+    const dx = Math.abs(wrist.x - centerX);
+    const dy = wrist.y - shoulder.y; // negative when wrist is above shoulder in screen coordinates
+    const isHigh = dy < -PUNCH_THRESHOLD;
+    const isFar = dx > PUNCH_THRESHOLD;
+    const guard = Math.abs(wrist.y - nose.y) < GUARD_THRESHOLD;
+
+    console.log('[boxing] side=%s dx=%f dy=%f isHigh=%s isFar=%s guard=%s active=%s',
+      side, dx, dy, isHigh, isFar, guard, _pose.punchActive[side]);
+
+    if (isHigh || isFar) {
+      _pose.punchActive[side] = true;
+    }
+
+    if (_pose.punchActive[side] && guard && now - _pose.lastCountAt > MIN_PUNCH_INTERVAL) {
+      _pose.punchActive[side] = false;
+      _pose.lastCountAt = now;
+      _pose.state = 'punch';
+      counted = true;
+      break;
+    }
+
+    if (guard && Math.abs(dy) < GUARD_THRESHOLD / 2) {
+      _pose.punchActive[side] = false;
     }
   }
-  return fired;
-}
 
-/** Apply game logic for each punch fired this frame: damage, defeat,
- *  XP banking. Returns the side that triggered the most recent hit
- *  so callers can paint the visual flash. */
-function applyPunches(sides) {
-  if (!sides || !sides.length) return null;
-  const b = _pose.boxing;
-  for (const side of sides) {
-    const dmg = BOXING_DMG_MIN + Math.floor(Math.random() * (BOXING_DMG_MAX - BOXING_DMG_MIN + 1));
-    b.enemyHp = Math.max(0, b.enemyHp - dmg);
-    b.totalDamage += dmg;
-    b.pendingXp   += BOXING_PUNCH_XP;
-    _pose.reps++;
-    if (b.enemyHp <= 0) {
-      b.defeats++;
-      b.pendingXp += BOXING_ENEMY_KILL_XP;
-      // Respawn next enemy (cycles through the pool, scaling HP slightly).
-      b.enemyEmoji = BOXING_EMOJIS[b.defeats % BOXING_EMOJIS.length];
-      b.enemyMaxHp = BOXING_ENEMY_HP + b.defeats * 25;
-      b.enemyHp    = b.enemyMaxHp;
-    }
-  }
-  return sides[sides.length - 1];
-}
-
-/** Single shared AudioContext for hit sounds. iOS Safari needs it
- *  resumed from a user gesture; startWorkout (camera permission tap)
- *  satisfies that, so by the time the first punch lands we're good. */
-let _hitAudioCtx = null;
-function getHitAudioCtx() {
-  if (!_hitAudioCtx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    _hitAudioCtx = new AC();
-  }
-  if (_hitAudioCtx.state === 'suspended') {
-    _hitAudioCtx.resume().catch(() => {});
-  }
-  return _hitAudioCtx;
-}
-
-/** Synthesize a percussive "punch" sound: a fast-decaying sine sweep
- *  (low thud) mixed with a filtered noise burst (smack). All in-process
- *  via Web Audio API — no asset files, no <audio> element, so the
- *  existing CSP (media-src 'self' blob: mediastream:) is irrelevant. */
-function playPunchSound() {
-  const ctx = getHitAudioCtx();
-  if (!ctx) return;
-  const t0 = ctx.currentTime;
-
-  // Thud: 150Hz → 40Hz exponential drop in 80ms.
-  const osc  = ctx.createOscillator();
-  const oscG = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(150, t0);
-  osc.frequency.exponentialRampToValueAtTime(40, t0 + 0.08);
-  oscG.gain.setValueAtTime(0.45, t0);
-  oscG.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
-  osc.connect(oscG).connect(ctx.destination);
-  osc.start(t0); osc.stop(t0 + 0.18);
-
-  // Smack: 50ms of low-passed white noise, sharp attack + decay.
-  const len  = Math.floor(ctx.sampleRate * 0.06);
-  const buf  = ctx.createBuffer(1, len, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-  const noise = ctx.createBufferSource();
-  noise.buffer = buf;
-  const flt = ctx.createBiquadFilter();
-  flt.type = 'lowpass';
-  flt.frequency.value = 1800;
-  const noiseG = ctx.createGain();
-  noiseG.gain.setValueAtTime(0.35, t0);
-  noiseG.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
-  noise.connect(flt).connect(noiseG).connect(ctx.destination);
-  noise.start(t0);
-}
-
-/** Visual hit flash — toggles a CSS class on the overlay, with the side
- *  encoded in data-side so the gradient comes from the correct edge. */
-function flashHitEffect(side) {
-  const el = document.getElementById('punchFlash');
-  if (!el) return;
-  el.dataset.side = side || 'left';
-  el.classList.remove('is-active');
-  // Force reflow so the animation re-triggers when fired rapidly.
-  void el.offsetWidth;
-  el.classList.add('is-active');
-  // Also wiggle the enemy.
-  const enemy = document.getElementById('boxingEnemy');
-  if (enemy) {
-    enemy.classList.remove('is-hit');
-    void enemy.offsetWidth;
-    enemy.classList.add('is-hit');
-  }
-}
-
-function renderBoxingHud() {
-  if (!_pose.boxing) return;
-  const cur = document.getElementById('boxingHpCur');
-  const max = document.getElementById('boxingHpMax');
-  const fill = document.getElementById('boxingHpFill');
-  const enemy = document.getElementById('boxingEnemy');
-  if (cur)   cur.textContent  = _pose.boxing.enemyHp;
-  if (max)   max.textContent  = _pose.boxing.enemyMaxHp;
-  if (fill)  fill.style.width = (_pose.boxing.enemyHp / _pose.boxing.enemyMaxHp * 100) + '%';
-  if (enemy) enemy.textContent = _pose.boxing.enemyEmoji;
+  return counted;
 }
 
 /** Render loop. rAF for video draw + DOM updates; pose inference paced
  *  to PU_INFER_FPS via a setInterval so we don't melt the phone. */
 function runPoseLoop() {
-  const v   = document.getElementById('poseVideo');
+  const v   = document.getElementById('videoElement');
   const cv  = document.getElementById('poseCanvas');
   const cnt = document.getElementById('workoutCount');
   const st  = document.getElementById('workoutState');
@@ -7286,22 +7302,22 @@ function runPoseLoop() {
       const lms = res && res.landmarks && res.landmarks[0];
       if (lms) {
         lastLandmarks = lms;
+        handlePoseResults();
         if (_pose.exercise === 'pushup') {
-          if (pushupTick(lms) && navigator.vibrate) {
-            try { navigator.vibrate(40); } catch (_) {}
+          if (pushupTick(lms)) {
+            playRepFeedback();
+            if (navigator.vibrate) {
+              try { navigator.vibrate(40); } catch (_) {}
+            }
           }
         } else if (_pose.exercise === 'boxing') {
-          const fired = boxingTick(lms);
-          if (fired.length) {
-            const lastSide = applyPunches(fired);
-            playPunchSound();
-            flashHitEffect(lastSide);
+          if (punchTick(lms)) {
+            _pose.reps++;
+            playRepFeedback();
+            flashBoxingHit();
             if (navigator.vibrate) {
-              try { navigator.vibrate(25); } catch (_) {}
+              try { navigator.vibrate([20, 40, 20]); } catch (_) {}
             }
-            // Mirror lastCountAt so the FPS / counter render in the render
-            // loop picks up the change immediately on the next frame.
-            _pose.lastCountAt = performance.now();
           }
         }
       }
@@ -7329,7 +7345,14 @@ function runPoseLoop() {
         ctx.lineTo(b.x * cv.width, b.y * cv.height);
         ctx.stroke();
       };
-      const green = '#00ff87', white = 'rgba(255,255,255,.55)';
+      const green = '#00ff87', white = 'rgba(255,255,255,.55)', red = 'rgba(255,80,80,0.9)';
+      const drawDot = (p, color, size = 6) => {
+        if (!p) return;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(p.x * cv.width, p.y * cv.height, size, 0, Math.PI * 2);
+        ctx.fill();
+      };
       drawLine(pts[11], pts[13], green);    // L shoulder→elbow
       drawLine(pts[13], pts[15], green);    // L elbow→wrist
       drawLine(pts[12], pts[14], green);    // R shoulder→elbow
@@ -7338,16 +7361,19 @@ function runPoseLoop() {
       drawLine(pts[23], pts[24], white);    // hips
       drawLine(pts[11], pts[23], white);    // torso L
       drawLine(pts[12], pts[24], white);    // torso R
+      if (_pose.exercise === 'boxing') {
+        drawDot(pts[15], red, 7);
+        drawDot(pts[16], red, 7);
+      }
       ctx.restore();
     }
 
     if (_pose.reps !== lastReps) {
       lastReps = _pose.reps;
-      if (cnt) cnt.textContent = lastReps;
-      // Boxing HUD repaints alongside the punch counter so the HP bar
-      // and enemy emoji track the latest hit. Cheap — three textContent
-      // writes + a width assignment, gated on actual change.
-      if (_pose.exercise === 'boxing') renderBoxingHud();
+        if (cnt) cnt.textContent = lastReps;
+        // Keep the global quick-rep counter in sync with camera-detected reps
+        repCount = lastReps;
+        try { updateRepUI(); } catch(_) {}
     }
     if (_pose.state !== lastState) {
       lastState = _pose.state;
@@ -8577,29 +8603,7 @@ function isFirebaseConfigured() {
     fbDB      = firebase.firestore();
     fbStorage = firebase.storage();
 
-    // One-line init banner so config issues are obvious from the console.
-    // If the user pastes this back to us we can verify they're hitting
-    // the right project + bucket without a screenshot.
-    console.info('[1pb] Firebase initialized', {
-      appVersion:    APP_VERSION,
-      projectId:     FIREBASE_CONFIG.projectId,
-      authDomain:    FIREBASE_CONFIG.authDomain,
-      storageBucket: FIREBASE_CONFIG.storageBucket,
-      authReady:     !!fbAuth,
-      dbReady:       !!fbDB,
-      storageReady:  !!fbStorage,
-    });
-
-    // Offline persistence.
-    // NOTE: enablePersistence() is deprecated in Firebase v10 (the modular
-    // SDK replaces it with `persistentLocalCache` on initializeFirestore).
-    // We're on the compat SDK here, where it still works — just logs a
-    // deprecation warning. When migrating to the modular SDK, swap to:
-    //   import { initializeFirestore, persistentLocalCache,
-    //            persistentMultipleTabManager } from 'firebase/firestore';
-    //   const db = initializeFirestore(app, {
-    //     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-    //   });
+    // Offline persistence
     fbDB.enablePersistence({ synchronizeTabs: true })
       .catch(e => console.warn('[Firestore] Persistence:', e.code));
 
@@ -8626,17 +8630,6 @@ let obInteracted = false; // true once user clicked continue at least once
 function showAuthScreen() {
   // Never interrupt the user if they're mid-onboarding
   if (obInteracted) return;
-
-  // If the Iron Will alarm is currently ringing (e.g. a token refresh
-  // failed mid-alarm) the dismiss flow can't persist anything anyway —
-  // the user is no longer authenticated. Close the overlay + stop the
-  // audio first; otherwise the auth screen would appear UNDER the
-  // overlay and the alarm would keep ringing for the signed-out state.
-  if (document.body.classList.contains('iw-active') &&
-      typeof hideIronWillOverlay === 'function') {
-    hideIronWillOverlay();
-  }
-
   document.getElementById('authScreen')?.classList.remove('hidden');
   document.getElementById('onboarding')?.classList.add('hidden');
   document.getElementById('app').style.display = 'none';
@@ -8758,79 +8751,15 @@ async function doForgotPassword() {
 const PER_USER_KEYS = [
   '1pb_onboarded', '1pb_name', '1pb_xp', '1pb_streak', '1pb_habits',
   '1pb_activity', '1pb_posts', '1pb_uid', '1pb_iron_will',
-  '1pb_morning_routine', '1pb_workouts', '1pb_photo',
+  '1pb_morning_routine', '1pb_workouts',
 ];
-// Prefixes for per-day keys (e.g. 1pb_qtasks_2026-05-11, 1pb_dc_2026-05-11).
-// These accumulate one entry per day and would otherwise leak across users
-// on the same device. Wiped alongside PER_USER_KEYS.
-const PER_USER_KEY_PREFIXES = ['1pb_qtasks_', '1pb_dc_'];
-
-function wipePerUserStorage() {
-  PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
-  // Iterate a snapshot of the keys — removeItem mutates localStorage and
-  // index-based iteration would skip entries otherwise.
-  const all = [];
-  for (let i = 0; i < localStorage.length; i++) all.push(localStorage.key(i));
-  all.forEach(k => {
-    if (k && PER_USER_KEY_PREFIXES.some(p => k.startsWith(p))) {
-      localStorage.removeItem(k);
-    }
-  });
-}
 
 async function doSignOut() {
   if (!isFirebaseConfigured()) return;
-  // Tear down all the per-session resources BEFORE we wipe the user's
-  // localStorage. Otherwise running timers/audio/streams keep firing
-  // against the now-empty state, and the next user on this device
-  // inherits the previous user's running detection loop / scheduler.
-  resetPerUserRuntime();
-  wipePerUserStorage();
+  PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
   await fbAuth.signOut();
   // Reset in-memory onboarding flow so the next sign-in re-renders cleanly.
   obStep = 0; obHabits = []; obXP = 0; obInteracted = false;
-}
-
-/** Stop everything that's tied to the *currently signed-in user*: the
- *  Iron Will scheduler + audio overlay, the workout camera + inference
- *  loop, and any cached in-memory state objects that mirror per-user
- *  data. Called from doSignOut and from onUserSignedIn before the new
- *  user's data is loaded. Safe to call repeatedly. */
-function resetPerUserRuntime() {
-  // Iron Will scheduler + active overlay.
-  if (_iwTickHandle) { clearInterval(_iwTickHandle); _iwTickHandle = null; }
-  _iwLastShown = null;
-  _iwTestMode  = false;
-  if (typeof hideIronWillOverlay === 'function') {
-    const overlay = document.getElementById('ironWillOverlay');
-    if (overlay && !overlay.hidden) hideIronWillOverlay();
-  }
-
-  // Workout camera + inference. stopWorkoutInternals stops the stream,
-  // RAF, inference timer, and flips _pose.active to false.
-  if (typeof stopWorkoutInternals === 'function') stopWorkoutInternals();
-  // Reset the rep counter and exercise state so a new user doesn't see
-  // the previous user's last count flash before init() repaints.
-  _pose.reps        = 0;
-  _pose.state       = 'ready';
-  _pose.downFrames  = 0;
-  _pose.upFrames    = 0;
-  _pose.lastCountAt = 0;
-  _pose.boxing      = null;
-  // Audio context too — different user = different gesture chain on
-  // iOS. Creating a fresh one on next punch is cheap (~ms).
-  if (_hitAudioCtx) { try { _hitAudioCtx.close(); } catch (_) {} _hitAudioCtx = null; }
-
-  // In-memory mirrors of localStorage. After this returns, callers
-  // either wipe localStorage (doSignOut) or pull fresh data from
-  // Firestore (onUserSignedIn) — either way the next read of these
-  // fields will hit the new data.
-  if (state) {
-    state.streak    = { current: 0, longest: 0, lastPostDate: '', history: [false,false,false,false,false,false,false], lastFreezeDate: null };
-    state.xp        = 0;
-    state.feedPosts = [];
-    state.todayDone = false;
-  }
 }
 
 /* Offline / dev mode — skip auth */
@@ -8846,17 +8775,11 @@ async function onUserSignedIn(user) {
   hideAuthScreen();
 
   // If this is a different user than last sign-in on this device, drop the
-  // previous user's local cache AND in-memory mirrors so we don't carry
-  // over their onboarded flag, streak, name, running scheduler, etc.
+  // previous user's local cache so we don't carry over their onboarded
+  // flag, streak, name, etc.
   const prevUid = localStorage.getItem('1pb_uid');
   if (prevUid && prevUid !== user.uid) {
-    resetPerUserRuntime();
-    wipePerUserStorage();
-  } else if (!prevUid) {
-    // First sign-in on this device: still reset runtime so a leftover
-    // pose detection loop / alarm scheduler from a prior anonymous
-    // session can't survive into the authenticated one.
-    resetPerUserRuntime();
+    PER_USER_KEYS.forEach(k => localStorage.removeItem(k));
   }
   localStorage.setItem('1pb_uid', user.uid);
 
@@ -8866,15 +8789,6 @@ async function onUserSignedIn(user) {
 
   // Load user data from Firestore (authoritative source for onboarded flag).
   await loadUserFromFirestore(user.uid);
-
-  // Reload the in-memory state object from the freshly-hydrated
-  // localStorage. Otherwise init() will read state.streak / state.xp
-  // that were captured at page load and may belong to a different user.
-  if (state) {
-    state.streak    = loadStreak();
-    state.xp        = (loadXP && loadXP().total) || 0;
-    state.todayDone = checkTodayDone();
-  }
 
   // initApp → init → initOnboarding will show or hide the onboarding panel
   // based on the (now-correct) localStorage state.
@@ -8899,26 +8813,14 @@ async function loadUserFromFirestore(uid) {
     const doc = await fbDB.collection('users').doc(uid).get();
     if (doc.exists) {
       const d = doc.data();
-      if (d.name)           localStorage.setItem('1pb_name',           d.name);
-      if (d.xp)             localStorage.setItem('1pb_xp',             JSON.stringify(d.xp));
-      if (d.streak)         localStorage.setItem('1pb_streak',         JSON.stringify(d.streak));
-      if (d.habits)         localStorage.setItem('1pb_habits',         JSON.stringify(d.habits));
-      if (d.onboarded)      localStorage.setItem('1pb_onboarded',      '1');
-      if (d.lang)           localStorage.setItem('1pb_lang',           d.lang);
-      if (d.theme)          localStorage.setItem('1pb_theme',          d.theme);
-      if (d.ironWill)       localStorage.setItem(IRON_WILL_KEY,        JSON.stringify(d.ironWill));
-      if (d.morningRoutine) localStorage.setItem(MORNING_ROUTINE_KEY,  JSON.stringify(d.morningRoutine));
-      if (d.workouts)       localStorage.setItem('1pb_workouts',       JSON.stringify(d.workouts));
-      if (d.photoURL)       localStorage.setItem('1pb_photo',          d.photoURL);
-    }
-    // Firebase Auth has its OWN photoURL on currentUser. If Firestore
-    // didn't have one but Auth does (e.g. Google sign-in profile pic),
-    // fall back to that — and write it back to Firestore so future
-    // loads are consistent.
-    if (!localStorage.getItem('1pb_photo') && currentUser && currentUser.photoURL) {
-      localStorage.setItem('1pb_photo', currentUser.photoURL);
-      try { await fbDB.collection('users').doc(uid)
-        .set({ photoURL: currentUser.photoURL }, { merge: true }); } catch (_) {}
+      if (d.name)      localStorage.setItem('1pb_name',      d.name);
+      if (d.xp)        localStorage.setItem('1pb_xp',        JSON.stringify(d.xp));
+      if (d.streak)    localStorage.setItem('1pb_streak',    JSON.stringify(d.streak));
+      if (d.habits)    localStorage.setItem('1pb_habits',    JSON.stringify(d.habits));
+      if (d.onboarded) localStorage.setItem('1pb_onboarded', '1');
+      if (d.lang)      localStorage.setItem('1pb_lang',      d.lang);
+      if (d.theme)     localStorage.setItem('1pb_theme',     d.theme);
+      if (d.ironWill)  localStorage.setItem(IRON_WILL_KEY,   JSON.stringify(d.ironWill));
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
@@ -8976,6 +8878,40 @@ async function savePostToFirestore(post) {
   }
 }
 
+function saveBoxingSummaryToFeed(reps, durSec) {
+  if (reps < 1) return;
+  const userName = localStorage.getItem('1pb_name') || currentUser?.displayName || 'Champion';
+  const isHe = currentLang === 'he';
+  const minutes = Math.floor(durSec / 60);
+  const seconds = durSec % 60;
+  const durationLabel = `${minutes > 0 ? minutes + (isHe ? ' דק׳' : 'm ') : ''}${seconds}${isHe ? ' שניות' : 's'}`;
+  const rank = reps >= 30 ? (isHe ? 'אלוף אגרוף' : 'Boxing Champ')
+             : reps >= 20 ? (isHe ? 'לוחם מסור' : 'Committed Fighter')
+             : (isHe ? 'מתאמן בתחילת הדרך' : 'Rising Fighter');
+
+  const caption = isHe
+    ? `הצלחתי לנספר ${reps} אגרופים ב-${durationLabel}. דירוג: ${rank}.`
+    : `Landed ${reps} punches in ${durationLabel}. Rating: ${rank}.`;
+
+  const post = {
+    id: `b-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    userName,
+    userInitial: userName.charAt(0).toUpperCase(),
+    avatarColor: '#ff3860',
+    groupName: isHe ? 'איגרוף' : 'Boxing',
+    streakDay: state.streak.current,
+    time: isHe ? 'כעת' : 'Just now',
+    imageEmoji: '🥊',
+    caption,
+    likes: 0,
+    hot: reps >= 20,
+  };
+
+  state.feedPosts.unshift(post);
+  renderFeed();
+  savePostToFirestore(post);
+}
+
 /* Load community posts from Firestore */
 async function loadPostsFromFirestore() {
   if (!fbDB) return null;
@@ -9000,230 +8936,20 @@ async function loadPostsFromFirestore() {
  * Returns the download URL, or null if offline/unconfigured.
  */
 async function uploadProofPhoto(file) {
-  if (!fbStorage)   { console.warn('[Storage] no fbStorage instance');   return null; }
-  if (!currentUser) { console.warn('[Storage] no currentUser — sign-in required'); return null; }
-  if (!file)        { console.warn('[Storage] no file given');           return null; }
-
-  const ext  = extFromMime(file.type);
-  const path = `proofs/${currentUser.uid}/${Date.now()}.${ext}`;
-  console.info('[Storage] uploading', { path, size: file.size, type: file.type });
-
+  if (!fbStorage || !currentUser || !file) return null;
   try {
+    const ext  = extFromMime(file.type);
+    const path = `proofs/${currentUser.uid}/${Date.now()}.${ext}`;
     const ref  = fbStorage.ref(path);
     // Pass explicit metadata: Firebase otherwise guesses content-type
     // from the path extension, which fails for files iOS hands us with
     // no extension on the original name.
     const snap = await ref.put(file, { contentType: file.type || `image/${ext}` });
-    const url  = await snap.ref.getDownloadURL();
-    console.info('[Storage] upload OK');
-    return url;
-  } catch (e) {
-    // Surface the actual Firebase error code in BOTH the console AND a
-    // user-facing toast. The previous version swallowed all errors as
-    // a generic "upload failed" which made remote diagnosis impossible.
-    console.error('[Storage] Upload failed', {
-      code:        e && e.code,
-      message:     e && e.message,
-      serverResp:  e && e.serverResponse,
-      raw:         e,
-    });
-    const isHe = currentLang === 'he';
-    let toast;
-    switch (e && e.code) {
-      case 'storage/unauthenticated':
-        toast = isHe ? 'נדרשת התחברות מחדש' : 'Sign in again to upload'; break;
-      case 'storage/unauthorized':
-        toast = isHe ? 'אין הרשאה ל-Storage — בדוק את storage.rules' : 'Storage permission denied — check storage.rules'; break;
-      case 'storage/canceled':
-        toast = isHe ? 'ההעלאה בוטלה' : 'Upload canceled'; break;
-      case 'storage/quota-exceeded':
-        toast = isHe ? 'אחסון מלא בפרויקט' : 'Storage quota full'; break;
-      case 'storage/retry-limit-exceeded':
-        toast = isHe ? 'הרשת איטית מדי — נסה שוב' : 'Network too slow — retry'; break;
-      case 'storage/invalid-argument':
-      case 'storage/no-default-bucket':
-        toast = isHe ? 'תצורת Storage שגויה — בדוק את firebaseConfig' : 'Storage misconfigured — check firebaseConfig'; break;
-      default:
-        // No code OR a low-level network failure (CORS, DNS, offline).
-        // This is exactly the path users saw as "No server connection".
-        if (!navigator.onLine) {
-          toast = isHe ? 'אין חיבור לאינטרנט' : 'No internet connection';
-        } else {
-          toast = isHe
-            ? 'העלאה נכשלה — ייתכן CORS לא מוגדר. פתח DevTools→Console.'
-            : 'Upload failed — likely CORS or network. Check DevTools console for details.';
-        }
-    }
-    if (typeof showToast === 'function') showToast('⚠ ' + toast);
+    return await snap.ref.getDownloadURL();
+  } catch(e) {
+    console.warn('[Storage] Upload failed:', e);
     return null;
   }
-}
-
-/* ═══════════════════════════════════════════════════════
-   PROFILE PHOTO (avatar) upload
-   - Picker → 512px downscale → Storage at avatars/{uid}/avatar.jpg
-   - Persists to Firebase Auth (updateProfile) + Firestore + localStorage
-   - paintAvatars() is the single source of truth for any avatar in the
-     DOM, switching between an <img> and the initial-letter fallback.
-═══════════════════════════════════════════════════════ */
-
-/** Render every avatar element (hub + profile + community feed entries)
- *  based on the current localStorage state. Photo URL takes precedence
- *  over the initial-letter fallback. */
-function paintAvatars() {
-  const photoURL = localStorage.getItem('1pb_photo');
-  const name     = localStorage.getItem('1pb_name') || '';
-  const initial  = (name.charAt(0) || '?').toUpperCase();
-  // Only accept https URLs — defensive against any non-Firebase value
-  // slipping in (e.g. legacy localStorage on a dev machine).
-  const useUrl = photoURL && /^https:\/\/[^"\s]+$/i.test(photoURL);
-
-  // The profile avatar has a rich structure (initial span, edit hint,
-  // loading spinner) we must NOT clobber. Toggle a child <img> instead.
-  const profileAv = document.getElementById('profileAvatar');
-  if (profileAv) {
-    const initialEl = document.getElementById('profileAvatarInitial');
-    let img = profileAv.querySelector('img');
-    if (useUrl) {
-      if (!img) {
-        img = document.createElement('img');
-        img.alt = '';
-        profileAv.insertBefore(img, profileAv.firstChild);
-      }
-      img.src = photoURL;
-      if (initialEl) initialEl.hidden = true;
-    } else {
-      if (img) img.remove();
-      if (initialEl) { initialEl.hidden = false; initialEl.textContent = initial; }
-    }
-  }
-
-  // Other avatars (hub avatar + any .avatar in dropdowns/quick-actions):
-  // simple — clear contents, append img OR set text.
-  document.querySelectorAll('.avatar, #hubAvatar').forEach(el => {
-    if (el === profileAv || el.id === 'profileAvatar') return;
-    el.innerHTML = '';
-    if (useUrl) {
-      const img = document.createElement('img');
-      img.src = photoURL;
-      img.alt = '';
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;';
-      el.appendChild(img);
-    } else {
-      el.textContent = initial;
-    }
-  });
-}
-
-async function uploadAvatar(file) {
-  if (!fbStorage)   { console.warn('[avatar] no fbStorage');             return null; }
-  if (!currentUser) { console.warn('[avatar] sign-in required');         return null; }
-  if (!file)        { console.warn('[avatar] no file given');            return null; }
-
-  // Downscale aggressively — 512px is plenty for the largest avatar
-  // surface (80px @ 3x DPR = 240px actual). Smaller = faster upload +
-  // stays under the 2MB rule cap even for noisy PNGs.
-  const compact = await downscaleImage(file, 512, 0.85);
-  const path = `avatars/${currentUser.uid}/avatar.jpg`;
-  console.info('[avatar] uploading', { path, size: compact.size, type: compact.type });
-
-  try {
-    const ref  = fbStorage.ref(path);
-    const snap = await ref.put(compact, { contentType: 'image/jpeg' });
-    const url  = await snap.ref.getDownloadURL();
-    console.info('[avatar] upload OK');
-    return url;
-  } catch (e) {
-    // Same error-code mapping pattern as uploadProofPhoto so the user
-    // gets a useful toast instead of "No server connection".
-    console.error('[avatar] Upload failed', {
-      code: e && e.code, message: e && e.message,
-      serverResp: e && e.serverResponse, raw: e,
-    });
-    const isHe = currentLang === 'he';
-    let toast;
-    switch (e && e.code) {
-      case 'storage/unauthenticated':
-        toast = isHe ? 'נדרשת התחברות מחדש' : 'Sign in again to upload'; break;
-      case 'storage/unauthorized':
-        toast = isHe ? 'אין הרשאה — בדוק את storage.rules' : 'Permission denied — check storage.rules'; break;
-      case 'storage/canceled':
-        toast = isHe ? 'ההעלאה בוטלה' : 'Upload canceled'; break;
-      case 'storage/quota-exceeded':
-        toast = isHe ? 'אחסון מלא בפרויקט' : 'Storage quota full'; break;
-      case 'storage/retry-limit-exceeded':
-        toast = isHe ? 'הרשת איטית מדי — נסה שוב' : 'Network too slow — retry'; break;
-      case 'storage/invalid-argument':
-      case 'storage/no-default-bucket':
-        toast = isHe ? 'תצורת Storage שגויה' : 'Storage misconfigured — check firebaseConfig'; break;
-      default:
-        if (!navigator.onLine) {
-          toast = isHe ? 'אין חיבור לאינטרנט' : 'No internet connection';
-        } else {
-          toast = isHe
-            ? 'העלאה נכשלה — ייתכן CORS לא מוגדר על הבאקט'
-            : 'Upload failed — likely CORS or network. See console.';
-        }
-    }
-    if (typeof showToast === 'function') showToast('⚠ ' + toast);
-    return null;
-  }
-}
-
-/** Apply a freshly-uploaded URL everywhere it matters: Firebase Auth
- *  profile (so other Firebase features see it), Firestore user doc (so
- *  it survives sign-in on another device), localStorage (so the next
- *  paintAvatars() call sees it), and the DOM (immediate UI update). */
-async function setUserAvatar(url) {
-  if (currentUser && currentUser.updateProfile) {
-    try { await currentUser.updateProfile({ photoURL: url }); }
-    catch (e) { console.warn('[avatar] updateProfile failed', e); }
-  }
-  if (typeof syncUserToFirestore === 'function' &&
-      typeof isFirebaseConfigured === 'function' &&
-      isFirebaseConfigured() && currentUser) {
-    syncUserToFirestore({ photoURL: url });
-  }
-  if (url) localStorage.setItem('1pb_photo', url);
-  else     localStorage.removeItem('1pb_photo');
-  paintAvatars();
-}
-
-/** Open a file picker; on selection, run the upload + persist flow. */
-function pickAndUploadAvatar() {
-  if (!currentUser || !fbStorage) {
-    const isHe = currentLang === 'he';
-    showToast(isHe ? 'התחבר כדי להעלות תמונה' : 'Sign in to upload a photo');
-    return;
-  }
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
-
-    // Reject HEIC up front (same reasoning as proof upload).
-    if (typeof isHeic === 'function' && isHeic(file)) {
-      const isHe = currentLang === 'he';
-      showToast(isHe
-        ? '⚠ פורמט HEIC לא נתמך — שנה ב-iOS ל-Most Compatible'
-        : '⚠ HEIC not supported. Switch iOS Camera Formats to "Most Compatible".');
-      return;
-    }
-
-    const spinner = document.getElementById('profileAvatarLoading');
-    const hint    = document.getElementById('profileAvatarEdit');
-    if (spinner) spinner.hidden = false;
-    if (hint)    hint.hidden    = true;
-
-    const url = await uploadAvatar(file);
-    if (url) await setUserAvatar(url);
-
-    if (spinner) spinner.hidden = true;
-    if (hint)    hint.hidden    = false;
-  };
-  input.click();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -9448,6 +9174,160 @@ function applyAuthTranslations(lang) {
 /* ── Final bootstrap ── */
 function applySavedPrefsAndInit() { init(); }
 
+/* ── BOXING MODE ───────────────────────────────────── */
+let boxingState = {
+  playerHP: 100,
+  enemyHP: 100,
+  inProgress: false,
+};
+
+function updateBoxingLabels() {
+  const isHe = currentLang === 'he';
+  document.getElementById('boxingScreenTitle').textContent = isHe ? 'אימון איגרוף' : 'Boxing Mode';
+  document.getElementById('boxingRoundLabel').textContent = isHe ? 'סיבוב 1' : 'Round 1';
+  document.getElementById('playerHpLabel').textContent = isHe ? 'חיים שלי' : 'Player HP';
+  document.getElementById('enemyHpLabel').textContent = isHe ? 'חיים יריב' : 'Opponent HP';
+  document.getElementById('boxingHitBtn').textContent = isHe ? 'הכה' : 'Hit';
+  document.getElementById('boxingResetBtnLabel').textContent = isHe ? 'אפס קרב' : 'Reset Fight';
+}
+
+function startBoxingMode() {
+  startWorkout('boxing');
+}
+
+function resetBoxingMode() {
+  boxingState.playerHP = 100;
+  boxingState.enemyHP  = 100;
+  boxingState.inProgress = true;
+  const isHe = currentLang === 'he';
+  document.getElementById('boxingMessage').textContent = isHe ? 'לחץ על הכה כדי להתחיל את הקרב.' : 'Press hit to start the fight.';
+  document.getElementById('boxingHitBtn').disabled = false;
+  updateBoxingUI();
+}
+
+function boxingHit() {
+  if (!boxingState.inProgress) return;
+  const damage = Math.floor(Math.random() * 18) + 10;
+  const isHe = currentLang === 'he';
+  boxingState.enemyHP = Math.max(0, boxingState.enemyHP - damage);
+  document.getElementById('boxingMessage').textContent = isHe ? `הכית בנזק ${damage}.` : `You hit for ${damage} damage.`;
+  flashBoxingHit();
+  updateBoxingUI();
+
+  if (boxingState.enemyHP === 0) {
+    boxingState.inProgress = false;
+    document.getElementById('boxingMessage').textContent = isHe ? '🥊 ניצחון! הכית להשכחה!' : '🥊 Victory! You knocked them out.';
+    document.getElementById('boxingHitBtn').disabled = true;
+    showToast(isHe ? '🥊 KO! יופי עבודה!' : '🥊 KO! Great work.');
+    return;
+  }
+
+  setTimeout(boxingEnemyCounter, 300);
+}
+
+function boxingEnemyCounter() {
+  if (!boxingState.inProgress) return;
+  const damage = Math.floor(Math.random() * 14) + 6;
+  const isHe = currentLang === 'he';
+  boxingState.playerHP = Math.max(0, boxingState.playerHP - damage);
+  flashBoxingHit();
+  document.getElementById('boxingMessage').textContent = isHe ? `יריב התנגד בנזק ${damage}.` : `Opponent counters for ${damage} damage.`;
+  updateBoxingUI();
+
+  if (boxingState.playerHP === 0) {
+    boxingState.inProgress = false;
+    document.getElementById('boxingHitBtn').disabled = true;
+    document.getElementById('boxingMessage').textContent = isHe ? 'הוכית להשכחה. אפס כדי לקרוב שוב.' : 'You were knocked out. Reset to fight again.';
+    showToast(isHe ? '💥 KO! נסה שוב.' : '💥 KO! Reset to fight again.');
+  }
+}
+
+function updateBoxingUI() {
+  const playerPct = boxingState.playerHP;
+  const enemyPct = boxingState.enemyHP;
+  document.getElementById('playerHpFill').style.width = `${playerPct}%`;
+  document.getElementById('playerHpValue').textContent = `${playerPct}%`;
+  document.getElementById('enemyHpFill').style.width = `${enemyPct}%`;
+  document.getElementById('enemyHpValue').textContent = `${enemyPct}%`;
+}
+
+function flashBoxingHit() {
+  const flash = document.getElementById('boxingFlash');
+  if (!flash) return;
+  flash.classList.add('active');
+  setTimeout(() => flash.classList.remove('active'), 220);
+}
+
+function flashWorkoutBackground() {
+  const flash = document.getElementById('workoutFlash');
+  if (!flash) return;
+  flash.classList.add('active');
+  setTimeout(() => flash.classList.remove('active'), 120);
+}
+
+function playRepFeedback() {
+  if (!playBeep()) {
+    flashWorkoutBackground();
+  }
+}
+
+function showWorkoutSummary(summary) {
+  const overlay = document.getElementById('workoutSummary');
+  const countEl = document.getElementById('summaryCount');
+  const durationEl = document.getElementById('summaryDuration');
+  const targetEl = document.getElementById('summaryTarget');
+  const titleEl = document.getElementById('summaryTitle');
+  if (!overlay || !countEl || !durationEl || !targetEl || !titleEl) return;
+  const isHe = currentLang === 'he';
+  titleEl.textContent = isHe ? 'אימון הושלם' : 'Workout Complete';
+  countEl.textContent = `${summary.reps} ${isHe ? 'חזרות' : 'reps'}`;
+  targetEl.textContent = `${summary.target} reps`;
+  const mins = Math.floor(summary.durSec / 60);
+  const secs = summary.durSec % 60;
+  durationEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  overlay.hidden = false;
+}
+
+function closeWorkoutSummary() {
+  const overlay = document.getElementById('workoutSummary');
+  if (overlay) overlay.hidden = true;
+  renderXP();
+  renderStreak();
+  // Re-enable upload UI after workout
+  try {
+    const fi = document.getElementById('fileInput'); if (fi) fi.disabled = false;
+    const ua = document.getElementById('uploadArea'); if (ua) ua.style.display = '';
+  } catch(_) {}
+  navigate('hub');
+}
+
+function playBeep() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return false;
+    const ctx = new C();
+    const g = ctx.createGain();
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    g.gain.value = 0.0001;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
+    setTimeout(() => {
+      g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.05);
+      setTimeout(() => { try { o.stop(); ctx.close(); } catch (_) {} }, 60);
+    }, 40);
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 if (!isFirebaseConfigured()) {
   // No Firebase — skip auth, run immediately
   const authEl = document.getElementById('authScreen');
@@ -9461,6 +9341,7 @@ if (!isFirebaseConfigured()) {
 //                          → if not signed in: showAuthScreen (already visible by default)
 
 </script>
+<div id="boxingFlash" class="boxing-flash" aria-hidden="true"></div>
 
 <!-- ══════════════════════════════════════════════
      IRON WILL ALARM — full-screen, no-snooze, type-to-dismiss

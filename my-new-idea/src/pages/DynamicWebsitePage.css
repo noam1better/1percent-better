@@ -1,0 +1,1678 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Root ───────────────────────────────────────────────────────── */
+.dw-root {
+  font-family: 'Heebo', 'Arial Hebrew', system-ui, sans-serif;
+  background: var(--dw-bg);
+  color: var(--dw-text);
+  direction: rtl;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+.dw-root ::selection {
+  background: var(--dw-accent2);
+  color: #fff;
+}
+
+/* ── Nav ────────────────────────────────────────────────────────── */
+.dw-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0 32px;
+  transition: background 0.3s, backdrop-filter 0.3s, border-bottom 0.3s;
+}
+.dw-nav--sticky {
+  background: color-mix(in srgb, var(--dw-bg) 90%, transparent);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border-bottom: 1px solid var(--dw-border);
+}
+.dw-nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.dw-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--dw-text);
+  margin-left: auto;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+.dw-logo-emoji { font-size: 22px; line-height: 1; }
+.dw-nav-links {
+  display: flex;
+  gap: 2px;
+}
+.dw-nav-link {
+  color: var(--dw-text2);
+  text-decoration: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s, background 0.15s;
+}
+.dw-nav-link:hover { color: var(--dw-text); background: var(--dw-accent1); }
+
+.dw-nav-cta {
+  background: var(--dw-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.dw-nav-cta:hover { opacity: 0.85; transform: translateY(-1px); }
+
+/* ── Hero ────────────────────────────────────────────────────────── */
+.dw-hero {
+  position: relative;
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 32px 80px;
+  overflow: hidden;
+}
+.dw-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: var(--dw-hero-glow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hero background photo — cinematic opacity */
+.dw-hero-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.48;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 1.4s ease;
+}
+.dw-classic .dw-hero-photo {
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+.dw-bold .dw-hero-photo { opacity: 0.3; }
+
+/* Cinematic gradient overlay — fades photo into page bg at bottom */
+.dw-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      rgba(0,0,0,0.12) 0%,
+      rgba(0,0,0,0) 18%,
+      rgba(0,0,0,0.06) 52%,
+      rgba(0,0,0,0.72) 78%,
+      rgba(0,0,0,0.97) 100%
+    );
+}
+/* Pro hero overlay — left-to-right (text panel on right in RTL) */
+.dw-hero-overlay--pro {
+  background: linear-gradient(
+    135deg,
+    rgba(0,0,0,0.88) 0%,
+    rgba(0,0,0,0.4) 55%,
+    rgba(0,0,0,0.15) 100%
+  );
+}
+/* Pro photo — very subtle */
+.dw-hero-photo--pro { opacity: 0.12; }
+
+/* Bold style: diagonal line decoration */
+.dw-bold .dw-hero-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 60px,
+    rgba(255,255,255,0.015) 60px,
+    rgba(255,255,255,0.015) 61px
+  );
+}
+
+.dw-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.dw-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--dw-accent1);
+  border: 1px solid var(--dw-accent2);
+  color: var(--dw-accent);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 20px;
+  border-radius: 99px;
+  margin-bottom: 28px;
+  letter-spacing: 0.3px;
+}
+
+/* Entrance animation for hero children */
+@keyframes dw-fade-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dw-hero-inner > * {
+  animation: dw-fade-up 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dw-hero-inner > *:nth-child(1) { animation-delay: 0.05s; }
+.dw-hero-inner > *:nth-child(2) { animation-delay: 0.15s; }
+.dw-hero-inner > *:nth-child(3) { animation-delay: 0.25s; }
+.dw-hero-inner > *:nth-child(4) { animation-delay: 0.38s; }
+.dw-hero-inner > *:nth-child(5) { animation-delay: 0.50s; }
+
+.dw-h1 {
+  font-size: clamp(3.4rem, 8.5vw, 6.2rem);
+  font-weight: var(--dw-h1-weight, 900);
+  line-height: 1.05;
+  letter-spacing: var(--dw-h1-spacing, -2px);
+  color: var(--dw-text);
+  margin: 0 0 24px;
+}
+/* bold style: accent color on first word via bg-clip */
+.dw-bold .dw-h1 {
+  background: linear-gradient(135deg, var(--dw-text) 40%, var(--dw-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.dw-h1-sub-type {
+  display: block;
+  font-size: 55%;
+  font-weight: 600;
+  color: var(--dw-text2);
+  letter-spacing: -0.5px;
+  margin-top: 4px;
+  -webkit-text-fill-color: var(--dw-text2);
+}
+.dw-bold .dw-h1-sub-type { -webkit-text-fill-color: var(--dw-text2); }
+
+.dw-hero-sub {
+  font-size: 17px;
+  color: var(--dw-text2);
+  line-height: 1.75;
+  max-width: 560px;
+  margin: 0 0 36px;
+}
+.dw-hero-btns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+.dw-trust-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.dw-trust-badge {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dw-text2);
+  background: var(--dw-surf);
+  border: 1px solid var(--dw-border);
+  padding: 5px 14px;
+  border-radius: 99px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.dw-btn-primary {
+  background: var(--dw-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 16px 36px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 0 40px var(--dw-accent2), 0 4px 20px rgba(0,0,0,0.3);
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+}
+.dw-btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 60px var(--dw-accent3), 0 8px 30px rgba(0,0,0,0.4);
+  opacity: 0.92;
+}
+.dw-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--dw-border);
+  color: var(--dw-text2);
+  text-decoration: none;
+  padding: 15px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+.dw-btn-outline:hover {
+  border-color: var(--dw-accent);
+  color: var(--dw-accent);
+  background: var(--dw-accent1);
+}
+.dw-btn-wa {
+  background: #25d366;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 16px 36px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(37,211,102,0.3);
+  transition: transform 0.18s, opacity 0.18s;
+}
+.dw-btn-wa:hover { transform: translateY(-3px); opacity: 0.92; }
+.dw-btn-lg { padding: 18px 44px; font-size: 17px; }
+
+/* ── Shared section layout ───────────────────────────────────────── */
+.dw-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+.dw-section {
+  padding: 96px 32px;
+}
+.dw-section--alt {
+  background: var(--dw-surf);
+}
+.dw-section-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--dw-accent);
+  margin-bottom: 12px;
+}
+.dw-h2 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--dw-text);
+  margin: 0 0 48px;
+  line-height: 1.15;
+}
+.dw-h2--sm {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 20px;
+}
+
+/* ── Services grid ───────────────────────────────────────────────── */
+.dw-services-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.dw-service-card {
+  background: var(--dw-surf);
+  border: 1px solid var(--dw-border);
+  border-radius: 20px;
+  padding: 32px 24px;
+  text-align: center;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.dw-service-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; left: 0;
+  height: 2px;
+  background: var(--dw-accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.dw-service-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--dw-accent2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+.dw-service-card:hover::before { opacity: 1; }
+.dw-service-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--dw-accent1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+}
+.dw-service-icon { font-size: 30px; line-height: 1; }
+.dw-service-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dw-text);
+  margin: 0 0 8px;
+}
+.dw-service-desc {
+  font-size: 13.5px;
+  color: var(--dw-text2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── About/strip ─────────────────────────────────────────────────── */
+.dw-strip {
+  padding: 80px 32px;
+  background: var(--dw-surf2);
+  border-top: 1px solid var(--dw-border);
+  border-bottom: 1px solid var(--dw-border);
+}
+.dw-strip-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+.dw-strip-desc {
+  font-size: 15px;
+  color: var(--dw-text2);
+  line-height: 1.75;
+  margin: 0 0 28px;
+}
+.dw-strip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dw-strip-stat {
+  background: var(--dw-surf);
+  border: 1px solid var(--dw-border);
+  border-right: 3px solid var(--dw-accent);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dw-text);
+}
+
+/* ── Proof bar ───────────────────────────────────────────────────── */
+.dw-proof-bar {
+  background: var(--dw-surf);
+  border-top: 1px solid var(--dw-border);
+  border-bottom: 1px solid var(--dw-border);
+  padding: 22px 32px;
+}
+.dw-proof-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.dw-proof-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dw-text);
+}
+.dw-proof-icon { font-size: 20px; }
+
+/* ── Objection box ───────────────────────────────────────────────── */
+.dw-objection-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--dw-accent1);
+  border: 1px solid var(--dw-accent2);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.dw-objection-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.dw-objection-q {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dw-text);
+  margin-bottom: 4px;
+}
+.dw-objection-a {
+  font-size: 13px;
+  color: var(--dw-text2);
+  line-height: 1.5;
+}
+
+/* ── Testimonials ────────────────────────────────────────────────── */
+.dw-testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.dw-testimonial {
+  background: var(--dw-surf2);
+  border: 1px solid var(--dw-border);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.dw-testimonial:hover {
+  transform: translateY(-3px);
+  border-color: var(--dw-accent2);
+}
+.dw-testimonial-stars { font-size: 14px; }
+.dw-testimonial-text {
+  font-size: 14px;
+  color: var(--dw-text2);
+  line-height: 1.65;
+  flex: 1;
+  margin: 0;
+  font-style: italic;
+}
+.dw-testimonial-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dw-text);
+}
+
+/* ── Testimonials placeholder ────────────────────────────────────── */
+.dw-testimonials-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  border: 1.5px dashed rgba(255,255,255,0.15);
+  border-radius: 16px;
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.dw-classic .dw-testimonials-placeholder {
+  border-color: rgba(0,0,0,0.12);
+}
+.dw-tp-icon { font-size: 32px; opacity: 0.5; }
+.dw-tp-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dw-text);
+  opacity: 0.8;
+  margin: 0;
+}
+.dw-tp-sub {
+  font-size: 14px;
+  color: var(--dw-text);
+  opacity: 0.5;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Contact ─────────────────────────────────────────────────────── */
+.dw-contact {
+  padding: 100px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.dw-contact-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 400px;
+  background: var(--dw-hero-glow);
+  pointer-events: none;
+  z-index: 0;
+}
+.dw-contact-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.dw-contact .dw-h2 { margin-bottom: 14px; }
+.dw-contact-sub {
+  font-size: 15px;
+  color: var(--dw-text2);
+  margin: 0 0 36px;
+}
+.dw-contact-btns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.dw-contact-city {
+  font-size: 14px;
+  color: var(--dw-text3);
+  font-weight: 500;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.dw-footer {
+  border-top: 1px solid var(--dw-border);
+  background: var(--dw-surf);
+  padding: 36px 32px 28px;
+}
+.dw-footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.dw-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--dw-border);
+}
+.dw-footer-brand-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dw-footer-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dw-text);
+}
+.dw-footer-city { color: var(--dw-text2); font-weight: 500; }
+.dw-footer-contact {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dw-footer-contact-link {
+  font-size: 13px;
+  color: var(--dw-text3);
+  text-decoration: none;
+  transition: color .15s;
+}
+.dw-footer-contact-link:hover { color: var(--dw-accent); }
+.dw-footer-links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.dw-footer-link {
+  font-size: 13px;
+  color: var(--dw-text2);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.dw-footer-link:hover { color: var(--dw-text); }
+.dw-footer-copy {
+  font-size: 12px;
+  color: var(--dw-text3);
+}
+.dw-footer-ai {
+  font-size: 12px;
+  color: var(--dw-text3);
+}
+.dw-footer-ai-brand {
+  color: var(--dw-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.dw-footer-ai-brand:hover { opacity: 0.8; }
+
+/* ── Classic style overrides ─────────────────────────────────────── */
+.dw-classic .dw-nav--sticky {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+.dw-classic .dw-hero-tag {
+  color: var(--dw-accent);
+}
+.dw-classic .dw-btn-outline {
+  border-color: rgba(0,0,0,0.15);
+  color: var(--dw-text2);
+}
+.dw-classic .dw-btn-outline:hover {
+  border-color: var(--dw-accent);
+}
+.dw-classic .dw-service-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+.dw-classic .dw-testimonial {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+/* ── Bold style overrides ────────────────────────────────────────── */
+.dw-bold .dw-service-card {
+  border-color: rgba(255,255,255,0.04);
+}
+.dw-bold .dw-h2 {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  letter-spacing: -1.5px;
+}
+.dw-bold .dw-btn-primary {
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+.dw-bold .dw-nav-cta {
+  border-radius: 6px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dw-services-grid { grid-template-columns: repeat(2, 1fr); }
+  .dw-strip-inner { grid-template-columns: 1fr; gap: 36px; }
+  .dw-testimonials-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+@media (max-width: 640px) {
+  .dw-nav { padding: 0 20px; }
+  .dw-nav-links { display: none; }
+  .dw-hero { padding: 100px 20px 60px; min-height: auto; }
+  .dw-h1 { font-size: clamp(2rem, 8vw, 3rem); }
+  .dw-section, .dw-strip, .dw-contact { padding: 60px 20px; }
+  .dw-services-grid { grid-template-columns: 1fr; gap: 14px; }
+  .dw-hero-btns { flex-direction: column; align-items: center; }
+  .dw-footer { padding: 28px 20px 20px; }
+  .dw-footer-top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .dw-footer-bottom { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .dw-footer-links { gap: 12px; }
+}
+
+/* ── Mobile clipping prevention ─────────────────────────────────── */
+.dw-root { overflow-x: hidden; }
+.dw-container { overflow-x: hidden; }
+
+/* ════════════════════════════════════════
+   PRO HERO LAYOUT (lawyer, accounting)
+════════════════════════════════════════ */
+.dw-hero--pro {
+  padding: 0;
+  min-height: auto;
+  background: none;
+}
+.dw-hero--pro::before { display: none; }
+.dw-hero-pro-inner {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 40px;
+  align-items: center;
+  padding: 100px 0 80px;
+}
+.dw-hero-pro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.dw-hero-pro-panel {
+  background: var(--dw-surf);
+  border: 1px solid var(--dw-border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.dw-hero-pro-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--dw-accent1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.dw-hero-pro-emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+.dw-hero-pro-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dw-hero-pro-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--dw-text2);
+  font-weight: 600;
+}
+.dw-hero-pro-badge-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--dw-accent1);
+  border: 1px solid var(--dw-accent2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.dw-btn-full { width: 100%; justify-content: center; text-align: center; display: block; }
+
+@media (max-width: 860px) {
+  .dw-hero-pro-inner { grid-template-columns: 1fr; padding: 80px 24px 60px; }
+  .dw-hero-pro-panel { display: none; }
+}
+
+/* ════════════════════════════════════════
+   LUXE HERO LAYOUT (beauty)
+════════════════════════════════════════ */
+.dw-hero--luxe {
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px 24px 80px;
+}
+.dw-hero-luxe-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.dw-hero-luxe-icon {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 24px var(--dw-accent));
+}
+.dw-hero-btns--center { justify-content: center; }
+.dw-trust-row--center { justify-content: center; }
+
+/* ════════════════════════════════════════
+   TECH HERO LAYOUT (startup)
+════════════════════════════════════════ */
+.dw-hero--tech .dw-h1 {
+  background: linear-gradient(135deg, var(--dw-text) 0%, var(--dw-accent) 55%, var(--dw-text) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% auto;
+  animation: dw-tech-shimmer 4s linear infinite;
+}
+@keyframes dw-tech-shimmer {
+  to { background-position: 200% center; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BUSINESS DNA — personality mutations per category
+   Applied via .dw-dna--{bizType} on root element
+════════════════════════════════════════════════════════════════════ */
+
+/* ── GYM DNA: aggressive, bold, energetic ────────────────────────── */
+.dw-dna--gym .dw-btn-primary,
+.dw-dna--gym .dw-nav-cta {
+  border-radius: 2px !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+.dw-dna--gym .dw-hero-tag {
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+.dw-dna--gym .dw-h2 {
+  text-transform: uppercase;
+  letter-spacing: -1px;
+}
+.dw-dna--gym .dw-service-card {
+  border-radius: 0;
+  border-top: 3px solid var(--dw-accent);
+  border-bottom: none;
+}
+.dw-dna--gym .dw-trust-badge {
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+}
+
+/* GYM stats bar */
+.dw-gym-stats {
+  background: var(--dw-accent);
+  padding: 24px 0;
+}
+.dw-gym-stats-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dw-gym-stat { text-align: center; padding: 8px 16px; }
+.dw-gym-stat-n {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -2px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.dw-gym-stat-l {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.75);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+/* GYM journey */
+.dw-gym-journey { background: var(--dw-surf2); }
+.dw-journey-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 40px;
+  background: var(--dw-border);
+}
+.dw-journey-card {
+  background: var(--dw-surf);
+  padding: 36px 28px;
+  border-top: 4px solid var(--dw-accent);
+  position: relative;
+  overflow: hidden;
+}
+.dw-journey-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--dw-accent1) 0%, transparent 40%);
+  pointer-events: none;
+}
+.dw-journey-icon {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+  display: block;
+}
+.dw-journey-tag {
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--dw-accent);
+  margin-bottom: 10px;
+}
+.dw-journey-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--dw-text);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+}
+.dw-journey-desc {
+  font-size: 0.88rem;
+  color: var(--dw-text2);
+  line-height: 1.65;
+}
+
+/* ── BEAUTY DNA: soft, elegant, spacious ─────────────────────────── */
+.dw-dna--beauty .dw-btn-primary,
+.dw-dna--beauty .dw-nav-cta {
+  border-radius: 999px !important;
+  padding: 14px 40px;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+}
+.dw-dna--beauty .dw-hero-tag {
+  letter-spacing: 5px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+.dw-dna--beauty .dw-h2 {
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+.dw-dna--beauty .dw-h1 {
+  font-weight: var(--dw-h1-weight, 300) !important;
+}
+.dw-dna--beauty .dw-service-card {
+  border-radius: 24px;
+}
+.dw-dna--beauty .dw-section {
+  padding: 100px 0;
+}
+.dw-dna--beauty .dw-trust-badge {
+  border-radius: 999px;
+}
+
+/* BEAUTY ritual */
+.dw-beauty-ritual { background: var(--dw-surf); }
+.dw-ritual-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 48px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.dw-ritual-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 28px 32px;
+  background: var(--dw-bg);
+  border-radius: 20px;
+  border: 1px solid var(--dw-border);
+  transition: transform 0.2s ease;
+}
+.dw-ritual-step:hover { transform: translateX(-4px); }
+.dw-ritual-n {
+  font-size: 3rem;
+  font-weight: 200;
+  color: var(--dw-accent);
+  line-height: 1;
+  flex-shrink: 0;
+  width: 56px;
+  text-align: center;
+}
+.dw-ritual-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dw-text);
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+.dw-ritual-desc {
+  font-size: 0.88rem;
+  color: var(--dw-text2);
+  line-height: 1.7;
+}
+
+/* ── RESTAURANT DNA: warm, inviting, cinematic ───────────────────── */
+.dw-dna--restaurant .dw-service-card { border-radius: 20px; }
+.dw-dna--restaurant .dw-btn-primary,
+.dw-dna--restaurant .dw-nav-cta { border-radius: 12px !important; }
+.dw-dna--restaurant .dw-trust-badge { border-radius: 999px; }
+.dw-dna--restaurant .dw-hero-photo {
+  filter: saturate(1.2) brightness(0.55);
+}
+
+/* RESTAURANT menu */
+.dw-restaurant-menu { border-top: 1px solid var(--dw-border); }
+.dw-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  margin-top: 40px;
+}
+.dw-menu-cat-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dw-accent);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--dw-border);
+}
+.dw-menu-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dw-menu-item {
+  font-size: 0.92rem;
+  color: var(--dw-text2);
+  padding-right: 14px;
+  border-right: 2px solid var(--dw-accent2);
+  line-height: 1.4;
+}
+.dw-menu-cta {
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* ── LAWYER DNA: authority, minimal, formal ──────────────────────── */
+.dw-dna--lawyer .dw-btn-primary,
+.dw-dna--lawyer .dw-nav-cta { border-radius: 4px !important; }
+.dw-dna--lawyer .dw-service-card {
+  border-radius: 4px;
+  border-right: 3px solid var(--dw-accent);
+}
+.dw-dna--lawyer .dw-hero-tag {
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.dw-dna--lawyer .dw-section-eyebrow { letter-spacing: 3px; }
+
+/* ── ACCOUNTING DNA: precise, clean ─────────────────────────────── */
+.dw-dna--accounting .dw-btn-primary { border-radius: 4px !important; }
+.dw-dna--accounting .dw-service-card {
+  border-radius: 4px;
+  border-right: 3px solid var(--dw-accent);
+}
+
+/* LAWYER / ACCOUNTING credentials bar */
+.dw-credentials-bar {
+  background: var(--dw-surf);
+  border-top: 1px solid var(--dw-border);
+  border-bottom: 1px solid var(--dw-border);
+  padding: 44px 0;
+}
+.dw-credentials-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.dw-credential { text-align: center; padding: 0 16px; }
+.dw-credential-n {
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 700;
+  color: var(--dw-accent);
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.dw-credential-l {
+  font-size: 0.78rem;
+  color: var(--dw-text2);
+  margin-top: 6px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ── FLOORING DNA: earthy, craftsmanship, solid ─────────────────── */
+.dw-dna--flooring .dw-service-card {
+  border-radius: 8px;
+  border-bottom: 2px solid var(--dw-accent);
+}
+.dw-dna--flooring .dw-btn-primary { border-radius: 6px !important; }
+.dw-dna--flooring .dw-h2 { font-weight: 800; }
+
+/* FLOORING materials */
+.dw-flooring-mats { background: var(--dw-surf2); }
+.dw-mats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 40px;
+}
+.dw-mat-card {
+  background: var(--dw-bg);
+  border: 1px solid var(--dw-border);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  border-bottom: 3px solid var(--dw-accent);
+  transition: transform 0.2s ease;
+}
+.dw-mat-card:hover { transform: translateY(-4px); }
+.dw-mat-emoji { font-size: 2.2rem; margin-bottom: 12px; display: block; }
+.dw-mat-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dw-text);
+  margin-bottom: 8px;
+}
+.dw-mat-desc { font-size: 0.82rem; color: var(--dw-text2); line-height: 1.5; }
+
+/* ── STARTUP DNA: tech, forward, data-driven ─────────────────────── */
+.dw-dna--startup .dw-service-card {
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.dw-dna--startup .dw-service-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--dw-accent), #6366f1, var(--dw-accent));
+  background-size: 200%;
+  animation: dw-startup-border 3s linear infinite;
+}
+@keyframes dw-startup-border { to { background-position: 200%; } }
+
+/* STARTUP metrics */
+.dw-startup-metrics {
+  background: var(--dw-surf);
+  border-top: 1px solid var(--dw-border);
+  border-bottom: 1px solid var(--dw-border);
+  padding: 32px 0;
+}
+.dw-startup-metrics-inner {
+  display: flex;
+  justify-content: space-around;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.dw-startup-metric { text-align: center; padding: 0 16px; }
+.dw-startup-metric-n {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--dw-text) 0%, var(--dw-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.dw-startup-metric-l {
+  font-size: 0.75rem;
+  color: var(--dw-text2);
+  margin-top: 6px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ── SHOP DNA: accessible, friendly, clear ───────────────────────── */
+.dw-dna--shop .dw-service-card { border-radius: 16px; }
+.dw-dna--shop .dw-btn-primary { border-radius: 10px !important; }
+
+/* ── DNA MOBILE responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .dw-gym-stats-inner { justify-content: center; gap: 0; }
+  .dw-gym-stat { width: 50%; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 14px 0; }
+  .dw-journey-grid { grid-template-columns: 1fr; gap: 2px; }
+  .dw-menu-grid { grid-template-columns: 1fr; gap: 28px; }
+  .dw-ritual-step { flex-direction: column; gap: 12px; padding: 20px; }
+  .dw-ritual-n { width: auto; font-size: 2rem; }
+  .dw-credentials-inner { gap: 0; }
+  .dw-credential { width: 50%; padding: 16px 0; border-bottom: 1px solid var(--dw-border); }
+  .dw-mats-grid { grid-template-columns: repeat(2, 1fr); }
+  .dw-startup-metrics-inner { gap: 0; }
+  .dw-startup-metric { width: 50%; padding: 12px 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CINEMATIC UPGRADES — per-type photo treatment + typography
+════════════════════════════════════════════════════════════════════ */
+
+/* Subtle film grain on all generated sites */
+.dw-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.038;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px;
+}
+
+/* ── GYM: explosive — max photo, max size ─── */
+.dw-dna--gym .dw-hero-photo {
+  opacity: 0.58;
+  filter: contrast(1.08) saturate(1.15);
+}
+.dw-dna--gym .dw-hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.25) 0%,
+    rgba(0,0,0,0.05) 28%,
+    rgba(0,0,0,0.2) 58%,
+    rgba(0,0,0,0.88) 82%,
+    rgba(0,0,0,0.99) 100%
+  );
+}
+.dw-dna--gym .dw-h1 {
+  font-size: clamp(4rem, 12vw, 9rem);
+  letter-spacing: -4px;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.dw-dna--gym .dw-hero { min-height: 100vh; }
+
+/* ── RESTAURANT: cinematic warmth ─── */
+.dw-dna--restaurant .dw-hero-photo {
+  opacity: 0.58;
+  filter: saturate(1.35) brightness(0.82);
+}
+.dw-dna--restaurant .dw-hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(10,2,2,0.15) 0%,
+    rgba(10,2,2,0) 22%,
+    rgba(10,2,2,0.08) 55%,
+    rgba(10,2,2,0.82) 80%,
+    rgba(10,2,2,0.98) 100%
+  );
+}
+.dw-dna--restaurant .dw-h1 {
+  font-size: clamp(3.4rem, 9vw, 6.8rem);
+  font-weight: 800;
+  letter-spacing: -2px;
+}
+
+/* ── FLOORING: architectural warmth ─── */
+.dw-dna--flooring .dw-hero-photo {
+  opacity: 0.52;
+  filter: sepia(0.18) saturate(1.25) brightness(0.88);
+}
+.dw-dna--flooring .dw-hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(12,6,0,0.1) 0%,
+    rgba(12,6,0,0) 20%,
+    rgba(12,6,0,0.1) 55%,
+    rgba(12,6,0,0.82) 80%,
+    rgba(12,6,0,0.98) 100%
+  );
+}
+.dw-dna--flooring .dw-h1 {
+  font-size: clamp(3.6rem, 9.5vw, 7rem);
+  font-weight: 800;
+  letter-spacing: -3px;
+}
+
+/* ── BEAUTY: editorial soft luxury ─── */
+.dw-dna--beauty .dw-hero-photo {
+  opacity: 0.38;
+  filter: saturate(1.05) brightness(0.95);
+}
+.dw-dna--beauty .dw-hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(4,2,6,0.12) 0%,
+    rgba(4,2,6,0) 24%,
+    rgba(4,2,6,0.1) 58%,
+    rgba(4,2,6,0.8) 80%,
+    rgba(4,2,6,0.98) 100%
+  );
+}
+.dw-dna--beauty .dw-h1 {
+  font-size: clamp(3rem, 8vw, 5.8rem);
+  font-weight: 200;
+  letter-spacing: 1px;
+  line-height: 1.15;
+}
+
+/* ── LAWYER: monumental authority ─── */
+.dw-dna--lawyer .dw-h1 {
+  font-size: clamp(3.2rem, 8vw, 6rem);
+  font-weight: 900;
+  letter-spacing: -3px;
+}
+
+/* ── ACCOUNTING: precise, modern ─── */
+.dw-dna--accounting .dw-h1 {
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  letter-spacing: -2px;
+}
+
+/* ── STARTUP: gradient cinematic ─── */
+.dw-dna--startup .dw-hero-photo {
+  opacity: 0.28;
+  filter: saturate(0.7) brightness(0.9);
+}
+.dw-dna--startup .dw-h1 {
+  font-size: clamp(3.4rem, 9vw, 6.5rem);
+  letter-spacing: -3px;
+}
+
+/* ── SHOP: vibrant, product-first ─── */
+.dw-dna--shop .dw-hero-photo {
+  opacity: 0.44;
+  filter: saturate(1.1) brightness(0.85);
+}
+.dw-dna--shop .dw-h1 {
+  font-size: clamp(3.4rem, 8.5vw, 6.2rem);
+  letter-spacing: -2px;
+}
+
+/* Mobile: normalize h1 sizing per DNA */
+@media (max-width: 640px) {
+  .dw-dna--gym .dw-h1 { font-size: clamp(3rem, 11vw, 5rem); letter-spacing: -2px; }
+  .dw-dna--flooring .dw-h1,
+  .dw-dna--restaurant .dw-h1,
+  .dw-dna--beauty .dw-h1,
+  .dw-dna--lawyer .dw-h1,
+  .dw-dna--accounting .dw-h1,
+  .dw-dna--startup .dw-h1,
+  .dw-dna--shop .dw-h1 { font-size: clamp(2.8rem, 10vw, 4.5rem); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PRO HERO: credential stat (replaces emoji)
+════════════════════════════════════════════════════════════════════ */
+.dw-hero-pro-cred {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+.dw-hero-pro-cred-n {
+  font-size: 4.5rem;
+  font-weight: 900;
+  color: var(--dw-accent);
+  letter-spacing: -4px;
+  line-height: 1;
+}
+.dw-hero-pro-cred-l {
+  font-size: 0.72rem;
+  color: var(--dw-text2);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TESTIMONIALS: featured first card
+════════════════════════════════════════════════════════════════════ */
+.dw-testimonial--featured {
+  border-color: var(--dw-accent2);
+  background: color-mix(in srgb, var(--dw-surf2) 80%, var(--dw-accent) 20%);
+}
+.dw-testimonial-stars {
+  font-size: 14px;
+  color: var(--dw-accent);
+  letter-spacing: 2px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   LAWYER / ACCOUNTING: editorial numbered service list
+════════════════════════════════════════════════════════════════════ */
+.dw-services-law { padding: 80px 32px; }
+.dw-law-list {
+  border-top: 1px solid var(--dw-border);
+  margin-top: 48px;
+}
+.dw-law-item {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 40px;
+  padding: 42px 0;
+  border-bottom: 1px solid var(--dw-border);
+  align-items: start;
+  transition: background 0.25s, padding 0.25s, margin 0.25s;
+}
+.dw-law-item:hover {
+  background: var(--dw-surf);
+  padding: 42px 28px;
+  margin: 0 -28px;
+}
+.dw-law-num {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--dw-accent);
+  opacity: 0.22;
+  letter-spacing: -3px;
+  line-height: 1;
+  padding-top: 2px;
+}
+.dw-law-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--dw-text);
+  margin: 0 0 10px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.dw-law-desc {
+  font-size: 0.92rem;
+  color: var(--dw-text2);
+  line-height: 1.7;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .dw-law-item { grid-template-columns: 48px 1fr; gap: 20px; }
+  .dw-law-num { font-size: 2.5rem; }
+  .dw-services-law { padding: 60px 20px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GYM: bold raw typographic tiles
+════════════════════════════════════════════════════════════════════ */
+.dw-services-gym-sec { padding: 0 32px 80px; }
+.dw-gym-srv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+  background: var(--dw-accent);
+  margin-top: 48px;
+}
+.dw-gym-srv {
+  background: var(--dw-bg);
+  padding: 52px 44px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.22s;
+}
+.dw-gym-srv:hover { background: var(--dw-surf); }
+.dw-gym-srv-n {
+  display: block;
+  font-size: 7rem;
+  font-weight: 900;
+  color: var(--dw-accent);
+  opacity: 0.09;
+  line-height: 1;
+  position: absolute;
+  top: 8px;
+  left: 16px;
+  letter-spacing: -6px;
+  pointer-events: none;
+}
+.dw-gym-srv-title {
+  font-size: 1.55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dw-text);
+  margin: 0 0 14px;
+  position: relative;
+  line-height: 1.15;
+}
+.dw-gym-srv-desc {
+  font-size: 0.9rem;
+  color: var(--dw-text2);
+  line-height: 1.65;
+  margin: 0;
+  position: relative;
+}
+@media (max-width: 640px) {
+  .dw-gym-srv-grid { grid-template-columns: 1fr; }
+  .dw-gym-srv { padding: 40px 28px; }
+  .dw-services-gym-sec { padding: 0 20px 60px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BEAUTY: soft airy editorial list
+════════════════════════════════════════════════════════════════════ */
+.dw-services-beauty-sec { padding: 80px 32px; }
+.dw-beauty-srv-list {
+  display: flex;
+  flex-direction: column;
+  max-width: 680px;
+  margin: 56px auto 0;
+  border-top: 1px solid var(--dw-border);
+}
+.dw-beauty-srv {
+  display: flex;
+  gap: 36px;
+  align-items: flex-start;
+  padding: 48px 0;
+  border-bottom: 1px solid var(--dw-border);
+  transition: padding 0.25s;
+}
+.dw-beauty-srv-n {
+  font-size: 0.62rem;
+  letter-spacing: 3.5px;
+  color: var(--dw-accent);
+  font-weight: 700;
+  flex-shrink: 0;
+  padding-top: 7px;
+  min-width: 28px;
+}
+.dw-beauty-srv-title {
+  font-size: 1.35rem;
+  font-weight: 300;
+  color: var(--dw-text);
+  margin: 0 0 14px;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+.dw-beauty-srv-desc {
+  font-size: 0.88rem;
+  color: var(--dw-text2);
+  line-height: 1.8;
+  margin: 0;
+  font-weight: 300;
+}
+@media (max-width: 640px) {
+  .dw-beauty-srv { gap: 20px; padding: 36px 0; }
+  .dw-services-beauty-sec { padding: 60px 20px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FLOORING: architectural 2-column feature blocks
+════════════════════════════════════════════════════════════════════ */
+.dw-services-floor-sec { padding: 80px 32px; }
+.dw-floor-srv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--dw-border);
+  margin-top: 48px;
+}
+.dw-floor-srv {
+  background: var(--dw-bg);
+  padding: 56px 48px;
+  border-right: 3px solid transparent;
+  transition: border-color 0.3s, background 0.3s;
+}
+.dw-floor-srv:hover {
+  border-right-color: var(--dw-accent);
+  background: var(--dw-surf);
+}
+.dw-floor-srv-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--dw-text);
+  margin: 0 0 20px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.dw-floor-srv-desc {
+  font-size: 0.92rem;
+  color: var(--dw-text2);
+  line-height: 1.75;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .dw-floor-srv-grid { grid-template-columns: 1fr; }
+  .dw-floor-srv { padding: 40px 28px; }
+  .dw-services-floor-sec { padding: 60px 20px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RESTAURANT: editorial horizontal menu-style list
+════════════════════════════════════════════════════════════════════ */
+.dw-services-rest-sec { padding: 80px 32px; }
+.dw-rest-srv-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--dw-border);
+  margin-top: 48px;
+}
+.dw-rest-srv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 32px;
+  padding: 36px 0;
+  border-bottom: 1px solid var(--dw-border);
+  transition: background 0.2s, padding 0.2s, margin 0.2s;
+}
+.dw-rest-srv:hover {
+  background: var(--dw-surf);
+  padding: 36px 24px;
+  margin: 0 -24px;
+}
+.dw-rest-srv-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--dw-text);
+  margin: 0;
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+}
+.dw-rest-srv-desc {
+  font-size: 0.9rem;
+  color: var(--dw-text2);
+  margin: 0;
+  text-align: start;
+  flex: 1;
+  padding-right: 24px;
+  line-height: 1.5;
+}
+@media (max-width: 640px) {
+  .dw-rest-srv { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .dw-rest-srv-desc { padding-right: 0; }
+  .dw-services-rest-sec { padding: 60px 20px; }
+}
