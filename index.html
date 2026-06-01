@@ -699,7 +699,7 @@
 
   /* ── SUCCESS TOAST ───────────────────────────────── */
   .toast {
-    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+    position: fixed; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--green); color: #000;
     padding: 12px 24px; border-radius: 99px;
     font-weight: 700; font-size: 14px; letter-spacing: .06em;
@@ -7261,6 +7261,125 @@ function refreshHubStatusCard(state = loadDailyQuests()) {
   }
 }
 
+function showMonkModeRules() {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('monkModeOverlay');
+  if (existing) existing.remove();
+
+  const rules = isHe ? [
+    ['🔕', 'ללא הסחות דעת', 'כבה התראות, סגור טאבים מיותרים. ריכוז מלא על המשימה.'],
+    ['🎯', 'משימה אחת בכל פעם', 'עשה דבר אחד עד הסוף לפני שאתה מתחיל הבא.'],
+    ['💪', 'אימון כל יום', 'גוף חזק = מוח חזק. אפילו 15 דקות — שבור את האינרציה.'],
+    ['🌅', 'קום מוקדם', 'אל תלחץ נודניק. קם כשהשעון מצלצל. הצעד הראשון מנצח.'],
+    ['🥗', 'אכול להצלחה', 'הוסף חלבון, הפחת סוכר. גוף שאוכל נקי חושב נקי.'],
+    ['📴', 'פחות מסכים לפני שינה', 'שעה לפני שינה: בלי טלפון. תן למוח להתרוקן.'],
+    ['📓', 'תכנן מחר הלילה', 'כתוב 3 משימות עיקריות לפני שתלך לישון.'],
+  ] : [
+    ['🔕', 'Eliminate Distractions', 'Silence notifications, close irrelevant tabs. Full focus on the task.'],
+    ['🎯', 'One Task at a Time', 'Complete one thing fully before starting the next.'],
+    ['💪', 'Train Every Day', 'Strong body = strong mind. Even 15 minutes breaks inertia.'],
+    ['🌅', 'Rise Early', 'No snooze. Get up when the alarm fires. First action wins the day.'],
+    ['🥗', 'Eat for Performance', 'Add protein, cut sugar. A clean body thinks clearly.'],
+    ['📴', 'Screen-Free Before Sleep', 'One hour before bed: no phone. Let the mind decompress.'],
+    ['📓', 'Plan Tomorrow Tonight', 'Write your 3 main tasks before you sleep.'],
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'monkModeOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:22px;font-weight:900;color:#fff;">🧠 Monk Mode</div>
+        <div style="font-size:12px;color:#666;margin-top:2px;">${isHe ? 'קרא, ספוג, יישם.' : 'Read, absorb, apply.'}</div>
+      </div>
+      <button onclick="document.getElementById('monkModeOverlay').remove()"
+        style="background:rgba(255,255,255,.08);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    ${rules.map(([icon, title, desc]) => `
+    <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #1a1a1a;">
+      <div style="font-size:22px;flex-shrink:0;margin-top:2px;">${icon}</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;color:#fff;margin-bottom:3px;">${title}</div>
+        <div style="font-size:13px;color:#888;line-height:1.5;">${desc}</div>
+      </div>
+    </div>`).join('')}
+    <div style="margin-top:18px;padding:14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:14px;text-align:center;">
+      <div style="font-size:13px;color:#a78bfa;font-weight:700;">${isHe ? '💡 קרא שוב מחר. הנצחון הוא בחזרה היומית.' : '💡 Read again tomorrow. Victory is in daily repetition.'}</div>
+    </div>
+  </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function showQuickReview() {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('quickReviewOverlay');
+  if (existing) existing.remove();
+
+  const streak  = loadStreak();
+  const quests  = loadDailyQuests();
+  const habits  = safeParse(localStorage.getItem('1pb_habits'), []);
+  const workouts = safeParse(localStorage.getItem('1pb_workouts'), []);
+  const today   = todayKey();
+
+  const questTotal = Object.keys(quests).length;
+  const questDone  = Object.values(quests).filter(Boolean).length;
+
+  const habitTotal = habits.length;
+  const habitDone  = habits.filter(h => h.doneToday).length;
+
+  const todayWorkouts = workouts.filter(w => w.date === today);
+  const wIcon = (ex) => ex === 'boxing' ? '🥊' : ex === 'jumprope' ? '🪢' : '💪';
+
+  const statCard = (icon, label, val, sub = '') =>
+    `<div style="flex:1;min-width:calc(50% - 6px);background:#111;border:1px solid #222;border-radius:14px;padding:14px 12px;">
+      <div style="font-size:11px;color:#666;margin-bottom:4px;">${icon} ${label}</div>
+      <div style="font-size:24px;font-weight:900;color:#fff;">${val}</div>
+      ${sub ? `<div style="font-size:11px;color:#555;margin-top:2px;">${sub}</div>` : ''}
+    </div>`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'quickReviewOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:22px;font-weight:900;color:#fff;">✨ ${isHe ? 'סקירת היום' : "Today's Review"}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px;">${new Date().toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { weekday:'long', day:'numeric', month:'long' })}</div>
+      </div>
+      <button onclick="document.getElementById('quickReviewOverlay').remove()"
+        style="background:rgba(255,255,255,.08);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      ${statCard('🔥', isHe ? 'רצף' : 'Streak', streak.current, isHe ? `שיא: ${streak.longest}` : `Best: ${streak.longest}`)}
+      ${statCard('🎯', isHe ? 'משימות יומיות' : 'Daily Quests', `${questDone}/${questTotal}`, questDone === questTotal ? (isHe ? '✅ הושלם!' : '✅ All done!') : '')}
+      ${statCard('✅', isHe ? 'הרגלים' : 'Habits', habitTotal ? `${habitDone}/${habitTotal}` : '—', habitTotal ? `${Math.round(habitDone/habitTotal*100)}%` : isHe ? 'אין הרגלים' : 'None set')}
+      ${statCard('🏋️', isHe ? 'אימונים היום' : 'Workouts Today', todayWorkouts.length || '0', todayWorkouts.map(w => wIcon(w.exercise)).join(' ') || '')}
+    </div>
+    ${todayWorkouts.length ? `
+    <div style="background:#111;border:1px solid #222;border-radius:14px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;color:#666;margin-bottom:10px;">${isHe ? 'פירוט אימונים' : 'Workout breakdown'}</div>
+      ${todayWorkouts.map(w => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;font-size:13px;">
+          <span>${wIcon(w.exercise)} ${w.exercise.toUpperCase()}</span>
+          <span style="color:#888;">${w.reps} ${isHe ? 'חזרות' : 'reps'} · ${w.durSec}s</span>
+        </div>`).join('')}
+    </div>` : ''}
+    <div style="padding:14px;background:rgba(0,255,135,.07);border:1px solid rgba(0,255,135,.2);border-radius:14px;text-align:center;">
+      <div style="font-size:13px;color:#00ff87;font-weight:700;">${
+        questDone === questTotal && habitDone === habitTotal
+          ? (isHe ? '🏆 יום מושלם! כל המשימות הושלמו.' : '🏆 Perfect day! All tasks complete.')
+          : (isHe ? `⚡ נשארו ${questTotal - questDone + (habitTotal - habitDone)} פעולות להיום.` : `⚡ ${questTotal - questDone + (habitTotal - habitDone)} actions left today.`)
+      }</div>
+    </div>
+  </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 function handleDailyQuestClick(event) {
   const button = event.currentTarget;
   const task = button && button.dataset && button.dataset.task;
@@ -7270,12 +7389,12 @@ function handleDailyQuestClick(event) {
     return;
   }
   if (task === 'monkMode') {
-    showToast('👊 חוקי Monk Mode מוצגים. קרא במשך דקה אחת.');
+    showMonkModeRules();
     markDailyQuestComplete('monkMode');
     return;
   }
   if (task === 'quickReview') {
-    showToast('📊 סקירה מהירה פתוחה. בדוק את מצב היום שלך.');
+    showQuickReview();
     markDailyQuestComplete('quickReview');
   }
 }
@@ -7301,11 +7420,11 @@ function handleHubStatusAction() {
     return;
   }
   if (incomplete === 'monkMode') {
-    showToast(isHe ? '👊 חוקי Monk Mode מוצגים. קרא במשך דקה אחת.' : '👊 Monk Mode rules are open. Read for 1 minute.');
+    showMonkModeRules();
     return;
   }
   if (incomplete === 'quickReview') {
-    showToast(isHe ? '📊 סקירה מהירה פתוחה. בדוק את מצב היום שלך.' : '📊 Quick status review opened. Check your day.');
+    showQuickReview();
   }
 }
 
