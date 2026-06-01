@@ -138,34 +138,26 @@
 
   .hub-hero {
     position: relative;
-    padding-top: 62px;
-    /* ISSUE 1 FIX: ensure the absolutely-positioned ? button is never
-       clipped by the card's border-radius (some mobile WebKit versions
-       clip overflow even at the default "visible" value when
-       border-radius is set on a non-overflow:hidden parent). */
     overflow: visible;
   }
   .hub-help-btn {
-    position: absolute;
-    top: 14px; right: 14px;
-    width: 46px; height: 46px;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,.18);
-    background: rgba(255,255,255,.08);
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.1);
     color: var(--text);
     font-weight: 900;
+    font-size: 16px;
     display: grid;
     place-items: center;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
-    z-index: 10;
-    /* ISSUE 1 FIX: force pointer events on in case a parent inadvertently
-       inherits pointer-events: none from a wrapper layer. */
+    transition: transform .18s ease, background .18s ease;
     pointer-events: auto;
+    flex-shrink: 0;
   }
-  .hub-help-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.14); box-shadow: 0 10px 18px rgba(0,0,0,.12); }
+  .hub-help-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.2); }
 
   .daily-progress-summary {
     display: grid;
@@ -2680,9 +2672,12 @@
 
     <!-- HEADER -->
     <div class="top-header">
-    <div class="guest-banner hidden" id="guestBanner">מצב אורח - הירשם כדי לשמור התקדמות</div>
-      <!-- (notification modal lives outside #app at line ~3366) -->
-      <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
+      <div class="logo">1%<span>BETTER</span></div>
+      <div class="guest-banner hidden" id="guestBanner">מצב אורח - הירשם כדי לשמור התקדמות</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works" style="position:static;width:38px;height:38px;">?</button>
+        <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
+      </div>
     </div>
 
     <!-- WEEKLY RECAP (shown on Sundays, dismissible) -->
@@ -2769,7 +2764,6 @@
     </div>
 
     <div class="hub-hero" id="hubHero">
-      <button class="hub-help-btn" id="hub-guide-btn" onclick="showOnboardingGuide()" aria-label="How it works" title="How it works">?</button>
       <div class="hub-hero-title">המשימה היומית שלך</div>
       <div class="hub-hero-sub">הגיע הזמן לבחור את המסלול הפשוט והברור ביותר: אימון קצר, ברור וממוקד. התחל עכשיו.</div>
       <div class="daily-progress-summary">
@@ -2817,6 +2811,21 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- WORKOUT LAUNCHER -->
+    <div class="wl-section-label">אימונים</div>
+    <div class="workout-launcher">
+      <button class="wl-btn boxing" onclick="startWorkout('boxing')">
+        <div class="wl-btn-icon">🥊</div>
+        <div class="wl-btn-label">BOXING</div>
+        <div class="wl-btn-sub">AI punch tracker</div>
+      </button>
+      <button class="wl-btn pushup" onclick="startWorkout('pushup')">
+        <div class="wl-btn-icon">💪</div>
+        <div class="wl-btn-label">PUSH-UPS</div>
+        <div class="wl-btn-sub">AI rep counter</div>
+      </button>
     </div>
 
     <!-- DAILY CHALLENGE -->
@@ -6652,6 +6661,10 @@ function makeBoxingState() {
     defeats:     0,
     totalDamage: 0,
     pendingXp:   0,
+    // Performance tracking
+    retractionTimes: [],  // ms from punch-extend to retract, per punch
+    guardFrames:     0,   // frames where both arms are in guard
+    totalFrames:     0,   // total valid frames (both wrists visible)
   };
 }
 
@@ -6798,17 +6811,35 @@ function finishWorkout() {
   // Snapshot boxing extras BEFORE stopWorkoutInternals (which doesn't
   // currently clear _pose.boxing, but a future change might).
   const boxingSnap = (exercise === 'boxing' && _pose.boxing)
-    ? { defeats: _pose.boxing.defeats, totalDamage: _pose.boxing.totalDamage,
-        pendingXp: _pose.boxing.pendingXp }
+    ? { defeats:          _pose.boxing.defeats,
+        totalDamage:      _pose.boxing.totalDamage,
+        pendingXp:        _pose.boxing.pendingXp,
+        retractionTimes:  _pose.boxing.retractionTimes,
+        guardFrames:      _pose.boxing.guardFrames,
+        totalFrames:      _pose.boxing.totalFrames }
     : null;
   stopWorkoutInternals();
+
+  // Compute performance metrics for boxing
+  let avgRetractMs = null, guardPct = null;
+  if (boxingSnap) {
+    const times = boxingSnap.retractionTimes;
+    if (times && times.length > 0) {
+      avgRetractMs = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+    }
+    if (boxingSnap.totalFrames > 0) {
+      guardPct = Math.round((boxingSnap.guardFrames / boxingSnap.totalFrames) * 100);
+    }
+  }
 
   // Persist locally — bounded slice so a long history doesn't bloat the
   // user doc beyond Firestore's 1MB limit (100 workouts ≈ 5-10KB).
   const entry = { exercise, reps, durSec, at: Date.now(), date: todayKey() };
   if (boxingSnap) {
-    entry.defeats     = boxingSnap.defeats;
-    entry.totalDamage = boxingSnap.totalDamage;
+    entry.defeats      = boxingSnap.defeats;
+    entry.totalDamage  = boxingSnap.totalDamage;
+    entry.avgRetractMs = avgRetractMs;
+    entry.guardPct     = guardPct;
   }
   const log = safeParse(localStorage.getItem('1pb_workouts'), []);
   log.unshift(entry);
@@ -6845,7 +6876,149 @@ function finishWorkout() {
   }
   showToast(msg);
   markDailyQuestComplete(exercise === 'pushup' ? 'pushup' : null);
-  navigate('hub');
+
+  // Boxing: show performance review; pushup: go straight to hub
+  if (exercise === 'boxing' && entry.avgRetractMs !== null) {
+    const log = safeParse(localStorage.getItem('1pb_workouts'), []);
+    const prev = log.find(w => w.exercise === 'boxing' && w.at !== entry.at);
+    showBoxingReview(entry, prev || null);
+  } else {
+    navigate('hub');
+  }
+}
+
+function showBoxingReview(entry, prev) {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('boxingReviewOverlay');
+  if (existing) existing.remove();
+
+  // Speed: lower retraction ms = faster = better
+  const speed     = entry.avgRetractMs;         // ms, lower is better
+  const prevSpeed = prev ? prev.avgRetractMs : null;
+  const guard     = entry.guardPct ?? 0;
+  const prevGuard = prev ? (prev.guardPct ?? null) : null;
+
+  function speedLabel(ms) {
+    if (ms === null) return '—';
+    if (ms < 300)  return isHe ? '⚡ מהיר מאוד' : '⚡ Very Fast';
+    if (ms < 500)  return isHe ? '🔥 מהיר'      : '🔥 Fast';
+    if (ms < 800)  return isHe ? '👊 בינוני'     : '👊 Average';
+    return isHe ? '🐢 איטי' : '🐢 Slow';
+  }
+
+  function delta(curr, prev, lowerIsBetter = false) {
+    if (curr === null || prev === null) return { arrow: '', pct: '', color: '#888', msg: '' };
+    const raw = lowerIsBetter
+      ? ((prev - curr) / prev) * 100   // improvement if curr < prev
+      : ((curr - prev) / prev) * 100;
+    const abs = Math.abs(raw).toFixed(0);
+    if (Math.abs(raw) < 2) return { arrow: '→', pct: abs + '%', color: '#888', msg: isHe ? 'ללא שינוי' : 'No change' };
+    const better = raw > 0;
+    return {
+      arrow: better ? '↑' : '↓',
+      pct:   abs + '%',
+      color: better ? '#00ff87' : '#ff5b5b',
+      msg:   better
+        ? (isHe ? `שיפור של ${abs}%!` : `${abs}% better!`)
+        : (isHe ? `ירידה של ${abs}%` : `${abs}% worse`),
+    };
+  }
+
+  const speedDelta = delta(speed, prevSpeed, true);  // lower ms = better
+  const guardDelta = delta(guard, prevGuard, false); // higher % = better
+
+  function miniBar(pct, color) {
+    return `<div style="height:8px;background:#222;border-radius:99px;overflow:hidden;margin-top:6px;">
+      <div style="height:100%;width:${Math.min(100,pct)}%;background:${color};border-radius:99px;transition:width .6s ease;"></div>
+    </div>`;
+  }
+
+  function statRow(icon, label, value, subLabel, d, barPct, barColor) {
+    return `
+      <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:18px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:24px;">${icon}</span>
+            <div>
+              <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.06em;">${label}</div>
+              <div style="font-size:22px;font-weight:800;color:#f0f0f0;">${value}</div>
+              <div style="font-size:12px;color:#888;margin-top:1px;">${subLabel}</div>
+            </div>
+          </div>
+          ${prev ? `<div style="text-align:right;">
+            <div style="font-size:26px;font-weight:900;color:${d.color};">${d.arrow}</div>
+            <div style="font-size:12px;color:${d.color};font-weight:700;">${d.pct}</div>
+            <div style="font-size:11px;color:#666;margin-top:2px;">${d.msg}</div>
+          </div>` : '<div style="font-size:11px;color:#555;text-align:right;">' + (isHe ? 'בסיס ראשון' : 'First baseline') + '</div>'}
+        </div>
+        ${barPct !== null ? miniBar(barPct, barColor) : ''}
+      </div>`;
+  }
+
+  const durMin = Math.floor(entry.durSec / 60);
+  const durSec2 = entry.durSec % 60;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'boxingReviewOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;overflow-y:auto;';
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:430px;background:#111;border-radius:24px 24px 0 0;padding:28px 20px 48px;border-top:1px solid rgba(255,255,255,.1);">
+      <div style="width:40px;height:4px;background:#333;border-radius:99px;margin:0 auto 20px;"></div>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:42px;margin-bottom:8px;">🥊</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.06em;color:#fff;">
+          ${isHe ? 'סיכום אימון בוקסינג' : 'POST-WORKOUT REVIEW'}
+        </div>
+        <div style="font-size:13px;color:#666;margin-top:4px;">
+          ${entry.reps} ${isHe ? 'מכות' : 'punches'} · ${durMin}:${String(durSec2).padStart(2,'0')} · ${entry.defeats} KOs
+        </div>
+        ${prev ? `<div style="font-size:11px;color:#555;margin-top:4px;">${isHe ? 'בהשוואה לאימון הקודם' : 'vs. previous session'}</div>` : ''}
+      </div>
+
+      ${statRow(
+        '⚡',
+        isHe ? 'מהירות החזרת ידיים' : 'PUNCH SPEED',
+        speed !== null ? speed + 'ms' : '—',
+        speedLabel(speed),
+        speedDelta,
+        speed !== null ? Math.max(0, 100 - (speed / 12)) : null,
+        speedDelta.color !== '#888' ? speedDelta.color : '#00b4ff'
+      )}
+
+      ${statRow(
+        '🛡',
+        isHe ? 'שמירת גארד' : 'GUARD INTEGRITY',
+        guard + '%',
+        guard >= 70 ? (isHe ? '✅ גארד טוב' : '✅ Solid guard') : (isHe ? '⚠️ שפר את הגארד' : '⚠️ Raise your guard more'),
+        guardDelta,
+        guard,
+        guard >= 70 ? '#00ff87' : guard >= 50 ? '#fbbf24' : '#ff5b5b'
+      )}
+
+      ${prev ? `
+      <div style="background:#181818;border:1px solid #2a2a2a;border-radius:14px;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">${isHe ? 'השוואה לאימון קודם' : 'PREVIOUS SESSION'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:#555;">${isHe ? 'מהירות קודמת' : 'Prev speed'}</div>
+            <div style="font-size:18px;font-weight:700;color:#888;">${prevSpeed !== null ? prevSpeed + 'ms' : '—'}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:#555;">${isHe ? 'גארד קודם' : 'Prev guard'}</div>
+            <div style="font-size:18px;font-weight:700;color:#888;">${prevGuard !== null ? prevGuard + '%' : '—'}</div>
+          </div>
+        </div>
+      </div>` : ''}
+
+      <button onclick="document.getElementById('boxingReviewOverlay')?.remove();navigate('hub');"
+        style="width:100%;padding:17px;background:linear-gradient(90deg,#8A2BE2,#00b4ff);border:none;border-radius:14px;color:#fff;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
+        ${isHe ? '← חזור לבית' : '← BACK TO HUB'}
+      </button>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); navigate('hub'); } });
+  document.body.appendChild(overlay);
 }
 
 function loadDailyQuests() {
@@ -7034,6 +7207,43 @@ function showOnboardingGuide() {
   setTimeout(() => document.getElementById('obNameInput')?.focus(), 200);
 }
 
+function showAppGuide() {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('appGuideOverlay');
+  if (existing) { existing.remove(); return; }
+  const overlay = document.createElement('div');
+  overlay.id = 'appGuideOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom,0px);';
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:430px;background:#111;border-radius:24px 24px 0 0;padding:28px 24px 40px;border-top:1px solid rgba(255,255,255,.1);">
+      <div style="width:40px;height:4px;background:#333;border-radius:99px;margin:0 auto 24px;"></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.06em;margin-bottom:6px;color:#fff;">
+        ${isHe ? 'איך זה עובד?' : 'HOW IT WORKS'}
+      </div>
+      <div style="font-size:13px;color:#888;margin-bottom:24px;">
+        ${isHe ? 'שיטת 1% Better — להשתפר כל יום בצעד קטן' : 'The 1% Better method — improve 1% every day'}
+      </div>
+      ${[
+        ['🎯', isHe ? 'בחר משימה יומית' : 'Pick a daily mission', isHe ? 'בחר תרגיל אחד ברור לביצוע היום.' : 'Choose one clear task to complete today.'],
+        ['📷', isHe ? 'הוכח את זה' : 'Prove it', isHe ? 'המצלמה עוקבת אחר התנועות שלך בזמן אמת.' : 'The AI camera tracks your movements in real time.'],
+        ['🔥', isHe ? 'שמור על רצף' : 'Keep your streak', isHe ? 'יום אחרי יום — ההרגל הופך לזהות שלך.' : 'Day after day — the habit becomes your identity.'],
+        ['⚡', isHe ? 'צבור XP ועלה רמה' : 'Earn XP & level up', isHe ? 'כל אימון מרוויח נקודות. השתפר. עלה רמה.' : 'Every workout earns points. Improve. Level up.'],
+      ].map(([icon,title,desc]) => `
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;">
+          <div style="font-size:28px;flex-shrink:0;margin-top:2px;">${icon}</div>
+          <div>
+            <div style="font-weight:700;font-size:15px;color:#f0f0f0;margin-bottom:3px;">${title}</div>
+            <div style="font-size:13px;color:#888;line-height:1.5;">${desc}</div>
+          </div>
+        </div>`).join('')}
+      <button onclick="document.getElementById('appGuideOverlay')?.remove()" style="width:100%;padding:16px;background:rgba(0,255,135,.12);border:1px solid rgba(0,255,135,.3);border-radius:14px;color:#00ff87;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px;">
+        ${isHe ? 'הבנתי ✓' : 'Got it ✓'}
+      </button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 function showOnboarding() {
   showOnboardingGuide();
 }
@@ -7111,13 +7321,14 @@ function boxingTick(landmarks) {
   const fired = [];
   const sides = [['left',  lS, lW], ['right', rS, rW]];
   const now   = performance.now();
+  const b     = _pose.boxing;
+  let bothVisible = true;
+
   for (const [side, sh, wr] of sides) {
-    // Confidence gate — don't transition on noisy frames, but don't
-    // reset the arm's state either.
-    if (sh.visibility < 0.5 || wr.visibility < 0.5) continue;
+    if (sh.visibility < 0.5 || wr.visibility < 0.5) { bothVisible = false; continue; }
     const dx = wr.x - sh.x, dy = wr.y - sh.y;
     const dist = Math.hypot(dx, dy);
-    const arm = _pose.boxing.arms[side];
+    const arm = b.arms[side];
 
     if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
       if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
@@ -7126,9 +7337,21 @@ function boxingTick(landmarks) {
         fired.push(side);
       }
     } else if (arm.state === 'extended' && dist < PUNCH_RETRACT_DIST) {
+      // Record retraction time for speed metric
+      const retractMs = now - arm.lastPunchAt;
+      if (retractMs > 0 && retractMs < 2000) b.retractionTimes.push(retractMs);
       arm.state = 'guard';
     }
   }
+
+  // Guard integrity: count frames where both arms are visible and in guard
+  if (bothVisible) {
+    b.totalFrames++;
+    if (b.arms.left.state === 'guard' && b.arms.right.state === 'guard') {
+      b.guardFrames++;
+    }
+  }
+
   return fired;
 }
 
