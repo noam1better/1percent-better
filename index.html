@@ -2336,6 +2336,8 @@
   .wl-btn.boxing:hover { border-color: rgba(255,100,0,.6); background: rgba(255,100,0,.12); }
   .wl-btn.pushup  { border-color: rgba(0,255,135,.25); background: rgba(0,255,135,.05); }
   .wl-btn.pushup:hover { border-color: rgba(0,255,135,.5); background: rgba(0,255,135,.1); }
+  .wl-btn.jumprope { border-color: rgba(56,189,248,.3); background: rgba(56,189,248,.06); }
+  .wl-btn.jumprope:hover { border-color: rgba(56,189,248,.6); background: rgba(56,189,248,.12); }
   .wl-section-label {
     margin: 0 20px 8px;
     font-size: 12px;
@@ -2825,6 +2827,11 @@
         <div class="wl-btn-icon">💪</div>
         <div class="wl-btn-label">PUSH-UPS</div>
         <div class="wl-btn-sub">AI rep counter</div>
+      </button>
+      <button class="wl-btn jumprope" onclick="startWorkout('jumprope')">
+        <div class="wl-btn-icon">🪢</div>
+        <div class="wl-btn-label">JUMP ROPE</div>
+        <div class="wl-btn-sub">AI jump counter</div>
       </button>
     </div>
 
@@ -6635,9 +6642,9 @@ let _pose = {
   rafId:         null,           // requestAnimationFrame handle
   inferTimer:    null,           // pacing for detection
   active:        false,
-  exercise:      'pushup',       // 'pushup' | 'boxing'
+  exercise:      'pushup',       // 'pushup' | 'boxing' | 'jumprope'
   reps:          0,
-  state:         'ready',        // pushup: 'ready'|'down'|'up'
+  state:         'ready',        // pushup: 'ready'|'down'|'up' / jumprope: 'calibrating'|'ground'|'jump'
   downFrames:    0,
   upFrames:      0,
   lastCountAt:   0,
@@ -6645,6 +6652,7 @@ let _pose = {
   lastFrameTime: 0,
   fpsAvg:        0,
   boxing:        null,           // populated by startWorkout('boxing')
+  jumprope:      null,           // populated by startWorkout('jumprope')
 };
 
 /** Build a fresh boxing state. Called from startWorkout so a new
@@ -6665,6 +6673,19 @@ function makeBoxingState() {
     retractionTimes: [],  // ms from punch-extend to retract, per punch
     guardFrames:     0,   // frames where both arms are in guard
     totalFrames:     0,   // total valid frames (both wrists visible)
+  };
+}
+
+function makeJumpRopeState() {
+  return {
+    calibFrames: 0,
+    calibSum:    0,
+    baseline:    null,   // EMA-smoothed hip Y while standing
+    smoothY:     null,   // running EMA of hip Y
+    airState:    false,  // true = hips currently above jump threshold
+    peakRise:    0,      // max rise seen in current air phase
+    lastJumpAt:  0,
+    jumpHeights: [],     // normalized rise per counted jump
   };
 }
 
@@ -6732,14 +6753,19 @@ async function startWorkout(exercise = 'pushup') {
   _pose.upFrames    = 0;
   _pose.lastCountAt = 0;
   _pose.startedAt   = Date.now();
-  _pose.boxing      = (exercise === 'boxing') ? makeBoxingState() : null;
+  _pose.boxing      = (exercise === 'boxing')    ? makeBoxingState()    : null;
+  _pose.jumprope    = (exercise === 'jumprope')  ? makeJumpRopeState()  : null;
 
   // UI mode — title, boxing HUD visibility, initial state pill.
   const titleEl = document.getElementById('workoutTitle');
   const hudEl   = document.getElementById('boxingHud');
-  if (titleEl) titleEl.textContent = (exercise === 'boxing') ? 'BOXING' : 'PUSH-UPS';
+  if (titleEl) titleEl.textContent = exercise === 'boxing'   ? 'BOXING'
+                                   : exercise === 'jumprope' ? 'JUMP ROPE'
+                                   : 'PUSH-UPS';
   if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
-  if (stEl)    stEl.textContent    = (exercise === 'boxing') ? 'GUARD' : 'READY';
+  if (stEl)    stEl.textContent    = exercise === 'boxing'   ? 'GUARD'
+                                   : exercise === 'jumprope' ? 'CALIBRATING'
+                                   : 'READY';
   if (exercise === 'boxing') renderBoxingHud();
 
   try {
@@ -6818,6 +6844,9 @@ function finishWorkout() {
         guardFrames:      _pose.boxing.guardFrames,
         totalFrames:      _pose.boxing.totalFrames }
     : null;
+  const jumpropeSnap = (exercise === 'jumprope' && _pose.jumprope)
+    ? { jumpHeights: _pose.jumprope.jumpHeights.slice() }
+    : null;
   stopWorkoutInternals();
 
   // Compute performance metrics for boxing
@@ -6841,6 +6870,11 @@ function finishWorkout() {
     entry.avgRetractMs = avgRetractMs;
     entry.guardPct     = guardPct;
   }
+  if (jumpropeSnap) {
+    const hs = jumpropeSnap.jumpHeights;
+    entry.avgJumpHeight = hs.length ? +(hs.reduce((a, b) => a + b, 0) / hs.length).toFixed(4) : 0;
+    entry.maxJumpHeight = hs.length ? +Math.max(...hs).toFixed(4) : 0;
+  }
   const log = safeParse(localStorage.getItem('1pb_workouts'), []);
   log.unshift(entry);
   const trimmed = log.slice(0, 100);
@@ -6860,7 +6894,9 @@ function finishWorkout() {
   if (reps >= 1) {
     xp = boxingSnap
       ? Math.min(200, boxingSnap.pendingXp)
-      : Math.min(50, 5 + reps);
+      : jumpropeSnap
+        ? Math.min(100, 5 + Math.floor(reps / 2))
+        : Math.min(50, 5 + reps);
     if (typeof gainXP === 'function') gainXP(xp);
     markMorningRoutine('workout', true);
   }
@@ -6871,17 +6907,22 @@ function finishWorkout() {
     msg = isHe
       ? `✓ ${reps} מכות · ${boxingSnap.defeats} אויבים · +${xp} XP`
       : `✓ ${reps} punches · ${boxingSnap.defeats} KOs · +${xp} XP`;
+  } else if (jumpropeSnap) {
+    msg = isHe ? `✓ ${reps} קפיצות · +${xp} XP` : `✓ ${reps} jumps · +${xp} XP`;
   } else {
     msg = isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`;
   }
   showToast(msg);
   markDailyQuestComplete(exercise === 'pushup' ? 'pushup' : null);
 
-  // Boxing: show performance review; pushup: go straight to hub
   if (exercise === 'boxing' && entry.avgRetractMs !== null) {
-    const log = safeParse(localStorage.getItem('1pb_workouts'), []);
-    const prev = log.find(w => w.exercise === 'boxing' && w.at !== entry.at);
+    const prevLog = safeParse(localStorage.getItem('1pb_workouts'), []);
+    const prev = prevLog.find(w => w.exercise === 'boxing' && w.at !== entry.at);
     showBoxingReview(entry, prev || null);
+  } else if (exercise === 'jumprope' && reps > 0) {
+    const prevLog = safeParse(localStorage.getItem('1pb_workouts'), []);
+    const prev = prevLog.find(w => w.exercise === 'jumprope' && w.at !== entry.at);
+    showJumpRopeReview(entry, prev || null);
   } else {
     navigate('hub');
   }
@@ -7013,6 +7054,80 @@ function showBoxingReview(entry, prev) {
 
       <button onclick="document.getElementById('boxingReviewOverlay')?.remove();navigate('hub');"
         style="width:100%;padding:17px;background:linear-gradient(90deg,#8A2BE2,#00b4ff);border:none;border-radius:14px;color:#fff;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
+        ${isHe ? '← חזור לבית' : '← BACK TO HUB'}
+      </button>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); navigate('hub'); } });
+  document.body.appendChild(overlay);
+}
+
+function showJumpRopeReview(entry, prev) {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('jrReviewOverlay');
+  if (existing) existing.remove();
+
+  const jumps     = entry.reps || 0;
+  const durMin    = Math.floor((entry.durSec || 0) / 60);
+  const durSec    = (entry.durSec || 0) % 60;
+  const avgH      = entry.avgJumpHeight || 0;
+  const maxH      = entry.maxJumpHeight || 0;
+  const prevJumps = prev ? (prev.reps || 0)           : null;
+  const prevAvgH  = prev ? (prev.avgJumpHeight || 0)  : null;
+
+  function heightLabel(h) {
+    if (h <= 0)    return isHe ? '—'              : '—';
+    if (h < 0.025) return isHe ? '🐛 נמוכה'       : '🐛 Low';
+    if (h < 0.05)  return isHe ? '🦘 בינונית'     : '🦘 Medium';
+    return isHe ? '🚀 גבוהה' : '🚀 High';
+  }
+
+  function delta(curr, prevVal, lowerIsBetter = false) {
+    if (curr === null || prevVal === null || prevVal === 0)
+      return { arrow: '', color: '#888', msg: '' };
+    const raw = lowerIsBetter
+      ? ((prevVal - curr) / prevVal) * 100
+      : ((curr - prevVal) / prevVal) * 100;
+    const abs = Math.abs(raw).toFixed(0);
+    if (Math.abs(raw) < 2) return { arrow: '→', color: '#888', msg: isHe ? 'ללא שינוי' : 'No change' };
+    const better = raw > 0;
+    return {
+      arrow: better ? '↑' : '↓',
+      color: better ? '#00ff87' : '#ff5b5b',
+      msg:   better
+        ? (isHe ? `שיפור של ${abs}%!` : `${abs}% better!`)
+        : (isHe ? `ירידה של ${abs}%`  : `${abs}% worse`),
+    };
+  }
+
+  const jumpsDelta = delta(jumps,  prevJumps, false);
+  const heightDelta = delta(avgH,  prevAvgH,  false);
+
+  function statRow(icon, label, val, d) {
+    return `<div style="background:#111;border:1px solid #222;border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;color:#888;">${icon} ${label}</span>
+        ${d.msg ? `<span style="font-size:12px;color:${d.color};">${d.arrow} ${d.msg}</span>` : ''}
+      </div>
+      <div style="font-size:26px;font-weight:900;color:#fff;margin-top:4px;">${val}</div>
+    </div>`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id    = 'jrReviewOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:28px 22px 40px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;">
+      <div style="text-align:center;margin-bottom:22px;">
+        <div style="font-size:40px;">🪢</div>
+        <div style="font-size:20px;font-weight:900;color:#fff;margin-top:6px;">${isHe ? 'סיכום אימון קפיצה' : 'Jump Rope Session'}</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;">${durMin}:${String(durSec).padStart(2,'0')} ${isHe ? 'דקות' : 'min'}</div>
+      </div>
+      ${statRow('🦘', isHe ? 'סה"כ קפיצות' : 'Total Jumps', jumps, jumpsDelta)}
+      ${statRow('📏', isHe ? 'גובה קפיצה ממוצע' : 'Avg Jump Height', heightLabel(avgH), heightDelta)}
+      ${maxH > 0 ? statRow('🏆', isHe ? 'קפיצה הגבוהה ביותר' : 'Best Jump', heightLabel(maxH), { arrow:'', color:'#888', msg:'' }) : ''}
+      ${prev ? `<div style="text-align:center;font-size:12px;color:#555;margin-bottom:14px;">${isHe ? `אימון קודם: ${prevJumps} קפיצות` : `Last session: ${prevJumps} jumps`}</div>` : ''}
+      <button onclick="document.getElementById('jrReviewOverlay')?.remove();navigate('hub');"
+        style="width:100%;padding:17px;background:linear-gradient(90deg,#0099ff,#00d4ff);border:none;border-radius:14px;color:#fff;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
         ${isHe ? '← חזור לבית' : '← BACK TO HUB'}
       </button>
     </div>`;
@@ -7300,19 +7415,90 @@ function pushupTick(landmarks) {
    Distances are 2D normalized (landmark coords are 0..1 in frame
    space). A jab from a typical phone-distance away puts the wrist
    ~0.30-0.40 from the shoulder; guarded hand sits ~0.10-0.15. */
-const PUNCH_EXTEND_DIST     = 0.28;
-const PUNCH_RETRACT_DIST    = 0.18;
+const PUNCH_EXTEND_DIST     = 0.22;  // lowered: orange dot triggers earlier in extension
+const PUNCH_RETRACT_DIST    = 0.15;  // retract threshold scales with extend
 const PUNCH_REFRACTORY_MS   = 220;
-const PUNCH_ELBOW_MIN_DEG   = 95;   // elbow angle — wide enough for angled/fast punches
-const PUNCH_MIN_VELOCITY    = 0.006; // min wrist speed — catches snappy punches, blocks pure static hover
-const PUNCH_MAX_DEPTH_FWD   = 0.32; // only reject hand literally pressed against lens
-const PUNCH_FACE_CLEARANCE  = 0.07; // only reject wrist resting directly on nose
+const PUNCH_ELBOW_MIN_DEG   = 95;
+const PUNCH_MIN_VELOCITY    = 0.005; // slightly lower — catches normal punching speed
+const PUNCH_FACE_CLEARANCE  = 0.05;  // tighter: only blocks wrist literally on nose
 const BOXING_DMG_MIN        = 5;
 const BOXING_DMG_MAX        = 15;
 const BOXING_ENEMY_HP       = 100;
 const BOXING_ENEMY_KILL_XP  = 25;     // bonus banked on defeat (applied at Finish)
 const BOXING_PUNCH_XP       = 1;      // per-punch xp (also banked)
 const BOXING_EMOJIS = ['😈','👹','💀','🤖','👺','🐉','🦖'];
+
+/* ── Jump Rope config ───────────────────────────────────────────────── */
+const JR_SMOOTH        = 0.25;  // EMA alpha for hip Y smoothing
+const JR_JUMP_RISE     = 0.032; // hip must rise this much above baseline to enter "air"
+const JR_LAND_DROP     = 0.012; // hip returns within this of baseline to complete jump
+const JR_REFRACTORY_MS = 320;   // min ms between counted jumps
+const JR_WRIST_SLACK   = 0.18;  // max avg-wrist-to-hip Y offset (rejects raised arms)
+const JR_CALIB_FRAMES  = 25;    // frames to build hip baseline
+
+/** Jump rope detector. Uses EMA-smoothed hip Y with a simple ground→air→ground
+ *  state machine. Returns true when a jump is counted this frame. */
+function jumpropeTick(landmarks) {
+  const jr = _pose.jumprope;
+  if (!jr) return false;
+
+  const lHip = landmarks[23], rHip = landmarks[24];
+  if (!lHip || !rHip || lHip.visibility < 0.4 || rHip.visibility < 0.4) return false;
+
+  // ── Hand position filter: reject raised arms (boxing guard, waving, etc.) ──
+  const lWr = landmarks[15], rWr = landmarks[16];
+  if (lWr && rWr && lWr.visibility > 0.4 && rWr.visibility > 0.4) {
+    const midHipY   = (lHip.y + rHip.y) / 2;
+    const avgWristY = (lWr.y + rWr.y)   / 2;
+    if (Math.abs(avgWristY - midHipY) > JR_WRIST_SLACK) return false;
+  }
+
+  const rawHipY = (lHip.y + rHip.y) / 2;
+
+  // EMA smooth
+  if (jr.smoothY === null) jr.smoothY = rawHipY;
+  jr.smoothY = JR_SMOOTH * rawHipY + (1 - JR_SMOOTH) * jr.smoothY;
+
+  // ── Calibration: build standing baseline ──
+  if (jr.calibFrames < JR_CALIB_FRAMES) {
+    jr.calibSum += jr.smoothY;
+    jr.calibFrames++;
+    _pose.state = 'calibrating';
+    if (jr.calibFrames === JR_CALIB_FRAMES) {
+      jr.baseline = jr.calibSum / jr.calibFrames;
+      _pose.state = 'ground';
+    }
+    return false;
+  }
+
+  // rise: positive = hips moved up (Y decreased)
+  const rise = jr.baseline - jr.smoothY;
+  const now  = performance.now();
+
+  if (jr.airState && rise > jr.peakRise) jr.peakRise = rise;
+
+  if (!jr.airState && rise > JR_JUMP_RISE) {
+    jr.airState = true;
+    jr.peakRise = rise;
+    _pose.state = 'jump';
+  } else if (jr.airState && rise < JR_LAND_DROP) {
+    if (now - jr.lastJumpAt > JR_REFRACTORY_MS) {
+      jr.jumpHeights.push(jr.peakRise);
+      jr.lastJumpAt     = now;
+      _pose.reps++;
+      _pose.lastCountAt = now;
+      jr.airState = false;
+      jr.peakRise = 0;
+      _pose.state = 'ground';
+      return true;
+    }
+    jr.airState = false;
+    jr.peakRise = 0;
+    _pose.state = 'ground';
+  }
+
+  return false;
+}
 
 /** Punch detector — per-arm state machine with three false-positive filters:
  *  1. Elbow extension angle (real punch opens the elbow past PUNCH_ELBOW_MIN_DEG)
@@ -7361,13 +7547,7 @@ function boxingTick(landmarks) {
           : true; // if elbow not visible, skip this check gracefully
         if (!elbowOk) continue;
 
-        // ── FILTER 2a: Depth — reject if wrist is too far forward of shoulder
-        //   (hand pressed against lens; shoulder.z − wrist.z > limit)
-        if (sh.z !== undefined && wr.z !== undefined) {
-          if ((sh.z - wr.z) > PUNCH_MAX_DEPTH_FWD) continue;
-        }
-
-        // ── FILTER 2b: Face proximity — wrist must not be near the nose
+        // ── FILTER 2: Face proximity — wrist must not be resting on the nose
         if (nose && nose.visibility > 0.4) {
           const faceDist = Math.hypot(wr.x - nose.x, wr.y - nose.y);
           if (faceDist < PUNCH_FACE_CLEARANCE) continue;
@@ -7548,6 +7728,10 @@ function runPoseLoop() {
             // loop picks up the change immediately on the next frame.
             _pose.lastCountAt = performance.now();
           }
+        } else if (_pose.exercise === 'jumprope') {
+          if (jumpropeTick(lms) && navigator.vibrate) {
+            try { navigator.vibrate(30); } catch (_) {}
+          }
         }
       }
     } catch (e) {
@@ -7563,26 +7747,112 @@ function runPoseLoop() {
     if (lastLandmarks) {
       ctx.clearRect(0, 0, cv.width, cv.height);
       ctx.save();
-      ctx.lineWidth = 4;
-      // Highlight the tracking arm in green; rest in subtle white.
       const pts = lastLandmarks;
-      const drawLine = (a, b, color) => {
-        if (!a || !b) return;
-        ctx.strokeStyle = color;
+      const W = cv.width, H = cv.height;
+
+      const drawLine = (a, b, color, lw = 3) => {
+        if (!a || !b || a.visibility < 0.3 || b.visibility < 0.3) return;
+        ctx.strokeStyle = color; ctx.lineWidth = lw;
         ctx.beginPath();
-        ctx.moveTo(a.x * cv.width, a.y * cv.height);
-        ctx.lineTo(b.x * cv.width, b.y * cv.height);
+        ctx.moveTo(a.x * W, a.y * H);
+        ctx.lineTo(b.x * W, b.y * H);
         ctx.stroke();
       };
-      const green = '#00ff87', white = 'rgba(255,255,255,.55)';
-      drawLine(pts[11], pts[13], green);    // L shoulder→elbow
-      drawLine(pts[13], pts[15], green);    // L elbow→wrist
-      drawLine(pts[12], pts[14], green);    // R shoulder→elbow
-      drawLine(pts[14], pts[16], green);    // R elbow→wrist
+
+      const drawDot = (pt, r, fill, stroke = 'rgba(0,0,0,.6)', sw = 2) => {
+        if (!pt || pt.visibility < 0.3) return;
+        ctx.beginPath();
+        ctx.arc(pt.x * W, pt.y * H, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill; ctx.fill();
+        ctx.strokeStyle = stroke; ctx.lineWidth = sw; ctx.stroke();
+      };
+
+      const drawCircle = (pt, r, stroke, lw = 2, dash = []) => {
+        if (!pt || pt.visibility < 0.3) return;
+        ctx.setLineDash(dash);
+        ctx.strokeStyle = stroke; ctx.lineWidth = lw;
+        ctx.beginPath();
+        ctx.arc(pt.x * W, pt.y * H, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      };
+
+      // ── Skeleton lines ──────────────────────────────────
+      const white = 'rgba(255,255,255,.45)';
       drawLine(pts[11], pts[12], white);    // shoulders
-      drawLine(pts[23], pts[24], white);    // hips
       drawLine(pts[11], pts[23], white);    // torso L
       drawLine(pts[12], pts[24], white);    // torso R
+      drawLine(pts[23], pts[24], white);    // hips
+      drawLine(pts[11], pts[13], '#00d4ff', 3);  // L upper arm
+      drawLine(pts[13], pts[15], '#00d4ff', 3);  // L forearm
+      drawLine(pts[12], pts[14], '#00d4ff', 3);  // R upper arm
+      drawLine(pts[14], pts[16], '#00d4ff', 3);  // R forearm
+
+      if (_pose.exercise === 'boxing') {
+        // ── Elbow dots (cyan) ─────────────────────────────────
+        drawDot(pts[13], 8, '#00d4ff', '#000', 2);   // L elbow
+        drawDot(pts[14], 8, '#00d4ff', '#000', 2);   // R elbow
+
+        // ── Wrist dots — green=guard, orange=extended ─────────
+        const bArms  = _pose.boxing && _pose.boxing.arms;
+        const lState = bArms ? bArms.left.state  : 'guard';
+        const rState = bArms ? bArms.right.state : 'guard';
+        drawDot(pts[15], 12, lState === 'extended' ? '#ff6b35' : '#00ff87', '#000', 2.5);
+        drawDot(pts[16], 12, rState === 'extended' ? '#ff6b35' : '#00ff87', '#000', 2.5);
+
+        // ── Nose dot + face-clearance zone ────────────────────
+        if (pts[0] && pts[0].visibility > 0.3) {
+          drawDot(pts[0], 6, '#fbbf24', '#000', 2);
+          drawCircle(pts[0], PUNCH_FACE_CLEARANCE * W, 'rgba(251,191,36,.5)', 1.5, [6, 4]);
+        }
+      } else if (_pose.exercise === 'jumprope') {
+        // ── Hip dots (blue) ───────────────────────────────────
+        drawDot(pts[23], 10, '#3b82f6', '#000', 2);  // L hip
+        drawDot(pts[24], 10, '#3b82f6', '#000', 2);  // R hip
+
+        // ── Wrist dots (plain white) ──────────────────────────
+        drawDot(pts[15], 9, '#e2e8f0', '#000', 2);
+        drawDot(pts[16], 9, '#e2e8f0', '#000', 2);
+
+        // ── Baseline + current hip-Y tracking line ────────────
+        const jr = _pose.jumprope;
+        if (jr && jr.baseline !== null) {
+          const baseY   = jr.baseline * H;
+          const inAir   = jr.airState;
+          // Baseline — white dashed
+          ctx.setLineDash([8, 5]);
+          ctx.strokeStyle = 'rgba(255,255,255,.35)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Current hip Y — colored by state
+          if (pts[23] && pts[24] && pts[23].visibility > 0.3 && pts[24].visibility > 0.3) {
+            const curY  = jr.smoothY * H;
+            const color = inAir ? '#f97316' : '#22d3ee';
+            ctx.strokeStyle = color; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(0, curY); ctx.lineTo(W, curY); ctx.stroke();
+          }
+        } else if (jr && jr.calibFrames < JR_CALIB_FRAMES) {
+          // Calibration progress bar at bottom
+          const pct   = jr.calibFrames / JR_CALIB_FRAMES;
+          const barH  = 6, barW = W * 0.7, barX = W * 0.15, barY = H - 30;
+          ctx.fillStyle = '#222';
+          ctx.fillRect(barX, barY, barW, barH);
+          ctx.fillStyle = '#22d3ee';
+          ctx.fillRect(barX, barY, barW * pct, barH);
+          ctx.fillStyle = 'rgba(255,255,255,.7)';
+          ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText('Calibrating...', W / 2, barY - 6);
+        }
+      } else {
+        // ── Pushup: plain wrist + elbow dots ──────────────────
+        drawDot(pts[13], 7, '#00d4ff', '#000', 2);
+        drawDot(pts[14], 7, '#00d4ff', '#000', 2);
+        drawDot(pts[15], 10, '#00ff87', '#000', 2);
+        drawDot(pts[16], 10, '#00ff87', '#000', 2);
+      }
+
       ctx.restore();
     }
 
@@ -7599,7 +7869,8 @@ function runPoseLoop() {
       if (st) {
         st.textContent = lastState.toUpperCase();
         st.className   = 'workout-state ' + (lastState === 'down' ? 'is-down'
-                                          :  lastState === 'up'   ? 'is-up' : '');
+                                          :  lastState === 'up'   ? 'is-up'
+                                          :  lastState === 'jump' ? 'is-up' : '');
       }
     }
 
