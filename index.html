@@ -6652,8 +6652,8 @@ let _pose = {
 function makeBoxingState() {
   return {
     arms: {
-      left:  { state: 'guard', lastPunchAt: 0 },
-      right: { state: 'guard', lastPunchAt: 0 },
+      left:  { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null },
+      right: { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null },
     },
     enemyMaxHp:  BOXING_ENEMY_HP,
     enemyHp:     BOXING_ENEMY_HP,
@@ -7303,6 +7303,10 @@ function pushupTick(landmarks) {
 const PUNCH_EXTEND_DIST     = 0.28;
 const PUNCH_RETRACT_DIST    = 0.18;
 const PUNCH_REFRACTORY_MS   = 220;
+const PUNCH_ELBOW_MIN_DEG   = 95;   // elbow angle — wide enough for angled/fast punches
+const PUNCH_MIN_VELOCITY    = 0.006; // min wrist speed — catches snappy punches, blocks pure static hover
+const PUNCH_MAX_DEPTH_FWD   = 0.32; // only reject hand literally pressed against lens
+const PUNCH_FACE_CLEARANCE  = 0.07; // only reject wrist resting directly on nose
 const BOXING_DMG_MIN        = 5;
 const BOXING_DMG_MAX        = 15;
 const BOXING_ENEMY_HP       = 100;
@@ -7310,34 +7314,73 @@ const BOXING_ENEMY_KILL_XP  = 25;     // bonus banked on defeat (applied at Fini
 const BOXING_PUNCH_XP       = 1;      // per-punch xp (also banked)
 const BOXING_EMOJIS = ['😈','👹','💀','🤖','👺','🐉','🦖'];
 
-/** Punch detector — per-arm idle/extended state machine, returns the
- *  array of sides ('left'/'right') that fired a punch this frame. */
+/** Punch detector — per-arm state machine with three false-positive filters:
+ *  1. Elbow extension angle (real punch opens the elbow past PUNCH_ELBOW_MIN_DEG)
+ *  2. Camera-proximity rejection (depth delta + nose-clearance)
+ *  3. Velocity gate (wrist must move fast enough to be a genuine strike)
+ *  Returns array of sides ('left'/'right') that fired a valid punch this frame. */
 function boxingTick(landmarks) {
-  // 11 L-shoulder, 12 R-shoulder, 15 L-wrist, 16 R-wrist
-  const lS = landmarks[11], rS = landmarks[12];
-  const lW = landmarks[15], rW = landmarks[16];
+  // Indices: 0=nose, 11=L-shoulder, 12=R-shoulder,
+  //          13=L-elbow, 14=R-elbow, 15=L-wrist, 16=R-wrist
+  const nose = landmarks[0];
+  const lS   = landmarks[11], rS = landmarks[12];
+  const lE   = landmarks[13], rE = landmarks[14];
+  const lW   = landmarks[15], rW = landmarks[16];
   if (!lS || !rS || !lW || !rW) return [];
 
   const fired = [];
-  const sides = [['left',  lS, lW], ['right', rS, rW]];
-  const now   = performance.now();
-  const b     = _pose.boxing;
+  const sides = [
+    ['left',  lS, lE, lW],
+    ['right', rS, rE, rW],
+  ];
+  const now = performance.now();
+  const b   = _pose.boxing;
   let bothVisible = true;
 
-  for (const [side, sh, wr] of sides) {
+  for (const [side, sh, el, wr] of sides) {
     if (sh.visibility < 0.5 || wr.visibility < 0.5) { bothVisible = false; continue; }
+
+    const arm = b.arms[side];
+
+    // Track velocity: wrist displacement since last valid frame
+    const velocity = (arm.prevX !== null)
+      ? Math.hypot(wr.x - arm.prevX, wr.y - arm.prevY)
+      : 0;
+    arm.prevX = wr.x;
+    arm.prevY = wr.y;
+
     const dx = wr.x - sh.x, dy = wr.y - sh.y;
     const dist = Math.hypot(dx, dy);
-    const arm = b.arms[side];
 
     if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
       if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
+
+        // ── FILTER 1: Elbow angle — must open past threshold (true extension)
+        const elbowOk = (el && el.visibility > 0.4)
+          ? angleDeg(sh, el, wr) >= PUNCH_ELBOW_MIN_DEG
+          : true; // if elbow not visible, skip this check gracefully
+        if (!elbowOk) continue;
+
+        // ── FILTER 2a: Depth — reject if wrist is too far forward of shoulder
+        //   (hand pressed against lens; shoulder.z − wrist.z > limit)
+        if (sh.z !== undefined && wr.z !== undefined) {
+          if ((sh.z - wr.z) > PUNCH_MAX_DEPTH_FWD) continue;
+        }
+
+        // ── FILTER 2b: Face proximity — wrist must not be near the nose
+        if (nose && nose.visibility > 0.4) {
+          const faceDist = Math.hypot(wr.x - nose.x, wr.y - nose.y);
+          if (faceDist < PUNCH_FACE_CLEARANCE) continue;
+        }
+
+        // ── FILTER 3: Velocity — require a sharp movement spike, not slow drift
+        if (velocity < PUNCH_MIN_VELOCITY) continue;
+
         arm.state       = 'extended';
         arm.lastPunchAt = now;
         fired.push(side);
       }
     } else if (arm.state === 'extended' && dist < PUNCH_RETRACT_DIST) {
-      // Record retraction time for speed metric
       const retractMs = now - arm.lastPunchAt;
       if (retractMs > 0 && retractMs < 2000) b.retractionTimes.push(retractMs);
       arm.state = 'guard';
