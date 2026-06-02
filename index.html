@@ -3442,10 +3442,10 @@
         <span class="pro-price-period">לחודש</span>
         <span class="pro-price-cta">התחל עכשיו</span>
       </button>
-      <button class="pro-price-btn lifetime" onclick="clickProWaitlist('lifetime')">
-        <span class="pro-price-amount">149 ₪</span>
-        <span class="pro-price-period">גישה לכל החיים</span>
-        <span class="pro-price-cta">שלם פעם אחת</span>
+      <button class="pro-price-btn lifetime" onclick="clickProWaitlist('annual')">
+        <span class="pro-price-amount">150 ₪</span>
+        <span class="pro-price-period">לשנה</span>
+        <span class="pro-price-cta">מנוי שנתי</span>
       </button>
     </div>
 
@@ -7667,8 +7667,8 @@ function showProWaitlistModal(plan) {
       </div>
       <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px 16px;margin-bottom:22px;font-size:13px;color:#fbbf24;">
         ${isHe
-          ? `✅ תוכנית שנבחרה: ${plan === 'lifetime' ? 'גישה לכל החיים — 149 ₪' : 'חודשי — 29 ₪/חודש'}`
-          : `✅ Plan selected: ${plan === 'lifetime' ? 'Lifetime Access — 149 ₪' : 'Monthly — 29 ₪/mo'}`}
+          ? `✅ תוכנית שנבחרה: ${plan === 'annual' ? 'מנוי שנתי — 150 ₪/שנה' : 'חודשי — 29 ₪/חודש'}`
+          : `✅ Plan selected: ${plan === 'annual' ? 'Annual — 150 ₪/year' : 'Monthly — 29 ₪/mo'}`}
       </div>
       <button onclick="document.getElementById('proWaitlistOverlay').remove();"
         style="width:100%;padding:15px;background:linear-gradient(90deg,#a855f7,#f59e0b);border:none;border-radius:14px;color:#000;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
