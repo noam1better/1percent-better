@@ -2766,8 +2766,8 @@
     </div>
 
     <div class="hub-hero" id="hubHero">
-      <div class="hub-hero-title">המשימה היומית שלך</div>
-      <div class="hub-hero-sub">הגיע הזמן לבחור את המסלול הפשוט והברור ביותר: אימון קצר, ברור וממוקד. התחל עכשיו.</div>
+      <div class="hub-hero-title" id="hub-hero-title">המשימה היומית שלך</div>
+      <div class="hub-hero-sub" id="hub-hero-sub">הגיע הזמן לבחור. אימון קצר, ברור, ממוקד. התחל עכשיו.</div>
       <div class="daily-progress-summary">
         <div class="daily-progress-header">
           <div class="daily-progress-label" id="dailyQuestProgressLabel">Today's Progress: 0/3 Missions Completed</div>
@@ -2787,27 +2787,27 @@
         <button class="hub-status-btn" id="hubStatusButton" onclick="handleHubStatusAction()">Start Mission</button>
       </div>
       <div class="daily-quests" id="dailyQuests">
-        <div class="daily-quests-title">המשימות היומיות שלך 🎯</div>
-        <div class="daily-quests-sub">בחר משימה ברורה ליום אחד. היא תסומן כ"בוצעה" ברגע שהאימון יסתיים.</div>
+        <div class="daily-quests-title" id="daily-quests-title">המשימות היומיות שלך 🎯</div>
+        <div class="daily-quests-sub" id="daily-quests-sub">בחר משימה ברורה ליום אחד. תסומן כ"בוצעה" כשהאימון יסתיים.</div>
         <div class="dq-list" id="dqList">
           <button type="button" class="dq-task" data-task="pushup">
             <div class="dq-task-info">
-              <div class="dq-task-title">🔥 אתגר יומי: 15 שכיבות סמיכה (זיהוי AI)</div>
-              <div class="dq-task-desc">לחץ כדי לפתוח את הספירה והזיהוי של השכיבות סמיכה.</div>
+              <div class="dq-task-title" id="dq-pushup-title">🔥 אתגר יומי: 15 שכיבות סמיכה (זיהוי AI)</div>
+              <div class="dq-task-desc" id="dq-pushup-desc">לחץ כדי לפתוח את הספירה והזיהוי.</div>
             </div>
             <div class="dq-task-check" id="dq-check-pushup">⏳</div>
           </button>
           <button type="button" class="dq-task" data-task="monkMode">
             <div class="dq-task-info">
-              <div class="dq-task-title">🧠 מנטליות: לקרוא את חוקי ה-Monk Mode (דקה אחת)</div>
-              <div class="dq-task-desc">פתח את ההסבר והתחל לחזק את הריכוז שלך.</div>
+              <div class="dq-task-title" id="dq-monkmode-title">🧠 מנטליות: לקרוא את חוקי ה-Monk Mode (דקה אחת)</div>
+              <div class="dq-task-desc" id="dq-monkmode-desc">פתח את ההסבר והתחל לחזק את הריכוז שלך.</div>
             </div>
             <div class="dq-task-check" id="dq-check-monkMode">☐</div>
           </button>
           <button type="button" class="dq-task" data-task="quickReview">
             <div class="dq-task-info">
-              <div class="dq-task-title">✨ קבל סקירה מהירה על מצב היום שלך</div>
-              <div class="dq-task-desc">בדוק את הסטטוס היומי והתקדמות כדי להתרכז בטווח הקצר.</div>
+              <div class="dq-task-title" id="dq-quickreview-title">✨ קבל סקירה מהירה על מצב היום שלך</div>
+              <div class="dq-task-desc" id="dq-quickreview-desc">בדוק את הסטטוס היומי וההתקדמות שלך.</div>
             </div>
             <div class="dq-task-check" id="dq-check-quickReview">☐</div>
           </button>
@@ -2816,7 +2816,7 @@
     </div>
 
     <!-- WORKOUT LAUNCHER -->
-    <div class="wl-section-label">אימונים</div>
+    <div class="wl-section-label" id="wl-workouts-label">אימונים</div>
     <div class="workout-launcher">
       <button class="wl-btn boxing" onclick="startWorkout('boxing')">
         <div class="wl-btn-icon">🥊</div>
@@ -4833,6 +4833,7 @@ const TRANSLATIONS = {
     'dq-monkmode-desc': 'Open the guide. Strengthen your focus.',
     'dq-quickreview-title': '✨ Get a Quick Status Check',
     'dq-quickreview-desc': 'Review today\'s progress. Stay sharp.',
+    'wl-workouts-label': 'Workouts',
   },
   he: {
     dir: 'rtl',
@@ -4960,6 +4961,18 @@ const TRANSLATIONS = {
     'qa-log-title':       'רישום מהיר',
     'qa-log-save':        'שמור',
     'qa-log-cancel':      'ביטול',
+    // Hub hero + daily quests
+    'hub-hero-title':       'המשימה היומית שלך',
+    'hub-hero-sub':         'הגיע הזמן לבחור. אימון קצר, ברור, ממוקד. התחל עכשיו.',
+    'daily-quests-title':   'המשימות היומיות שלך 🎯',
+    'daily-quests-sub':     'בחר משימה ברורה ליום אחד. תסומן כ"בוצעה" כשהאימון יסתיים.',
+    'dq-pushup-title':      '🔥 אתגר יומי: 15 שכיבות סמיכה (זיהוי AI)',
+    'dq-pushup-desc':       'לחץ כדי לפתוח את הספירה והזיהוי.',
+    'dq-monkmode-title':    '🧠 מנטליות: לקרוא את חוקי ה-Monk Mode (דקה אחת)',
+    'dq-monkmode-desc':     'פתח את ההסבר והתחל לחזק את הריכוז שלך.',
+    'dq-quickreview-title': '✨ קבל סקירה מהירה על מצב היום שלך',
+    'dq-quickreview-desc':  'בדוק את הסטטוס היומי וההתקדמות שלך.',
+    'wl-workouts-label':    'אימונים',
   },
   es: {
     dir: 'ltr',
@@ -4986,6 +4999,12 @@ const TRANSLATIONS = {
     'toast-saved': '✓ ¡Perfil guardado!',
     'toast-reset': '🔥 Racha reseteada a 0',
     'confirm-reset': '¿Resetear tu racha a 0? No se puede deshacer.',
+    'hub-hero-title': 'Tu Misión Diaria', 'hub-hero-sub': 'Elige un camino claro. Entrena corto, enfocado.',
+    'daily-quests-title': 'Misiones de Hoy 🎯', 'daily-quests-sub': 'Completa una tarea. Se marca al terminar.',
+    'dq-pushup-title': '🔥 Reto: 15 Flexiones (IA)', 'dq-pushup-desc': 'Toca para contar. La IA verifica.',
+    'dq-monkmode-title': '🧠 Mentalidad: Monk Mode (1 min)', 'dq-monkmode-desc': 'Abre la guía. Fortalece tu enfoque.',
+    'dq-quickreview-title': '✨ Revisión Rápida', 'dq-quickreview-desc': 'Revisa tu progreso de hoy.',
+    'wl-workouts-label': 'Entrenamientos',
   },
   fr: {
     dir: 'ltr',
@@ -5012,6 +5031,12 @@ const TRANSLATIONS = {
     'toast-saved': '✓ Profil sauvegardé !',
     'toast-reset': '🔥 Série réinitialisée à 0',
     'confirm-reset': 'Remettre la série à 0 ? Impossible à annuler.',
+    'hub-hero-title': 'Ta Mission du Jour', 'hub-hero-sub': 'Choisis un chemin clair. Court, ciblé.',
+    'daily-quests-title': 'Quêtes du Jour 🎯', 'daily-quests-sub': 'Une tâche par jour. Cochée à la fin.',
+    'dq-pushup-title': '🔥 Défi: 15 Pompes (IA)', 'dq-pushup-desc': 'Lance le compteur IA.',
+    'dq-monkmode-title': '🧠 Monk Mode (1 min)', 'dq-monkmode-desc': 'Ouvre le guide. Renforce ta concentration.',
+    'dq-quickreview-title': '✨ Bilan Rapide', 'dq-quickreview-desc': 'Vérifier ta progression du jour.',
+    'wl-workouts-label': 'Entraînements',
   },
   ar: {
     dir: 'rtl',
@@ -5038,6 +5063,12 @@ const TRANSLATIONS = {
     'toast-saved': '✓ تم حفظ الملف!',
     'toast-reset': '🔥 تمت إعادة التعيين إلى 0',
     'confirm-reset': 'إعادة السلسلة إلى 0؟ لا يمكن التراجع.',
+    'hub-hero-title': 'مهمتك اليومية', 'hub-hero-sub': 'اختر مساراً واضحاً. تدريب قصير ومركّز.',
+    'daily-quests-title': 'مهام اليوم 🎯', 'daily-quests-sub': 'اختر مهمة واحدة. تُعلَّم عند الانتهاء.',
+    'dq-pushup-title': '🔥 تحدي: 15 ضغطة (ذكاء اصطناعي)', 'dq-pushup-desc': 'اضغط لبدء العد.',
+    'dq-monkmode-title': '🧠 Monk Mode (دقيقة)', 'dq-monkmode-desc': 'افتح الدليل. عزّز تركيزك.',
+    'dq-quickreview-title': '✨ مراجعة سريعة', 'dq-quickreview-desc': 'راجع تقدّمك اليوم.',
+    'wl-workouts-label': 'التدريبات',
   },
   ru: {
     dir: 'ltr',
@@ -5064,6 +5095,12 @@ const TRANSLATIONS = {
     'toast-saved': '✓ Профиль сохранён!',
     'toast-reset': '🔥 Серия сброшена до 0',
     'confirm-reset': 'Сбросить серию до 0? Это нельзя отменить.',
+    'hub-hero-title': 'Твоя Ежедневная Миссия', 'hub-hero-sub': 'Выбери чёткий путь. Короткая, сфокусированная тренировка.',
+    'daily-quests-title': 'Задания на Сегодня 🎯', 'daily-quests-sub': 'Одно задание в день. Отмечается по завершении.',
+    'dq-pushup-title': '🔥 Задание: 15 Отжиманий (ИИ)', 'dq-pushup-desc': 'Нажми для подсчёта.',
+    'dq-monkmode-title': '🧠 Monk Mode (1 мин)', 'dq-monkmode-desc': 'Открой руководство. Усиль фокус.',
+    'dq-quickreview-title': '✨ Быстрый Обзор', 'dq-quickreview-desc': 'Проверь прогресс за сегодня.',
+    'wl-workouts-label': 'Тренировки',
   },
   pt: {
     dir: 'ltr',
@@ -5090,6 +5127,12 @@ const TRANSLATIONS = {
     'toast-saved': '✓ Perfil salvo!',
     'toast-reset': '🔥 Sequência zerada',
     'confirm-reset': 'Resetar para 0? Esta ação não pode ser desfeita.',
+    'hub-hero-title': 'Sua Missão Diária', 'hub-hero-sub': 'Escolha um caminho claro. Treino curto e focado.',
+    'daily-quests-title': 'Missões de Hoje 🎯', 'daily-quests-sub': 'Uma tarefa por dia. Marcada ao concluir.',
+    'dq-pushup-title': '🔥 Desafio: 15 Flexões (IA)', 'dq-pushup-desc': 'Toque para contar.',
+    'dq-monkmode-title': '🧠 Monk Mode (1 min)', 'dq-monkmode-desc': 'Abra o guia. Fortaleça seu foco.',
+    'dq-quickreview-title': '✨ Revisão Rápida', 'dq-quickreview-desc': 'Verifique seu progresso hoje.',
+    'wl-workouts-label': 'Treinos',
   },
 };
 
@@ -9311,9 +9354,9 @@ function updateHubSimplifiedUI() {
   const simple = isGuestSession();
   hub.classList.toggle('hub-simplified', simple);
   const primaryLabel = document.getElementById('lbl-primary-cta');
-  if (primaryLabel) primaryLabel.textContent = simple ? 'התחל אימון עכשיו' : 'התחל משימה';
-  const heroTitle = document.querySelector('.hub-hero-title');
-  if (heroTitle) heroTitle.textContent = 'המשימה היומית שלך';
+  if (primaryLabel) primaryLabel.textContent = simple
+    ? (currentLang === 'he' ? 'התחל אימון עכשיו' : 'Start Workout Now')
+    : (currentLang === 'he' ? 'התחל משימה' : 'Start Mission');
 }
 
 function continueAsGuest() {
