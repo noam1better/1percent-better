@@ -6673,7 +6673,12 @@ const PU_DOWN_DEG     = 95;     // elbow angle BELOW this counts as "down"
 const PU_UP_DEG       = 155;    // elbow angle ABOVE this counts as "up"
 const PU_FRAMES_STABLE = 3;     // require this many consecutive frames before transitioning
 const PU_REFRACTORY_MS = 500;   // ignore further counts for this long after counting
-const PU_INFER_FPS    = 20;     // detection rate; rendering is independent
+const PU_INFER_FPS    = 15;     // 15fps gives mobile GPUs enough time per tick
+
+/* Guard: prevents concurrent detectForVideo calls.
+   MediaPipe requires monotonically increasing timestamps — overlapping
+   async calls from setInterval throw silently and starve lastLandmarks. */
+let _inferBusy = false;
 
 /* MediaPipe handles. Held at module scope so re-entries don't
    re-download the model. */
@@ -6702,8 +6707,8 @@ let _pose = {
 function makeBoxingState() {
   return {
     arms: {
-      left:  { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null },
-      right: { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null },
+      left:  { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null },
+      right: { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null },
     },
     enemyMaxHp:  BOXING_ENEMY_HP,
     enemyHp:     BOXING_ENEMY_HP,
@@ -7576,12 +7581,12 @@ function pushupTick(landmarks) {
    Distances are 2D normalized (landmark coords are 0..1 in frame
    space). A jab from a typical phone-distance away puts the wrist
    ~0.30-0.40 from the shoulder; guarded hand sits ~0.10-0.15. */
-const PUNCH_EXTEND_DIST     = 0.22;  // lowered: orange dot triggers earlier in extension
-const PUNCH_RETRACT_DIST    = 0.15;  // retract threshold scales with extend
-const PUNCH_REFRACTORY_MS   = 220;
-const PUNCH_ELBOW_MIN_DEG   = 95;
-const PUNCH_MIN_VELOCITY    = 0.005; // slightly lower — catches normal punching speed
-const PUNCH_FACE_CLEARANCE  = 0.05;  // tighter: only blocks wrist literally on nose
+const PUNCH_EXTEND_DIST     = 0.20;  // normalized shoulder→wrist dist to enter extended
+const PUNCH_RETRACT_DIST    = 0.14;  // dist to return to guard
+const PUNCH_REFRACTORY_MS   = 200;
+const PUNCH_ELBOW_MIN_DEG   = 90;    // lower: mobile users often don't fully extend
+const PUNCH_MIN_VEL_PER_SEC = 0.08;  // time-normalized (norm-coords/s); loose for mobile
+const PUNCH_FACE_CLEARANCE  = 0.05;
 const BOXING_DMG_MIN        = 5;
 const BOXING_DMG_MAX        = 15;
 const BOXING_ENEMY_HP       = 100;
@@ -7590,12 +7595,12 @@ const BOXING_PUNCH_XP       = 1;      // per-punch xp (also banked)
 const BOXING_EMOJIS = ['😈','👹','💀','🤖','👺','🐉','🦖'];
 
 /* ── Jump Rope config ───────────────────────────────────────────────── */
-const JR_SMOOTH        = 0.25;  // EMA alpha for hip Y smoothing
-const JR_JUMP_RISE     = 0.032; // hip must rise this much above baseline to enter "air"
-const JR_LAND_DROP     = 0.012; // hip returns within this of baseline to complete jump
-const JR_REFRACTORY_MS = 320;   // min ms between counted jumps
-const JR_WRIST_SLACK   = 0.18;  // max avg-wrist-to-hip Y offset (rejects raised arms)
-const JR_CALIB_FRAMES  = 25;    // frames to build hip baseline
+const JR_SMOOTH        = 0.3;   // slightly more reactive on mobile
+const JR_JUMP_RISE     = 0.022; // lower: mobile cameras often show compressed body range
+const JR_LAND_DROP     = 0.010;
+const JR_REFRACTORY_MS = 280;
+const JR_WRIST_SLACK   = 0.25;  // more forgiving: mobile users hold arms at various angles
+const JR_CALIB_FRAMES  = 20;    // fewer frames: calibrate faster on mobile
 
 /** Jump rope detector. Uses EMA-smoothed hip Y with a simple ground→air→ground
  *  state machine. Returns true when a jump is counted this frame. */
@@ -7604,7 +7609,7 @@ function jumpropeTick(landmarks) {
   if (!jr) return false;
 
   const lHip = landmarks[23], rHip = landmarks[24];
-  if (!lHip || !rHip || lHip.visibility < 0.4 || rHip.visibility < 0.4) return false;
+  if (!lHip || !rHip || lHip.visibility < 0.3 || rHip.visibility < 0.3) return false;
 
   // ── Hand position filter: reject raised arms (boxing guard, waving, etc.) ──
   const lWr = landmarks[15], rWr = landmarks[16];
@@ -7685,16 +7690,16 @@ function boxingTick(landmarks) {
   let bothVisible = true;
 
   for (const [side, sh, el, wr] of sides) {
-    if (sh.visibility < 0.5 || wr.visibility < 0.5) { bothVisible = false; continue; }
+    if (sh.visibility < 0.35 || wr.visibility < 0.35) { bothVisible = false; continue; }
 
     const arm = b.arms[side];
 
-    // Track velocity: wrist displacement since last valid frame
-    const velocity = (arm.prevX !== null)
-      ? Math.hypot(wr.x - arm.prevX, wr.y - arm.prevY)
+    // Time-normalized velocity (norm-coords per second) — works at any inference FPS
+    const dt = (arm.prevTime !== null) ? (now - arm.prevTime) : null;
+    const velocity = (dt && dt > 0 && arm.prevX !== null)
+      ? Math.hypot(wr.x - arm.prevX, wr.y - arm.prevY) / (dt / 1000)
       : 0;
-    arm.prevX = wr.x;
-    arm.prevY = wr.y;
+    arm.prevX = wr.x; arm.prevY = wr.y; arm.prevTime = now;
 
     const dx = wr.x - sh.x, dy = wr.y - sh.y;
     const dist = Math.hypot(dx, dy);
@@ -7702,20 +7707,20 @@ function boxingTick(landmarks) {
     if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
       if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
 
-        // ── FILTER 1: Elbow angle — must open past threshold (true extension)
-        const elbowOk = (el && el.visibility > 0.4)
+        // ── FILTER 1: Elbow angle
+        const elbowOk = (el && el.visibility > 0.3)
           ? angleDeg(sh, el, wr) >= PUNCH_ELBOW_MIN_DEG
-          : true; // if elbow not visible, skip this check gracefully
+          : true;
         if (!elbowOk) continue;
 
-        // ── FILTER 2: Face proximity — wrist must not be resting on the nose
-        if (nose && nose.visibility > 0.4) {
+        // ── FILTER 2: Face proximity
+        if (nose && nose.visibility > 0.3) {
           const faceDist = Math.hypot(wr.x - nose.x, wr.y - nose.y);
           if (faceDist < PUNCH_FACE_CLEARANCE) continue;
         }
 
-        // ── FILTER 3: Velocity — require a sharp movement spike, not slow drift
-        if (velocity < PUNCH_MIN_VELOCITY) continue;
+        // ── FILTER 3: Time-normalized velocity
+        if (velocity < PUNCH_MIN_VEL_PER_SEC) continue;
 
         arm.state       = 'extended';
         arm.lastPunchAt = now;
@@ -7865,11 +7870,33 @@ function runPoseLoop() {
   let fpsT0   = performance.now();
 
   // ── inference paced loop ─────────────────────────────────
+  // Uses _inferBusy guard: prevents concurrent detectForVideo calls.
+  // MediaPipe requires monotonically increasing timestamps — overlapping
+  // async calls (common on mobile where inference > interval) throw silently.
+  let _dbgFrames = 0; // debug counter — logs every 60 ticks
   _pose.inferTimer = setInterval(async () => {
     if (!_pose.active || !_pose.landmarker || v.readyState < 2) return;
+    if (_inferBusy) return;                 // ← skip if previous call still running
+    _inferBusy = true;
     try {
-      const res = await _pose.landmarker.detectForVideo(v, performance.now());
+      const t0  = performance.now();
+      const res = await _pose.landmarker.detectForVideo(v, t0);
       const lms = res && res.landmarks && res.landmarks[0];
+
+      // Debug: log landmark detection status every 60 ticks (~4s at 15fps)
+      _dbgFrames++;
+      if (_dbgFrames % 60 === 0) {
+        if (lms) {
+          const nose = lms[0], lSh = lms[11], rSh = lms[12];
+          console.debug('[pose] lms ok — nose vis:', nose?.visibility?.toFixed(2),
+            '| L-sh:', lSh?.visibility?.toFixed(2), '| R-sh:', rSh?.visibility?.toFixed(2),
+            '| ex:', _pose.exercise, '| reps:', _pose.reps);
+        } else {
+          console.debug('[pose] no landmarks detected — v.readyState:', v.readyState,
+            'videoWidth:', v.videoWidth);
+        }
+      }
+
       if (lms) {
         lastLandmarks = lms;
         if (_pose.exercise === 'pushup') {
@@ -7885,8 +7912,6 @@ function runPoseLoop() {
             if (navigator.vibrate) {
               try { navigator.vibrate(25); } catch (_) {}
             }
-            // Mirror lastCountAt so the FPS / counter render in the render
-            // loop picks up the change immediately on the next frame.
             _pose.lastCountAt = performance.now();
           }
         } else if (_pose.exercise === 'jumprope') {
@@ -7897,6 +7922,8 @@ function runPoseLoop() {
       }
     } catch (e) {
       console.warn('[workout] detect error', e);
+    } finally {
+      _inferBusy = false;                   // always release, even on error
     }
   }, Math.round(1000 / PU_INFER_FPS));
 
@@ -8039,7 +8066,8 @@ function runPoseLoop() {
     const now = performance.now();
     if (now - fpsT0 > 1000) {
       _pose.fpsAvg = Math.round(frameCt * 1000 / (now - fpsT0));
-      if (fps) fps.textContent = `${_pose.fpsAvg} fps`;
+      const lmsIndicator = lastLandmarks ? ' 👁' : ' ✗';
+      if (fps) fps.textContent = `${_pose.fpsAvg} fps${lmsIndicator}`;
       fpsT0 = now; frameCt = 0;
     }
   };
