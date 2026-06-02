@@ -7287,7 +7287,7 @@ function showMonkModeRules() {
   const overlay = document.createElement('div');
   overlay.id = 'monkModeOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-  overlay.innerHTML = `<div style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
+  overlay.innerHTML = `<div dir="${isHe ? 'rtl' : 'ltr'}" style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
         <div style="font-size:22px;font-weight:900;color:#fff;">🧠 Monk Mode</div>
@@ -7343,7 +7343,7 @@ function showQuickReview() {
   const overlay = document.createElement('div');
   overlay.id = 'quickReviewOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-  overlay.innerHTML = `<div style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
+  overlay.innerHTML = `<div dir="${isHe ? 'rtl' : 'ltr'}" style="background:#0a0a0a;border-radius:24px 24px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
         <div style="font-size:22px;font-weight:900;color:#fff;">✨ ${isHe ? 'סקירת היום' : "Today's Review"}</div>
@@ -9101,7 +9101,7 @@ function renderHubActivePath() {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .then(reg => {
-        console.log('[PWA] Service Worker registered:', reg.scope);
+        console.info('[PWA] sw registered:', reg.scope);
 
         // Check for updates every 60 seconds
         setInterval(() => reg.update(), 60_000);
