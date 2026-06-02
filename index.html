@@ -2555,6 +2555,77 @@
     100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
   }
 </style>
+<style>
+  /* ══ PRO PAYWALL SCREEN ══════════════════════════════ */
+  #screen-pro { padding-bottom: 100px; }
+  .pro-hero {
+    background: linear-gradient(160deg, #0d0d0d 0%, #1a0a2e 40%, #0d0d0d 100%);
+    padding: 32px 24px 28px;
+    text-align: center;
+    border-bottom: 1px solid rgba(138,43,226,.25);
+  }
+  .pro-crown { font-size: 48px; margin-bottom: 10px; filter: drop-shadow(0 0 16px rgba(250,204,21,.6)); }
+  .pro-hero-title {
+    font-family: var(--font-head);
+    font-size: 30px; font-weight: 900; letter-spacing: .04em;
+    background: linear-gradient(90deg, #f59e0b, #a855f7, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+  .pro-hero-sub { font-size: 14px; color: #9ca3af; line-height: 1.5; }
+  .pro-features { padding: 20px 20px 0; }
+  .pro-feat-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: #6b7280; margin-bottom: 12px;
+  }
+  [dir="rtl"] .pro-feat-label { letter-spacing: 0; text-transform: none; }
+  .pro-feat-card {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px; padding: 16px; margin-bottom: 10px;
+    transition: border-color .2s;
+  }
+  .pro-feat-card:hover { border-color: rgba(138,43,226,.4); }
+  .pro-feat-icon { font-size: 28px; flex-shrink: 0; margin-top: 1px; }
+  .pro-feat-title { font-size: 15px; font-weight: 800; color: #f3f4f6; margin-bottom: 3px; }
+  .pro-feat-desc  { font-size: 13px; color: #9ca3af; line-height: 1.45; }
+  .pro-pricing {
+    margin: 20px 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .pro-price-btn {
+    border: none; border-radius: 16px; padding: 18px 12px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: transform .15s, opacity .15s;
+    touch-action: manipulation;
+  }
+  .pro-price-btn:active { transform: scale(.96); opacity: .9; }
+  .pro-price-btn.monthly {
+    background: rgba(138,43,226,.15); border: 1.5px solid rgba(138,43,226,.45);
+  }
+  .pro-price-btn.lifetime {
+    background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(168,85,247,.15));
+    border: 1.5px solid rgba(245,158,11,.55);
+    position: relative; overflow: hidden;
+  }
+  .pro-price-btn.lifetime::before {
+    content: '🔥 פופולרי'; position: absolute; top: 0; right: 0;
+    background: linear-gradient(90deg,#f59e0b,#a855f7);
+    font-size: 9px; font-weight: 800; color: #000; padding: 3px 8px;
+    border-radius: 0 16px 0 10px; letter-spacing: .04em;
+  }
+  [dir="ltr"] .pro-price-btn.lifetime::before { content: '🔥 BEST VALUE'; right: 0; left: auto; }
+  .pro-price-amount { font-size: 26px; font-weight: 900; color: #fff; }
+  .pro-price-period { font-size: 12px; color: #9ca3af; }
+  .pro-price-cta    { font-size: 13px; font-weight: 700; color: #d1d5db; margin-top: 2px; }
+  .pro-social-proof { text-align: center; font-size: 12px; color: #4b5563; margin: 14px 20px 0; }
+  .pro-back-btn {
+    display: block; width: calc(100% - 40px); margin: 20px 20px 0;
+    background: transparent; border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 12px; color: #6b7280; font-size: 14px;
+    cursor: pointer; touch-action: manipulation;
+  }
+</style>
 </head>
 <body>
 
@@ -2675,7 +2746,10 @@
     <div class="top-header">
       <div class="logo">1%<span>BETTER</span></div>
       <div class="guest-banner hidden" id="guestBanner">מצב אורח - הירשם כדי לשמור התקדמות</div>
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="navigate('pro')"
+          style="background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(168,85,247,.15));border:1px solid rgba(245,158,11,.45);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:800;color:#f59e0b;cursor:pointer;letter-spacing:.04em;white-space:nowrap;touch-action:manipulation;"
+          id="proEntryBtn">⭐ PRO</button>
         <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works" style="position:static;width:38px;height:38px;">?</button>
         <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
       </div>
@@ -3316,6 +3390,67 @@
 
   </div>
 
+  </div>
+
+  <!-- ══════════════ PRO PAYWALL SCREEN ══════════════ -->
+  <div class="screen" id="screen-pro">
+    <div class="pro-hero">
+      <div class="pro-crown">👑</div>
+      <div class="pro-hero-title">1% Better PRO</div>
+      <div class="pro-hero-sub">הגרסה שמשנה אנשים רציניים.<br>כלים מתקדמים. קהילה. תוצאות.</div>
+    </div>
+
+    <div class="pro-features">
+      <div class="pro-feat-label">מה כלול ב-PRO</div>
+
+      <div class="pro-feat-card">
+        <div class="pro-feat-icon">👥</div>
+        <div>
+          <div class="pro-feat-title">Monk Mode קבוצתי</div>
+          <div class="pro-feat-desc">חדרי משמעת קבוצתיים — התחרות עם חברים בזמן אמת. אחריות משותפת. תוצאות כפולות.</div>
+        </div>
+      </div>
+
+      <div class="pro-feat-card">
+        <div class="pro-feat-icon">🎓</div>
+        <div>
+          <div class="pro-feat-title">מסלולי VIP ואוטומציה</div>
+          <div class="pro-feat-desc">גישה מלאה לכל מסלולי הלמידה: כושר מתקדם, אוטומציה עסקית, בניית הרגלים של אנשי עילית.</div>
+        </div>
+      </div>
+
+      <div class="pro-feat-card">
+        <div class="pro-feat-icon">📊</div>
+        <div>
+          <div class="pro-feat-title">אנליטיקה חודשית מתקדמת</div>
+          <div class="pro-feat-desc">גרפים חודשיים, תובנות AI אישיות, ומדדי ביצועים שמראים בדיוק איפה אתה מתפתח.</div>
+        </div>
+      </div>
+
+      <div class="pro-feat-card">
+        <div class="pro-feat-icon">⚡</div>
+        <div>
+          <div class="pro-feat-title">פריוריטי תמיכה + תכונות מוקדמות</div>
+          <div class="pro-feat-desc">גישה ראשונה לכל פיצ'ר חדש. תמיכה ישירה. השפעה על רשימת הפיתוח.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pro-pricing">
+      <button class="pro-price-btn monthly" onclick="clickProWaitlist('monthly')">
+        <span class="pro-price-amount">29 ₪</span>
+        <span class="pro-price-period">לחודש</span>
+        <span class="pro-price-cta">התחל עכשיו</span>
+      </button>
+      <button class="pro-price-btn lifetime" onclick="clickProWaitlist('lifetime')">
+        <span class="pro-price-amount">149 ₪</span>
+        <span class="pro-price-period">גישה לכל החיים</span>
+        <span class="pro-price-cta">שלם פעם אחת</span>
+      </button>
+    </div>
+
+    <div class="pro-social-proof">🔒 תשלום מאובטח · ביטול בכל עת · ללא מחויבות</div>
+    <button class="pro-back-btn" onclick="navigate('hub')">← חזור לדשבורד</button>
   </div>
 
 </div><!-- /app -->
@@ -7487,6 +7622,62 @@ function showOnboardingGuide() {
   buildObDots();
   updateObStep();
   setTimeout(() => document.getElementById('obNameInput')?.focus(), 200);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PRO PAYWALL — WAITLIST VALIDATION
+═══════════════════════════════════════════════════════ */
+
+async function clickProWaitlist(plan) {
+  // Record interest in Firestore (no payment, validation only)
+  if (typeof syncUserToFirestore === 'function' &&
+      typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({
+      clickedPro:      true,
+      clickedProPlan:  plan,           // 'monthly' | 'lifetime'
+      clickedProAt:    Date.now(),
+      isPro:           false,          // real upgrade handled manually for now
+    }).catch(() => {});
+  }
+  // localStorage fallback so we capture guest interest too
+  localStorage.setItem('1pb_clicked_pro', JSON.stringify({ plan, at: Date.now() }));
+
+  showProWaitlistModal(plan);
+}
+
+function showProWaitlistModal(plan) {
+  const existing = document.getElementById('proWaitlistOverlay');
+  if (existing) existing.remove();
+
+  const isHe = currentLang === 'he';
+  const overlay = document.createElement('div');
+  overlay.id = 'proWaitlistOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#0f0f1a;border:1px solid rgba(138,43,226,.4);border-radius:24px;padding:32px 24px;max-width:360px;width:100%;text-align:center;">
+      <div style="font-size:52px;margin-bottom:14px;">🎉</div>
+      <div style="font-family:var(--font-head);font-size:22px;font-weight:900;color:#fff;margin-bottom:12px;line-height:1.2;">
+        ${isHe ? 'גרסת ה-PRO נפתחת בקרוב!' : 'PRO is launching soon!'}
+      </div>
+      <div style="font-size:14px;color:#9ca3af;line-height:1.6;margin-bottom:20px;">
+        ${isHe
+          ? 'גרסת ה-PRO נפתחת בקרוב ל-100 משתמשים ראשונים בלבד.\nשמרנו לך מקום ברשימה! 🙌'
+          : 'PRO is opening soon for the first 100 users only.\nWe saved your spot on the list! 🙌'}
+      </div>
+      <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px 16px;margin-bottom:22px;font-size:13px;color:#fbbf24;">
+        ${isHe
+          ? `✅ תוכנית שנבחרה: ${plan === 'lifetime' ? 'גישה לכל החיים — 149 ₪' : 'חודשי — 29 ₪/חודש'}`
+          : `✅ Plan selected: ${plan === 'lifetime' ? 'Lifetime Access — 149 ₪' : 'Monthly — 29 ₪/mo'}`}
+      </div>
+      <button onclick="document.getElementById('proWaitlistOverlay').remove();"
+        style="width:100%;padding:15px;background:linear-gradient(90deg,#a855f7,#f59e0b);border:none;border-radius:14px;color:#000;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
+        ${isHe ? '✓ נרשמתי לרשימה!' : '✓ I\'m on the list!'}
+      </button>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 function showAppGuide() {
