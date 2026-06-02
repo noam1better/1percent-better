@@ -6707,8 +6707,8 @@ let _pose = {
 function makeBoxingState() {
   return {
     arms: {
-      left:  { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null },
-      right: { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null },
+      left:  { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null, prevElbowAngle: null },
+      right: { state: 'guard', lastPunchAt: 0, prevX: null, prevY: null, prevTime: null, prevElbowAngle: null },
     },
     enemyMaxHp:  BOXING_ENEMY_HP,
     enemyHp:     BOXING_ENEMY_HP,
@@ -6960,7 +6960,8 @@ function finishWorkout() {
     msg = isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`;
   }
   showToast(msg);
-  markDailyQuestComplete(exercise === 'pushup' ? 'pushup' : null);
+  // All workout exercises complete the 'pushup' daily quest (the workout quest)
+  markDailyQuestComplete('pushup');
 
   if (exercise === 'boxing' && entry.avgRetractMs !== null) {
     const prevLog = safeParse(localStorage.getItem('1pb_workouts'), []);
@@ -7704,32 +7705,49 @@ function boxingTick(landmarks) {
     const dx = wr.x - sh.x, dy = wr.y - sh.y;
     const dist = Math.hypot(dx, dy);
 
-    if (arm.state === 'guard' && dist > PUNCH_EXTEND_DIST) {
+    // Current elbow angle (null if elbow not visible)
+    const curElbow = (el && el.visibility > 0.3) ? angleDeg(sh, el, wr) : null;
+
+    // ── DUAL PATH: lateral punch OR straight jab ─────────────────
+    // Path A — hook/wide cross: wrist moves far from shoulder in 2D XY
+    const isLateralExtend = dist > PUNCH_EXTEND_DIST;
+    // Path B — jab/straight cross: elbow rapidly straightens (guard ≤115° → extended ≥140°)
+    //   Catches forward jabs that barely change XY because motion is toward camera (Z-axis)
+    const isJabExtend = (curElbow !== null && curElbow >= 140) &&
+                        (arm.prevElbowAngle !== null && arm.prevElbowAngle <= 115);
+
+    arm.prevElbowAngle = curElbow;
+
+    if (arm.state === 'guard' && (isLateralExtend || isJabExtend)) {
       if (now - arm.lastPunchAt > PUNCH_REFRACTORY_MS) {
 
-        // ── FILTER 1: Elbow angle
-        const elbowOk = (el && el.visibility > 0.3)
-          ? angleDeg(sh, el, wr) >= PUNCH_ELBOW_MIN_DEG
-          : true;
-        if (!elbowOk) continue;
+        // ── FILTER 1: Elbow must be at least somewhat open (catch-all)
+        //   Skipped for jab path since elbow angle is already the trigger
+        if (!isJabExtend && curElbow !== null && curElbow < PUNCH_ELBOW_MIN_DEG) continue;
 
-        // ── FILTER 2: Face proximity
-        if (nose && nose.visibility > 0.3) {
+        // ── FILTER 2: Face proximity (ignore for jab — it starts near face)
+        if (!isJabExtend && nose && nose.visibility > 0.3) {
           const faceDist = Math.hypot(wr.x - nose.x, wr.y - nose.y);
           if (faceDist < PUNCH_FACE_CLEARANCE) continue;
         }
 
-        // ── FILTER 3: Time-normalized velocity
-        if (velocity < PUNCH_MIN_VEL_PER_SEC) continue;
+        // ── FILTER 3: Velocity — loose; jab path gets a slightly lower bar
+        const velThresh = isJabExtend ? PUNCH_MIN_VEL_PER_SEC * 0.5 : PUNCH_MIN_VEL_PER_SEC;
+        if (velocity < velThresh) continue;
 
         arm.state       = 'extended';
         arm.lastPunchAt = now;
         fired.push(side);
       }
-    } else if (arm.state === 'extended' && dist < PUNCH_RETRACT_DIST) {
-      const retractMs = now - arm.lastPunchAt;
-      if (retractMs > 0 && retractMs < 2000) b.retractionTimes.push(retractMs);
-      arm.state = 'guard';
+    } else if (arm.state === 'extended') {
+      // Retract: lateral arm came back OR elbow bent back to guard angle
+      const lateralRetract = dist < PUNCH_RETRACT_DIST;
+      const elbowRetract   = curElbow !== null && curElbow < 115;
+      if (lateralRetract || elbowRetract) {
+        const retractMs = now - arm.lastPunchAt;
+        if (retractMs > 0 && retractMs < 2000) b.retractionTimes.push(retractMs);
+        arm.state = 'guard';
+      }
     }
   }
 
