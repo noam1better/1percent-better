@@ -2,31 +2,41 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
     // ── PROOF PHOTOS ────────────────────────────────────
-    // Only the owner can upload/read/delete their own proofs
+    // Only the owner can upload/read/delete their own proofs.
+    // No overwrite — each proof is an immutable timestamped record.
     match /proofs/{uid}/{fileName} {
-      allow read:   if request.auth != null && request.auth.uid == uid;
-      allow create: if request.auth != null
-                    && request.auth.uid == uid
-                    && request.resource.size < 10 * 1024 * 1024  // max 10MB
-                    && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null && request.auth.uid == uid;
-      allow update: if false; // no overwriting
+      allow read:   if isOwner(uid);
+      allow create: if isOwner(uid)
+                   && request.resource.size < 10 * 1024 * 1024
+                   && isImage()
+                   && fileName.size() <= 200;
+      allow update: if false;
+      allow delete: if isOwner(uid);
     }
 
     // ── PROFILE AVATARS ─────────────────────────────────
-    // Any signed-in user can read avatars (so they appear in the feed
-    // and on profile pages). Only the owner can write theirs.
-    // Updates ARE allowed here (unlike proofs) because the file path
-    // is stable (avatar.jpg) and getting overwritten is the expected
-    // behavior when the user changes their photo.
+    // Any signed-in user can read (avatars appear in the community feed).
+    // Only the owner can write; overwrites are intentional (stable path).
     match /avatars/{uid}/{fileName} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null
-                   && request.auth.uid == uid
-                   && request.resource.size < 2 * 1024 * 1024     // max 2MB after downscale
-                   && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow read:   if isSignedIn();
+      allow write:  if isOwner(uid)
+                   && request.resource.size < 2 * 1024 * 1024
+                   && isImage()
+                   && fileName.size() <= 200;
+      allow delete: if isOwner(uid);
     }
 
     // ── DENY EVERYTHING ELSE ───────────────────────────

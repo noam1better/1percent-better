@@ -2,6 +2,11 @@
 <html lang="he" dir="rtl" class="notranslate" translate="no">
 <head>
 <meta charset="UTF-8" />
+<script>
+  if (location.hostname === 'better-de9aa.web.app') {
+    location.replace(location.href.replace('better-de9aa.web.app', 'better-de9aa.firebaseapp.com'));
+  }
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
 <!-- PWA Core -->
@@ -15,10 +20,10 @@
 <meta name="apple-mobile-web-app-title" content="1% Better" />
 
 <!-- SEO / Share -->
-<meta name="description" content="בצע משימות, תתקדם, ותוכיח את זה" />
+<meta name="description" content="Do tasks. Make progress. Prove it." />
 <meta name="application-name" content="1% Better" />
 <meta property="og:title"       content="1% Better" />
-<meta property="og:description" content="בצע משימות, תתקדם, ותוכיח את זה" />
+<meta property="og:description" content="Do tasks. Make progress. Prove it." />
 <meta property="og:type"        content="website" />
 
 <meta name="google" content="notranslate" />
@@ -30,6 +35,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -2335,6 +2342,8 @@
   .wl-btn.boxing:hover { border-color: rgba(255,100,0,.6); background: rgba(255,100,0,.12); }
   .wl-btn.pushup  { border-color: rgba(0,255,135,.25); background: rgba(0,255,135,.05); }
   .wl-btn.pushup:hover { border-color: rgba(0,255,135,.5); background: rgba(0,255,135,.1); }
+  .wl-btn.pullup  { border-color: rgba(168,85,247,.35); background: rgba(168,85,247,.06); }
+  .wl-btn.pullup:hover { border-color: rgba(168,85,247,.6); background: rgba(168,85,247,.12); }
   .wl-btn.jumprope { border-color: rgba(56,189,248,.3); background: rgba(56,189,248,.06); }
   .wl-btn.jumprope:hover { border-color: rgba(56,189,248,.6); background: rgba(56,189,248,.12); }
   .wl-section-label {
@@ -2557,7 +2566,16 @@
 </style>
 <style>
   /* ══ PRO PAYWALL SCREEN ══════════════════════════════ */
-  #screen-pro { padding-bottom: 100px; }
+  /* Ensure the PRO screen can grow and scroll independently so
+     pricing cards are visible on small viewports and not clipped. */
+  #screen-pro {
+    padding-bottom: 100px;
+    min-height: calc(100vh - 90px);
+    height: auto;
+    box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .pro-hero {
     background: linear-gradient(160deg, #0d0d0d 0%, #1a0a2e 40%, #0d0d0d 100%);
     padding: 32px 24px 28px;
@@ -2593,31 +2611,27 @@
   .pro-pricing {
     margin: 20px 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   }
-  .pro-price-btn {
-    border: none; border-radius: 16px; padding: 18px 12px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    transition: transform .15s, opacity .15s;
-    touch-action: manipulation;
+  .pro-price-card {
+    border-radius: 16px; padding: 16px 12px 14px; position: relative; overflow: hidden;
+    background: rgba(138,43,226,.12); border: 1.5px solid rgba(138,43,226,.35);
+    display: flex; flex-direction: column; gap: 4px;
   }
-  .pro-price-btn:active { transform: scale(.96); opacity: .9; }
-  .pro-price-btn.monthly {
-    background: rgba(138,43,226,.15); border: 1.5px solid rgba(138,43,226,.45);
+  .pro-price-card-featured {
+    background: linear-gradient(135deg, rgba(245,158,11,.13), rgba(168,85,247,.13));
+    border-color: rgba(245,158,11,.5);
   }
-  .pro-price-btn.lifetime {
-    background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(168,85,247,.15));
-    border: 1.5px solid rgba(245,158,11,.55);
-    position: relative; overflow: hidden;
-  }
-  .pro-price-btn.lifetime::before {
-    content: '🔥 פופולרי'; position: absolute; top: 0; right: 0;
+  .pro-price-badge {
+    position: absolute; top: 0; right: 0;
     background: linear-gradient(90deg,#f59e0b,#a855f7);
     font-size: 9px; font-weight: 800; color: #000; padding: 3px 8px;
     border-radius: 0 16px 0 10px; letter-spacing: .04em;
   }
-  [dir="ltr"] .pro-price-btn.lifetime::before { content: '🔥 BEST VALUE'; right: 0; left: auto; }
-  .pro-price-amount { font-size: 26px; font-weight: 900; color: #fff; }
-  .pro-price-period { font-size: 12px; color: #9ca3af; }
-  .pro-price-cta    { font-size: 13px; font-weight: 700; color: #d1d5db; margin-top: 2px; }
+  [dir="ltr"] .pro-price-badge { right: 0; left: auto; }
+  .pro-price-card-top { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; }
+  .pro-price-amount { font-size: 24px; font-weight: 900; color: #fff; }
+  .pro-price-period { font-size: 11px; color: #9ca3af; }
+  .pro-price-card-sub { font-size: 10px; color: #6b7280; margin-bottom: 10px; }
+  .paypal-btn-container { min-height: 44px; }
   .pro-social-proof { text-align: center; font-size: 12px; color: #4b5563; margin: 14px 20px 0; }
   .pro-back-btn {
     display: block; width: calc(100% - 40px); margin: 20px 20px 0;
@@ -2625,37 +2639,176 @@
     border-radius: 12px; padding: 12px; color: #6b7280; font-size: 14px;
     cursor: pointer; touch-action: manipulation;
   }
+
+  /* ══ PRIMARY AI CTA ═════════════════════════════ */
+  .ai-primary-cta {
+    display: block; width: calc(100% - 32px); margin: 16px 16px 0;
+    padding: 22px 20px;
+    background: linear-gradient(135deg, #00ff87 0%, #00b4ff 100%);
+    border: none; border-radius: 20px;
+    cursor: pointer; touch-action: manipulation;
+    position: relative; overflow: hidden;
+  }
+  .ai-primary-cta::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,135,.15), transparent);
+    animation: ctaPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes ctaPulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  .ai-primary-cta:active { transform: scale(.98); }
+  .ai-cta-label {
+    font-family: var(--font-head); font-size: 28px; letter-spacing: .04em;
+    color: #000; line-height: 1.1; display: block;
+  }
+  .ai-cta-sub {
+    font-size: 13px; font-weight: 600; color: rgba(0,0,0,.6);
+    margin-top: 4px; display: block;
+  }
+  .ai-cta-icon { font-size: 38px; float: right; margin-top: -4px; }
+
+  /* ══ RPG PROGRESS BLOCK ══════════════════════════ */
+  .rpg-block {
+    margin: 12px 16px 0;
+    background: #0c0c18;
+    border: 1px solid rgba(0,255,135,.18);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  .rpg-stat { display: flex; flex-direction: column; gap: 2px; }
+  .rpg-stat-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    color: #4b5563; text-transform: uppercase;
+  }
+  .rpg-stat-value {
+    font-family: var(--font-head); font-size: 26px; letter-spacing: .04em; line-height: 1;
+  }
+  .rpg-stat-value.green  { color: #00ff87; }
+  .rpg-stat-value.gold   { color: #f59e0b; }
+  .rpg-stat-value.blue   { color: #38bdf8; }
+  .rpg-stat-value.red    { color: #ef4444; }
+  .rpg-stat-sub { font-size: 11px; color: #4b5563; }
+
+  /* ══ WORKOUT HINT OVERLAY ════════════════════════ */
+  .workout-hint {
+    position: absolute; bottom: 88px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.72); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 99px; padding: 8px 16px;
+    font-size: 12px; color: #d1d5db; white-space: nowrap;
+    pointer-events: none; z-index: 25;
+    transition: opacity .5s;
+  }
+
+  /* ══ GROWTH / VIRAL FEATURES ════════════════════ */
+  .challenge-overlay {
+    position: fixed; inset: 0; z-index: 8000;
+    background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px 24px;
+    animation: challengeFadeIn .35s ease-out;
+  }
+  @keyframes challengeFadeIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+  .challenge-flame { font-size: 72px; margin-bottom: 12px; }
+  .challenge-vs    { font-family: var(--font-head); font-size: 64px; color: #ef4444; letter-spacing: .08em; margin-bottom: 8px; }
+  .challenge-title { font-family: var(--font-head); font-size: 28px; color: #fff; text-align: center; line-height: 1.2; margin-bottom: 6px; }
+  .challenge-sub   { font-size: 14px; color: #9ca3af; text-align: center; margin-bottom: 28px; }
+  .challenge-target-badge {
+    background: rgba(239,68,68,.15); border: 2px solid rgba(239,68,68,.6);
+    border-radius: 16px; padding: 16px 28px; margin-bottom: 32px; text-align: center;
+  }
+  .challenge-target-num  { font-family: var(--font-head); font-size: 72px; color: #ef4444; line-height: 1; }
+  .challenge-target-lbl  { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+  .challenge-accept-btn  {
+    width: 100%; padding: 18px; border: none; border-radius: 16px;
+    background: linear-gradient(90deg, #ef4444, #f59e0b);
+    font-family: var(--font-head); font-size: 22px; letter-spacing: .06em;
+    color: #fff; cursor: pointer; touch-action: manipulation; margin-bottom: 12px;
+  }
+  .challenge-decline-btn {
+    background: none; border: none; color: #4b5563; font-size: 13px;
+    cursor: pointer; touch-action: manipulation; padding: 8px;
+  }
+  .challenge-hud {
+    position: absolute; top: 64px; left: 0; right: 0;
+    display: flex; justify-content: center; pointer-events: none; z-index: 20;
+  }
+  .challenge-hud-inner {
+    background: rgba(0,0,0,.7); border: 1px solid rgba(239,68,68,.5);
+    border-radius: 12px; padding: 6px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .challenge-hud-name  { font-size: 12px; color: #9ca3af; }
+  .challenge-hud-score { font-size: 16px; font-weight: 900; }
+  .challenge-hud-you   { color: #f59e0b; }
+  .challenge-hud-them  { color: #ef4444; }
+
+  .share-btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .share-btn {
+    flex: 1; padding: 14px; border: none; border-radius: 14px;
+    font-weight: 800; font-size: 14px; cursor: pointer; touch-action: manipulation;
+    letter-spacing: .04em;
+  }
+  .share-btn-flex     { background: linear-gradient(90deg,#f59e0b,#a855f7); color: #000; }
+  .share-btn-challenge { background: rgba(239,68,68,.15); border: 1.5px solid rgba(239,68,68,.5); color: #ef4444; }
+
+  .rec-indicator {
+    position: fixed; top: 16px; right: 16px; z-index: 30;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,.7); border-radius: 99px; padding: 5px 10px;
+    font-size: 11px; font-weight: 700; color: #fff; pointer-events: none;
+    opacity: 0; transition: opacity .3s;
+  }
+  .rec-indicator.active { opacity: 1; }
+  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: recBlink 1s infinite; }
+  @keyframes recBlink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
+
+  .clip-save-btn {
+    position: fixed; bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    left: 50%; transform: translateX(-50%);
+    background: linear-gradient(90deg,#ef4444,#f59e0b);
+    border: none; border-radius: 99px; padding: 12px 22px;
+    font-weight: 900; font-size: 14px; color: #fff; cursor: pointer;
+    z-index: 600; touch-action: manipulation; letter-spacing: .04em;
+    box-shadow: 0 4px 20px rgba(239,68,68,.5);
+    animation: clipBtnPop .4s cubic-bezier(.34,1.56,.64,1) forwards;
+    opacity: 0;
+  }
+  @keyframes clipBtnPop { to { opacity: 1; transform: translateX(-50%) scale(1); } from { transform: translateX(-50%) scale(.7); } }
 </style>
 </head>
 <body>
 
 <div class="install-modal-backdrop" id="installBackdrop" aria-hidden="true">
-  <div class="install-modal" role="dialog" aria-modal="true" aria-labelledby="installTitle" dir="rtl">
-    <h3 id="installTitle" class="modal-title">התקנת האפליקציה — מדריך בשלושה שלבים</h3>
+  <div class="install-modal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <h3 id="installTitle" class="modal-title">Install App — 3 Simple Steps</h3>
     <div class="install-steps">
       <div class="install-step">
         <div class="step-num">1</div>
         <div>
-          <p><strong>לחץ על כפתור השיתוף</strong></p>
-          <p style="color:var(--muted2);">(אייקון: ריבוע עם חץ כלפי מעלה) בתחתית הדפדפן.</p>
+          <p><strong id="install-step-1-title">Tap the Share button</strong></p>
+          <p style="color:var(--muted2);" id="install-step-1-desc">(Icon: square with arrow pointing up) at the bottom of your browser.</p>
         </div>
       </div>
       <div class="install-step">
         <div class="step-num">2</div>
         <div>
-          <p><strong>גלול מטה ובחר ב- "הוסף למסך הבית"</strong></p>
-          <p style="color:var(--muted2);">האפשרות תוסיף קיצור לאפליקציה על מסך הבית שלך.</p>
+          <p><strong id="install-step-2-title">Scroll down and tap "Add to Home Screen"</strong></p>
+          <p style="color:var(--muted2);" id="install-step-2-desc">This adds an app shortcut to your home screen.</p>
         </div>
       </div>
       <div class="install-step">
         <div class="step-num">3</div>
         <div>
-          <p><strong>פתח את האפליקציה מהמסך הבית</strong></p>
-          <p style="color:var(--muted2);">כדי לאפשר התראות וחוויית מסך מלא.</p>
+          <p><strong id="install-step-3-title">Open the app from your home screen</strong></p>
+          <p style="color:var(--muted2);" id="install-step-3-desc">To enable notifications and full-screen experience.</p>
         </div>
       </div>
     </div>
-    <button class="close-btn" id="closeInstallGuidance">סגור</button>
+    <button class="close-btn" id="closeInstallGuidance">Close</button>
   </div>
 </div>
 
@@ -2682,7 +2835,7 @@
       Sign In
     </button>
     <button class="auth-btn-ghost" id="guest-btn" onclick="continueAsGuest()">
-      המשך כמתאמן אורח
+      Continue as Guest
     </button>
     <div class="auth-divider" id="auth-or">or</div>
     <button class="auth-btn-google" onclick="doGoogleLogin()">
@@ -2696,7 +2849,7 @@
 
   <!-- REGISTER FORM -->
   <div class="auth-form" id="form-register" style="display:none;">
-    <input class="auth-input" id="reg-name"     type="text"     placeholder="שמך הפרטי" autocomplete="given-name" />
+    <input class="auth-input" id="reg-name"     type="text"     placeholder="Your first name" autocomplete="given-name" />
     <input class="auth-input" id="reg-email"    type="email"    placeholder="Email" autocomplete="email" />
     <input class="auth-input" id="reg-password" type="password" placeholder="Password (at least 6 characters)" autocomplete="new-password" />
     <div class="auth-error" id="register-error"></div>
@@ -2745,13 +2898,44 @@
     <!-- HEADER -->
     <div class="top-header">
       <div class="logo">1%<span>BETTER</span></div>
-      <div class="guest-banner hidden" id="guestBanner">מצב אורח - הירשם כדי לשמור התקדמות</div>
+      <div class="guest-banner" id="guestBanner" style="display:none">Guest mode – Sign up to save your progress</div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <button onclick="navigate('pro')"
+        <button onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
           style="background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(168,85,247,.15));border:1px solid rgba(245,158,11,.45);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:800;color:#f59e0b;cursor:pointer;letter-spacing:.04em;white-space:nowrap;touch-action:manipulation;"
           id="proEntryBtn">⭐ PRO</button>
         <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works" style="position:static;width:38px;height:38px;">?</button>
         <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
+      </div>
+    </div>
+
+    <!-- PRIMARY AI WORKOUT CTA -->
+    <button class="ai-primary-cta" onclick="startWorkout('pushup')" id="aiPrimaryCta">
+      <span class="ai-cta-icon">💪</span>
+      <span class="ai-cta-label" id="lbl-ai-cta">התחל אימון שכיבות סמיכה</span>
+      <span class="ai-cta-sub" id="lbl-ai-cta-sub">זיהוי AI · המצלמה סופרת בשבילך</span>
+    </button>
+
+    <!-- RPG PROGRESS BLOCK -->
+    <div class="rpg-block" id="rpgBlock">
+      <div class="rpg-stat">
+        <div class="rpg-stat-label" id="rpg-lbl-streak">Streak</div>
+        <div class="rpg-stat-value green" id="rpgStreak">—</div>
+        <div class="rpg-stat-sub" id="rpg-sub-streak">days in a row</div>
+      </div>
+      <div class="rpg-stat">
+        <div class="rpg-stat-label" id="rpg-lbl-weekly">Weekly Reps</div>
+        <div class="rpg-stat-value blue" id="rpgWeeklyReps">—</div>
+        <div class="rpg-stat-sub" id="rpg-sub-weekly">All types</div>
+      </div>
+      <div class="rpg-stat">
+        <div class="rpg-stat-label" id="rpg-lbl-combo">Combo Bonus</div>
+        <div class="rpg-stat-value gold" id="rpgComboBonus">×1.0</div>
+        <div class="rpg-stat-sub" id="rpg-sub-combo">Last multiplier</div>
+      </div>
+      <div class="rpg-stat">
+        <div class="rpg-stat-label" id="rpg-lbl-quest">Daily Quest</div>
+        <div class="rpg-stat-value" id="rpgQuestStatus" style="font-size:22px;">⏳</div>
+        <div class="rpg-stat-sub" id="rpg-sub-quest">Push-Ups</div>
       </div>
     </div>
 
@@ -2798,7 +2982,7 @@
       <div class="xp-bar-wrap">
         <div class="xp-bar" id="xpBar" style="width:72%"></div>
       </div>
-      <div class="xp-next" id="lbl-xp-next">70  נקודות לרמה הבאה</div>
+      <div class="xp-next" id="lbl-xp-next">70 XP to next level</div>
     </div>
 
     <!-- STATS ROW -->
@@ -2807,29 +2991,29 @@
         <div class="hub-stat-val green" id="streakNum">
           <span id="streakNumVal">7</span><span id="streakFreezeIcon" class="freeze-icon" hidden aria-label="Streak freeze used" title="Streak freeze used">❄️</span>
         </div>
-        <div class="hub-stat-label" id="lbl-days-unit">ימי רצף</div>
+        <div class="hub-stat-label" id="lbl-days-unit">Day Streak</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="streakDots2">🔥🔥🔥🔥🔥🔥🔥</div>
       </div>
       <div class="hub-stat">
         <div class="hub-stat-val blue" id="dailyDoneCount">0</div>
-        <div class="hub-stat-label" id="lbl-today-done">היום</div>
+        <div class="hub-stat-label" id="lbl-today-done">Today</div>
         <div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:6px;overflow:hidden;">
           <div id="dailyProgressBar" style="height:100%;background:var(--blue);border-radius:99px;width:0%;transition:width .5s;"></div>
         </div>
       </div>
       <div class="hub-stat">
         <div class="hub-stat-val gold" id="totalXpDisplay">180</div>
-        <div class="hub-stat-label" id="lbl-xp-label">נקודות</div>
+        <div class="hub-stat-label" id="lbl-xp-label">Points</div>
       </div>
     </div>
 
     <!-- INSTALL APP CARD (shown only when not in standalone/display-mode) -->
     <div class="install-card" id="installCard" style="display:none;">
       <div>
-        <strong style="display:block;font-size:15px;">התקן אפליקציה לקבלת עדכונים</strong>
-        <div style="color:var(--muted2);margin-top:6px;">קבל התראות וחוויית מסך מלא</div>
+        <strong style="display:block;font-size:15px;" id="installCardTitle">Install App for Updates</strong>
+        <div style="color:var(--muted2);margin-top:6px;" id="installCardSub">Get notifications and full-screen experience</div>
       </div>
-      <button class="install-cta" id="openInstallGuidanceCard">התקן אפליקציה לקבלת עדכונים</button>
+      <button class="install-cta" id="openInstallGuidanceCard">Install App</button>
     </div>
 
     <!-- MORNING ROUTINE STATUS (hidden when both pieces done for today) -->
@@ -2860,8 +3044,8 @@
         <button class="hub-status-btn" id="hubStatusButton" onclick="handleHubStatusAction()">Start Mission</button>
       </div>
       <div class="daily-quests" id="dailyQuests">
-        <div class="daily-quests-title" id="daily-quests-title">המשימות היומיות שלך 🎯</div>
-        <div class="daily-quests-sub" id="daily-quests-sub">בחר משימה ברורה ליום אחד. תסומן כ"בוצעה" כשהאימון יסתיים.</div>
+        <div class="daily-quests-title" id="daily-quests-title">Today's Quests 🎯</div>
+        <div class="daily-quests-sub" id="daily-quests-sub">Pick one clear task. It auto-completes when your workout ends.</div>
         <div class="dq-list" id="dqList">
           <button type="button" class="dq-task" data-task="pushup">
             <div class="dq-task-info">
@@ -2879,8 +3063,8 @@
           </button>
           <button type="button" class="dq-task" data-task="quickReview">
             <div class="dq-task-info">
-              <div class="dq-task-title" id="dq-quickreview-title">✨ קבל סקירה מהירה על מצב היום שלך</div>
-              <div class="dq-task-desc" id="dq-quickreview-desc">בדוק את הסטטוס היומי וההתקדמות שלך.</div>
+              <div class="dq-task-title" id="dq-quickreview-title">✨ Get a Quick Status Check</div>
+              <div class="dq-task-desc" id="dq-quickreview-desc">Review today's progress. Stay sharp.</div>
             </div>
             <div class="dq-task-check" id="dq-check-quickReview">☐</div>
           </button>
@@ -2901,6 +3085,11 @@
         <div class="wl-btn-label">PUSH-UPS</div>
         <div class="wl-btn-sub">AI rep counter</div>
       </button>
+      <button class="wl-btn pullup" onclick="startWorkout('pullup')">
+        <div class="wl-btn-icon">🧗</div>
+        <div class="wl-btn-label">PULL-UPS</div>
+        <div class="wl-btn-sub">AI pull-up counter</div>
+      </button>
       <button class="wl-btn jumprope" onclick="startWorkout('jumprope')">
         <div class="wl-btn-icon">🪢</div>
         <div class="wl-btn-label">JUMP ROPE</div>
@@ -2910,19 +3099,19 @@
 
     <!-- DAILY CHALLENGE -->
     <div class="daily-challenge">
-      <div class="dc-label" id="lbl-daily-challenge-badge">⚡ אתגר יומי</div>
-      <div class="dc-title" id="dcTitle">ריצה 5 ק"מ + 50 שכיבות</div>
-      <div class="dc-sub" id="dcSub">אתגר משולב · כושר + סיבולת · 25 דק׳</div>
+      <div class="dc-label" id="lbl-daily-challenge-badge">⚡ Daily Challenge</div>
+      <div class="dc-title" id="dcTitle">Run 5km + 50 Push-Ups</div>
+      <div class="dc-sub" id="dcSub">Combined challenge · Fitness + Endurance · 25 min</div>
       <div class="dc-row">
         <div style="display:flex;flex-direction:column;gap:6px;">
           <div class="dc-camera-badge">
             <span>📷</span>
-            <span id="lbl-camera-check">המצלמה בודקת אותך</span>
+            <span id="lbl-camera-check">Camera verifies you</span>
           </div>
           <div class="dc-xp" id="dcXp">+50 XP</div>
         </div>
         <button class="dc-start-btn" id="dcBtn" onclick="startDailyChallenge()">
-          <span id="lbl-dc-start">התחל אתגר →</span>
+          <span id="lbl-dc-start">Start Challenge →</span>
         </button>
       </div>
     </div>
@@ -2930,7 +3119,7 @@
     <!-- QUICK TASKS -->
     <div class="quick-tasks">
       <div class="qt-header">
-        <div class="qt-title" id="lbl-quick-tasks">משימות מהירות</div>
+        <div class="qt-title" id="lbl-quick-tasks">Quick Tasks</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="qtTierBadge" style="font-size:11px;font-weight:700;"></span>
           <div class="qt-done-count" id="qtDoneLabel">0/5</div>
@@ -2960,10 +3149,10 @@
     <div class="ai-tip">
       <div class="ai-tip-icon">🤖</div>
       <div style="flex:1;">
-        <div class="ai-tip-label" id="lbl-ai-tip-label">טיפ 1% · ריצה</div>
-        <div class="ai-tip-text" id="aiTipText">טוען...</div>
+        <div class="ai-tip-label" id="lbl-ai-tip-label">1% Tip · Running</div>
+        <div class="ai-tip-text" id="aiTipText">Loading...</div>
       </div>
-      <button class="tip-refresh" onclick="refreshTip('hub')" title="טיפ חדש">↻</button>
+      <button class="tip-refresh" onclick="refreshTip('hub')" title="New tip">↻</button>
     </div>
 
     <div style="height:100px;"></div>
@@ -3048,6 +3237,19 @@
       <div id="workoutLoadingTxt">Loading pose model…</div>
     </div>
     <div class="workout-error" id="workoutError" hidden></div>
+    <!-- Challenge mode HUD (hidden unless challenge active) -->
+    <div class="challenge-hud" id="challengeHud" style="display:none">
+      <div class="challenge-hud-inner">
+        <span class="challenge-hud-name" id="challengeHudName">vs Challenger</span>
+        <span class="challenge-hud-score challenge-hud-you" id="challengeHudYou">0</span>
+        <span style="color:#555;font-size:12px;">vs</span>
+        <span class="challenge-hud-score challenge-hud-them" id="challengeHudThem">0</span>
+      </div>
+    </div>
+    <!-- Recording indicator -->
+    <div class="rec-indicator" id="recIndicator"><div class="rec-dot"></div> REC</div>
+    <!-- Instructional hint (fades out after first rep) -->
+    <div class="workout-hint" id="workoutHint">Position in front of camera — when skeleton appears, start your reps 👇</div>
     <div class="workout-controls">
       <button class="workout-finish" id="workoutFinishBtn" onclick="finishWorkout()">Finish</button>
     </div>
@@ -3269,7 +3471,7 @@
         <div class="settings-row-icon green">👤</div>
         <div class="settings-row-body">
           <div class="settings-row-title" id="lbl-display-name">Display Name</div>
-          <input class="settings-input" id="inputName" placeholder="שמך הפרטי" value="Noam Cohen" style="margin-top:8px;" />
+          <input class="settings-input" id="inputName" placeholder="Your first name" value="Noam Cohen" style="margin-top:8px;" />
         </div>
       </div>
       <div class="settings-row">
@@ -3397,60 +3599,75 @@
     <div class="pro-hero">
       <div class="pro-crown">👑</div>
       <div class="pro-hero-title">1% Better PRO</div>
-      <div class="pro-hero-sub">הגרסה שמשנה אנשים רציניים.<br>כלים מתקדמים. קהילה. תוצאות.</div>
+      <div class="pro-hero-sub" id="pro-hero-sub">The version that changes serious people.<br>Advanced tools. Community. Results.</div>
     </div>
 
     <div class="pro-features">
-      <div class="pro-feat-label">מה כלול ב-PRO</div>
+      <div class="pro-feat-label" id="pro-feat-label">What's Included in PRO</div>
 
       <div class="pro-feat-card">
         <div class="pro-feat-icon">👥</div>
         <div>
-          <div class="pro-feat-title">Monk Mode קבוצתי</div>
-          <div class="pro-feat-desc">חדרי משמעת קבוצתיים — התחרות עם חברים בזמן אמת. אחריות משותפת. תוצאות כפולות.</div>
+          <div class="pro-feat-title" id="pro-feat-1-title">Group Monk Mode</div>
+          <div class="pro-feat-desc" id="pro-feat-1-desc">Group discipline rooms — compete with friends in real time. Shared accountability. Double the results.</div>
         </div>
       </div>
 
       <div class="pro-feat-card">
         <div class="pro-feat-icon">🎓</div>
         <div>
-          <div class="pro-feat-title">מסלולי VIP ואוטומציה</div>
-          <div class="pro-feat-desc">גישה מלאה לכל מסלולי הלמידה: כושר מתקדם, אוטומציה עסקית, בניית הרגלים של אנשי עילית.</div>
+          <div class="pro-feat-title" id="pro-feat-2-title">VIP Paths &amp; Automation</div>
+          <div class="pro-feat-desc" id="pro-feat-2-desc">Full access to all learning paths: advanced fitness, business automation, elite-level habit building.</div>
         </div>
       </div>
 
       <div class="pro-feat-card">
         <div class="pro-feat-icon">📊</div>
         <div>
-          <div class="pro-feat-title">אנליטיקה חודשית מתקדמת</div>
-          <div class="pro-feat-desc">גרפים חודשיים, תובנות AI אישיות, ומדדי ביצועים שמראים בדיוק איפה אתה מתפתח.</div>
+          <div class="pro-feat-title" id="pro-feat-3-title">Advanced Monthly Analytics</div>
+          <div class="pro-feat-desc" id="pro-feat-3-desc">Monthly graphs, personal AI insights, and performance metrics showing exactly where you're growing.</div>
         </div>
       </div>
 
       <div class="pro-feat-card">
         <div class="pro-feat-icon">⚡</div>
         <div>
-          <div class="pro-feat-title">פריוריטי תמיכה + תכונות מוקדמות</div>
-          <div class="pro-feat-desc">גישה ראשונה לכל פיצ'ר חדש. תמיכה ישירה. השפעה על רשימת הפיתוח.</div>
+          <div class="pro-feat-title" id="pro-feat-4-title">Priority Support + Early Features</div>
+          <div class="pro-feat-desc" id="pro-feat-4-desc">First access to every new feature. Direct support. Influence the product roadmap.</div>
         </div>
       </div>
     </div>
 
     <div class="pro-pricing">
-      <button class="pro-price-btn monthly" onclick="clickProWaitlist('monthly')">
-        <span class="pro-price-amount">29 ₪</span>
-        <span class="pro-price-period">לחודש</span>
-        <span class="pro-price-cta">התחל עכשיו</span>
-      </button>
-      <button class="pro-price-btn lifetime" onclick="clickProWaitlist('annual')">
-        <span class="pro-price-amount">150 ₪</span>
-        <span class="pro-price-period">לשנה</span>
-        <span class="pro-price-cta">מנוי שנתי</span>
-      </button>
+      <div class="pro-price-card" id="proCardMonthly">
+        <div class="pro-price-card-top">
+          <span class="pro-price-amount">$8</span>
+          <span class="pro-price-period" id="pro-period-monthly">/month</span>
+        </div>
+        <div class="pro-price-card-sub" id="pro-sub-monthly">Billed monthly · Cancel anytime</div>
+        <div id="paypalMonthly" class="paypal-btn-container"></div>
+      </div>
+
+      <div class="pro-price-card pro-price-card-featured" id="proCardAnnual">
+        <div class="pro-price-badge" id="pro-badge-annual">🔥 Best Value</div>
+        <div class="pro-price-card-top">
+          <span class="pro-price-amount">$40</span>
+          <span class="pro-price-period" id="pro-period-annual">/year</span>
+        </div>
+        <div class="pro-price-card-sub" id="pro-sub-annual">Billed annually · Save ~40%</div>
+        <div id="paypalAnnual" class="paypal-btn-container"></div>
+      </div>
     </div>
 
-    <div class="pro-social-proof">🔒 תשלום מאובטח · ביטול בכל עת · ללא מחויבות</div>
-    <button class="pro-back-btn" onclick="navigate('hub')">← חזור לדשבורד</button>
+    <div id="proPaypalLoading" style="text-align:center;padding:16px 0;color:#9ca3af;font-size:13px;display:none;">
+      ⏳ Loading payment options...
+    </div>
+    <div id="proPaypalError" style="text-align:center;padding:12px 16px;color:#f87171;font-size:13px;background:rgba(248,113,113,.08);border-radius:12px;margin:0 20px;display:none;">
+      <span id="pro-paypal-error-msg">Error loading PayPal.</span> <button onclick="initProScreen()" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:13px;text-decoration:underline;" id="pro-paypal-retry">Try again</button>
+    </div>
+
+    <div class="pro-social-proof" id="pro-social-proof">🔒 Secure payment via PayPal · Cancel anytime · No commitment</div>
+    <button class="pro-back-btn" onclick="navigate('hub')" id="pro-back-btn">← Back to Dashboard</button>
   </div>
 
 </div><!-- /app -->
@@ -3491,8 +3708,8 @@
   <div class="confetti-wrap" id="confettiWrap"></div>
   <div class="celeb-bubble" id="celebBubble">
     <span class="celeb-emoji" id="celebEmoji">🔥</span>
-    <span class="celeb-title" id="celebTitle">מעולה!</span>
-    <span class="celeb-sub" id="celebSub">המשימה הושלמה</span>
+    <span class="celeb-title" id="celebTitle">Awesome!</span>
+    <span class="celeb-sub" id="celebSub">Task complete</span>
     <span class="celeb-xp" id="celebXp">+20 XP</span>
   </div>
 </div>
@@ -3760,6 +3977,14 @@ function safeParse(json, fallback) {
   if (json === null || json === undefined) return fallback;
   try { return JSON.parse(json); }
   catch (e) { console.warn('[safeParse] corrupt JSON, using fallback', e); return fallback; }
+}
+
+// Safe localStorage wrappers — used by _lsGet/_lsSet/_lsDel above.
+// Defined here so they're available before the auth block loads.
+if (typeof _lsGet === 'undefined') {
+  window._lsGet = (k)    => { try { return localStorage.getItem(k);    } catch (_) { return null; } };
+  window._lsSet = (k, v) => { try { localStorage.setItem(k, v);        } catch (_) {} };
+  window._lsDel = (k)    => { try { localStorage.removeItem(k);        } catch (_) {} };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -4116,7 +4341,7 @@ function refreshTip(context) {
     if (label) {
       const lang   = currentLang || 'he';
       const labels = lang === 'he' ? GROUP_LABELS_HE : GROUP_LABELS_EN;
-      label.textContent = `טיפ 1% · ${labels[group] || group}`;
+      label.textContent = (currentLang === 'he' ? `טיפ 1% · ` : `1% Tip · `) + (labels[group] || group);
     }
   }
 
@@ -4325,7 +4550,7 @@ function postProof() {
   // Navigate to hub + celebrate
   navigate('hub');
   setTimeout(() => {
-    celebrateCompletion('מעולה! 🔥', 'הוכחה פורסמה ✓', 20);
+    celebrateCompletion(currentLang === 'he' ? 'מעולה! 🔥' : 'Awesome! 🔥', currentLang === 'he' ? 'הוכחה פורסמה ✓' : 'Proof posted ✓', 20);
     // Offer to share after short delay
     setTimeout(() => {
       const isHe = currentLang === 'he';
@@ -4360,6 +4585,7 @@ function navigate(screen) {
   if (navEl) navEl.classList.add('active');
 
   state.currentScreen = screen;
+  logEvent('page_view', { page_title: screen, page_location: screen });
 
   // Show FAB only on hub
   const fab = document.getElementById('fabBtn');
@@ -4371,10 +4597,11 @@ function navigate(screen) {
   if (nav) nav.style.display = (screen === 'workout') ? 'none' : '';
 
   // Refresh tip on each navigation
-  if (screen === 'hub') refreshTip('hub');
+  if (screen === 'hub') { refreshTip('hub'); setTimeout(renderRPGProgress, 0); }
   if (screen === 'upload') refreshTip('upload');
   if (screen === 'paths')       { renderLearningPaths(); }
   if (screen === 'history')     renderHistory();
+  if (screen === 'pro')         setTimeout(initProScreen, 150);
   if (screen === 'settings') {
     // Sync settings lang label with current language
     const langNames = { en:'English', he:'עברית', es:'Español', fr:'Français', ar:'العربية', ru:'Русский', pt:'Português' };
@@ -4655,62 +4882,63 @@ function getTier(lvl) {
   return 3;
 }
 
-// Each task has 4 tiers: [מתחיל, מתקדם, מיומן, עילית]
+// Each task has 4 tiers: [Beginner, Advanced, Skilled, Elite]
 const TIERED_TASKS = [
   {
     id: 'qt1', icon: '🏃', group: 'running',
     tiers: [
-      { name: 'ריצה 1 ק"מ',          meta: 'ריצה · ~8 דק׳',        xp: 10 },
-      { name: 'ריצה 3 ק"מ',          meta: 'ריצה · ~18 דק׳',       xp: 20 },
-      { name: 'ריצה 5 ק"מ',          meta: 'ריצה · ~25 דק׳',       xp: 30 },
-      { name: 'ריצה 10 ק"מ',         meta: 'ריצה · ~50 דק׳',       xp: 50 },
+      { name: 'ריצה 1 ק"מ',       nameEn: 'Run 1 km',          meta: 'ריצה · ~8 דק׳',        metaEn: 'Running · ~8 min',   xp: 10 },
+      { name: 'ריצה 3 ק"מ',       nameEn: 'Run 3 km',          meta: 'ריצה · ~18 דק׳',       metaEn: 'Running · ~18 min',  xp: 20 },
+      { name: 'ריצה 5 ק"מ',       nameEn: 'Run 5 km',          meta: 'ריצה · ~25 דק׳',       metaEn: 'Running · ~25 min',  xp: 30 },
+      { name: 'ריצה 10 ק"מ',      nameEn: 'Run 10 km',         meta: 'ריצה · ~50 דק׳',       metaEn: 'Running · ~50 min',  xp: 50 },
     ],
   },
   {
     id: 'qt2', icon: '💧', group: 'hydrate',
     tiers: [
-      { name: 'שתה 1.5 ליטר מים',    meta: 'הידרציה · כל היום',    xp: 8  },
-      { name: 'שתה 2 ליטר מים',      meta: 'הידרציה · כל היום',    xp: 10 },
-      { name: 'שתה 3 ליטר מים',      meta: 'הידרציה · כל היום',    xp: 12 },
-      { name: 'שתה 3.5 ליטר מים',    meta: 'הידרציה · כל היום',    xp: 15 },
+      { name: 'שתה 1.5 ליטר מים', nameEn: 'Drink 1.5L of water', meta: 'הידרציה · כל היום', metaEn: 'Hydration · All day', xp: 8  },
+      { name: 'שתה 2 ליטר מים',   nameEn: 'Drink 2L of water',   meta: 'הידרציה · כל היום', metaEn: 'Hydration · All day', xp: 10 },
+      { name: 'שתה 3 ליטר מים',   nameEn: 'Drink 3L of water',   meta: 'הידרציה · כל היום', metaEn: 'Hydration · All day', xp: 12 },
+      { name: 'שתה 3.5 ליטר מים', nameEn: 'Drink 3.5L of water', meta: 'הידרציה · כל היום', metaEn: 'Hydration · All day', xp: 15 },
     ],
   },
   {
     id: 'qt3', icon: '📚', group: 'reading',
     tiers: [
-      { name: 'קרא 5 עמודים',         meta: 'קריאה · ~5 דק׳',       xp: 8  },
-      { name: 'קרא 10 עמודים',        meta: 'קריאה · ~10 דק׳',      xp: 15 },
-      { name: 'קרא 20 עמודים',        meta: 'קריאה · ~20 דק׳',      xp: 20 },
-      { name: 'קרא 40 עמודים',        meta: 'קריאה · ~40 דק׳',      xp: 35 },
+      { name: 'קרא 5 עמודים',  nameEn: 'Read 5 pages',  meta: 'קריאה · ~5 דק׳',  metaEn: 'Reading · ~5 min',  xp: 8  },
+      { name: 'קרא 10 עמודים', nameEn: 'Read 10 pages', meta: 'קריאה · ~10 דק׳', metaEn: 'Reading · ~10 min', xp: 15 },
+      { name: 'קרא 20 עמודים', nameEn: 'Read 20 pages', meta: 'קריאה · ~20 דק׳', metaEn: 'Reading · ~20 min', xp: 20 },
+      { name: 'קרא 40 עמודים', nameEn: 'Read 40 pages', meta: 'קריאה · ~40 דק׳', metaEn: 'Reading · ~40 min', xp: 35 },
     ],
   },
   {
     id: 'qt4', icon: '🧘', group: 'meditate',
     tiers: [
-      { name: 'מדיטציה 3 דקות',       meta: 'מיינדפולנס · ~3 דק׳',  xp: 8  },
-      { name: 'מדיטציה 5 דקות',       meta: 'מיינדפולנס · ~5 דק׳',  xp: 10 },
-      { name: 'מדיטציה 10 דקות',      meta: 'מיינדפולנס · ~10 דק׳', xp: 15 },
-      { name: 'מדיטציה 20 דקות',      meta: 'מיינדפולנס · ~20 דק׳', xp: 25 },
+      { name: 'מדיטציה 3 דקות',  nameEn: 'Meditate 3 min',  meta: 'מיינדפולנס · ~3 דק׳',  metaEn: 'Mindfulness · ~3 min',  xp: 8  },
+      { name: 'מדיטציה 5 דקות',  nameEn: 'Meditate 5 min',  meta: 'מיינדפולנס · ~5 דק׳',  metaEn: 'Mindfulness · ~5 min',  xp: 10 },
+      { name: 'מדיטציה 10 דקות', nameEn: 'Meditate 10 min', meta: 'מיינדפולנס · ~10 דק׳', metaEn: 'Mindfulness · ~10 min', xp: 15 },
+      { name: 'מדיטציה 20 דקות', nameEn: 'Meditate 20 min', meta: 'מיינדפולנס · ~20 דק׳', metaEn: 'Mindfulness · ~20 min', xp: 25 },
     ],
   },
   {
     id: 'qt5', icon: '🤸', group: 'cali',
     tiers: [
-      { name: '20 שכיבות סמיכה',      meta: 'קליסתניקס · ~5 דק׳',  xp: 10 },
-      { name: '50 שכיבות סמיכה',      meta: 'קליסתניקס · ~10 דק׳', xp: 18 },
-      { name: '100 שכיבות סמיכה',     meta: 'קליסתניקס · ~15 דק׳', xp: 25 },
-      { name: '200 שכיבות סמיכה',     meta: 'קליסתניקס · ~25 דק׳', xp: 45 },
+      { name: '20 שכיבות סמיכה',  nameEn: '20 Push-Ups',  meta: 'קליסתניקס · ~5 דק׳',  metaEn: 'Calisthenics · ~5 min',  xp: 10 },
+      { name: '50 שכיבות סמיכה',  nameEn: '50 Push-Ups',  meta: 'קליסתניקס · ~10 דק׳', metaEn: 'Calisthenics · ~10 min', xp: 18 },
+      { name: '100 שכיבות סמיכה', nameEn: '100 Push-Ups', meta: 'קליסתניקס · ~15 דק׳', metaEn: 'Calisthenics · ~15 min', xp: 25 },
+      { name: '200 שכיבות סמיכה', nameEn: '200 Push-Ups', meta: 'קליסתניקס · ~25 דק׳', metaEn: 'Calisthenics · ~25 min', xp: 45 },
     ],
   },
 ];
 
 function getTasksForLevel(lvl) {
   const tier = getTier(lvl);
+  const isHe = currentLang === 'he';
   return TIERED_TASKS.map(t => ({
     id:   t.id,
     icon: t.icon,
-    name: t.tiers[tier].name,
-    meta: t.tiers[tier].meta,
+    name: isHe ? t.tiers[tier].name : t.tiers[tier].nameEn,
+    meta: isHe ? t.tiers[tier].meta : t.tiers[tier].metaEn,
     xp:   t.tiers[tier].xp,
     done: false,
   }));
@@ -4734,6 +4962,16 @@ function loadQuickTasks() {
       saveQuickTasks(fresh, freshTier);
       return fresh;
     }
+    // Re-derive name/meta from template so language switch works on cached tasks
+    const isHe = currentLang === 'he';
+    tasks.forEach(task => {
+      const tmpl = TIERED_TASKS.find(t => t.id === task.id);
+      if (tmpl) {
+        const t = tmpl.tiers[freshTier] || tmpl.tiers[0];
+        task.name = isHe ? t.name : t.nameEn;
+        task.meta = isHe ? t.meta : t.metaEn;
+      }
+    });
     return tasks;
   }
   const lvl = getLevelFromXP(state.xp || 0);
@@ -4764,7 +5002,9 @@ function renderQuickTasks() {
   // Level tier badge
   const lvl   = getLevelFromXP(state.xp || 0);
   const tier  = getTier(lvl);
-  const tierLabels = ['מתחיל','מתקדם','מיומן','עילית'];
+  const tierLabels = currentLang === 'he'
+    ? ['מתחיל','מתקדם','מיומן','עילית']
+    : ['Beginner','Advanced','Skilled','Elite'];
   const tierColors = ['#00ff87','#00b4ff','#fbbf24','#fb923c'];
 
   const header = document.getElementById('qtTierBadge');
@@ -4798,7 +5038,7 @@ function completeQuickTask(id) {
   gainXP(task.xp);
   recordActivity(task.xp);
   renderQuickTasks();
-  celebrateCompletion('מעולה! 🔥', `${task.icon} ${task.name}`, task.xp);
+  celebrateCompletion(currentLang === 'he' ? 'מעולה! 🔥' : 'Awesome! 🔥', `${task.icon} ${task.name}`, task.xp);
   incrementStreak();
   maybeShowNotifModal();
 }
@@ -4807,13 +5047,13 @@ function completeQuickTask(id) {
    DAILY CHALLENGE
 ═══════════════════════════════════════════════════════ */
 const DAILY_CHALLENGES = [
-  { title:'ריצה 5 ק"מ + 50 שכיבות', sub:'אתגר משולב · כושר + סיבולת · 25 דק׳', xp:50 },
-  { title:'100 שכיבות + מדיטציה 10 דק׳', sub:'גוף ומוח יחד · 20 דק׳', xp:45 },
-  { title:'קריאה 30 דק׳ + שתה 3 ליטר', sub:'מוח + גוף · כל היום', xp:35 },
-  { title:'אימון עצמי 45 דק׳', sub:'כל סוג אימון · אתה בוחר', xp:60 },
-  { title:'יומן בוקר + ריצה 3 ק"מ', sub:'רוחני + גופני · 25 דק׳', xp:40 },
-  { title:'50 מתח + 100 שכיבות', sub:'קליסתניקס מלא · 20 דק׳', xp:55 },
-  { title:'לימוד 30 דק׳ + הליכה 30 דק׳', sub:'מוח + גוף קל · 60 דק׳', xp:35 },
+  { title:'ריצה 5 ק"מ + 50 שכיבות',   titleEn:'Run 5km + 50 Push-Ups',           sub:'אתגר משולב · כושר + סיבולת · 25 דק׳', subEn:'Combined challenge · Fitness + Endurance · 25 min', xp:50 },
+  { title:'100 שכיבות + מדיטציה 10 דק׳', titleEn:'100 Push-Ups + 10 min Meditation', sub:'גוף ומוח יחד · 20 דק׳',              subEn:'Body & mind together · 20 min',                   xp:45 },
+  { title:'קריאה 30 דק׳ + שתה 3 ליטר', titleEn:'Read 30 min + Drink 3L',          sub:'מוח + גוף · כל היום',                 subEn:'Mind + body · All day',                           xp:35 },
+  { title:'אימון עצמי 45 דק׳',          titleEn:'45 min Self-Workout',             sub:'כל סוג אימון · אתה בוחר',             subEn:'Any workout type · your choice',                  xp:60 },
+  { title:'יומן בוקר + ריצה 3 ק"מ',    titleEn:'Morning Journal + Run 3km',       sub:'רוחני + גופני · 25 דק׳',              subEn:'Mental + physical · 25 min',                      xp:40 },
+  { title:'50 מתח + 100 שכיבות',        titleEn:'50 Pull-Ups + 100 Push-Ups',      sub:'קליסתניקס מלא · 20 דק׳',             subEn:'Full calisthenics · 20 min',                      xp:55 },
+  { title:'לימוד 30 דק׳ + הליכה 30 דק׳',titleEn:'Study 30 min + Walk 30 min',     sub:'מוח + גוף קל · 60 דק׳',              subEn:'Mind + light cardio · 60 min',                    xp:35 },
 ];
 
 function getTodayChallenge() {
@@ -4824,13 +5064,14 @@ function getTodayChallenge() {
 function renderDailyChallenge() {
   const ch = getTodayChallenge();
   const setEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
-  setEl('dcTitle', ch.title);
-  setEl('dcSub',   ch.sub);
+  const isHe = currentLang === 'he';
+  setEl('dcTitle', isHe ? ch.title   : ch.titleEn);
+  setEl('dcSub',   isHe ? ch.sub     : ch.subEn);
   setEl('dcXp',    `+${ch.xp} XP`);
   const saved = localStorage.getItem('1pb_dc_' + todayKey());
   if (saved) {
     const btn = document.getElementById('dcBtn');
-    if (btn) btn.innerHTML = '✓ הושלם';
+    if (btn) btn.innerHTML = currentLang === 'he' ? '✓ הושלם' : '✓ Done';
     btn.disabled = true;
     btn.style.opacity = '.5';
   }
@@ -4861,7 +5102,7 @@ function completeDailyChallenge() {
 /* ═══════════════════════════════════════════════════════
    CELEBRATION ANIMATION
 ═══════════════════════════════════════════════════════ */
-function celebrateCompletion(title = 'מעולה! 🔥', sub = '', xp = 20) {
+function celebrateCompletion(title = 'Awesome! 🔥', sub = '', xp = 20) {
   const overlay = document.getElementById('celebration');
   if (!overlay) return;
   const setEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
@@ -4932,32 +5173,62 @@ function setTheme(mode) {
 const TRANSLATIONS = {
   en: {
     dir: 'ltr',
+    // Settings — appearance
     'lbl-appearance': 'Appearance',
     'lbl-dark': 'Dark',
     'lbl-light': 'Light',
     'lbl-language': 'Language',
+    // Settings — profile
     'lbl-profile-section': 'Profile',
     'lbl-display-name': 'Display Name',
     'lbl-streak-edit': 'Current Streak (days)',
     'lbl-streak-sub': 'Manually fix your streak if you missed syncing a workout.',
     'saveProfileBtn': 'Save Changes',
+    'reg-name': 'Your first name',
+    'inputName': 'Your first name',
+    // Settings — notifications
     'lbl-notifications': 'Notifications',
+    'lbl-tagline': 'Do tasks. Make progress. Prove it.',
+    'lbl-notif-permission': 'Enable Notifications',
+    'lbl-notif-permission-sub': 'Tap to allow push notifications',
     'lbl-daily-reminder': 'Daily Reminder',
     'lbl-daily-reminder-sub': 'Get a sharp daily nudge for your quest',
     'lbl-streak-alert': 'Streak Alerts',
-    'lbl-streak-alert-sub': 'Alert me before I break the streak',
+    'lbl-streak-alert-sub': 'Alert me 2h before I break the streak',
+    'lbl-levelup-notif': 'Level Up Alert',
+    'lbl-levelup-notif-sub': 'Celebrate when you reach a new level',
     'lbl-community': 'Community Activity',
     'lbl-community-sub': 'Likes and replies on your proofs',
+    'lbl-test-notif': 'Send Test Notification',
+    'lbl-test-notif-sub': 'Preview what notifications look like',
+    // Settings — danger
     'lbl-danger': 'Danger Zone',
     'lbl-reset': 'Reset Streak',
     'lbl-reset-sub': 'Reset your current streak to zero',
+    // Settings misc
     'nav-settings-label': 'Settings',
+    'closeInstallGuidance': 'Close',
     'toast-saved': '✓ Profile saved!',
     'toast-reset': '🔥 Streak reset to 0',
     'confirm-reset': 'Reset your streak to 0? This cannot be undone.',
+    // Nav
+    'nav-hub-label': 'Home',
+    'nav-upload-label': 'Proof',
+    'nav-feed-label': 'Feed',
+    'nav-profile-label': 'Profile',
+    'nav-paths-label': 'Paths',
+    'nav-history-label': 'History',
     // Hub hero
     'hub-hero-title': 'Your Daily Quest',
     'hub-hero-sub': 'Pick one clear path for today. Short, focused, proven.',
+    // Hub streak block
+    'lbl-streak-hero': '🔥 Current Streak',
+    'lbl-days-unit': 'days',
+    'lbl-streak-sub-text': 'You were 1% better for a full week straight.',
+    'lbl-today-goal': "Today's Goal",
+    'lbl-upload-proof-btn': 'Upload Proof',
+    'lbl-ai-tip-label': '1% Tip · Running',
+    'aiTipText': 'Loading...',
     // Daily quests
     'daily-quests-title': 'Today\'s Quests 🎯',
     'daily-quests-sub': 'Pick one clear task. It auto-completes when your workout ends.',
@@ -4968,6 +5239,114 @@ const TRANSLATIONS = {
     'dq-quickreview-title': '✨ Get a Quick Status Check',
     'dq-quickreview-desc': 'Review today\'s progress. Stay sharp.',
     'wl-workouts-label': 'Workouts',
+    // Workout hint
+    'workoutHint': 'Position in front of camera — when skeleton appears, start your reps 👇',
+    // Upload screen
+    'lbl-prove-it': 'Prove It.',
+    'lbl-upload-sub': 'Tap to photo or choose from gallery.\nNo proof — no progress.',
+    'lbl-before-post': 'Before You Post',
+    'lbl-retake': 'Retake',
+    'lbl-post-proof': 'Post Proof ✓',
+    'lbl-upload-screen-title': 'Upload Proof',
+    'lbl-share-proof': 'Share your proof',
+    // Profile screen
+    'lbl-profile-title': 'Profile',
+    'lbl-stat-streak': 'Day Streak',
+    'lbl-stat-posts': 'Posts',
+    'lbl-stat-groups': 'Groups',
+    // History screen
+    'lbl-hist-title': 'History',
+    'lbl-hist-sub': 'Your progress over time',
+    'lbl-hstat-streak': 'Best Streak',
+    'lbl-hstat-tasks': 'Tasks Done',
+    'lbl-hstat-xp': 'Total XP',
+    'lbl-hstat-days': 'Active Days',
+    'lbl-bh-label': 'Top Habit',
+    'lbl-xp-chart': 'XP — Last 7 Days',
+    'lbl-week-log': 'Daily Log',
+    // Learning paths
+    'nav-paths-label': 'Paths',
+    'lbl-lp-title': 'Learning Paths',
+    'lbl-lp-sub': '30-day programs. One task per day.',
+    'lbl-badges': 'Earned Badges',
+    'lbl-hub-path': 'Active Learning Path',
+    'lbl-task-action': 'What to Do',
+    'lbl-lpa-done': 'Done — Claim XP',
+    // Quick-action sheet
+    'qa-title': 'Do It Now.',
+    'qa-sub': 'Choose an action and start.',
+    'qa-act-timer': 'Workout Timer',
+    'qa-act-timer-sub': 'Track your workout time',
+    'qa-act-reps': 'Rep Counter',
+    'qa-act-reps-sub': 'Tap to count every rep',
+    'qa-act-photo': 'Upload Proof',
+    'qa-act-photo-sub': 'Post a workout photo',
+    'qa-act-log': 'Quick Log',
+    'qa-act-log-sub': 'Log sets and reps as text',
+    'qa-timer-title': 'Workout Timer',
+    'qa-rep-title': 'Rep Counter',
+    'qa-rep-tap': 'Tap +1',
+    'qa-rep-undo': 'Undo',
+    'qa-rep-reset': 'Reset',
+    'qa-rep-save': 'Save',
+    'qa-log-title': 'Quick Log',
+    'qa-log-save': 'Save',
+    'qa-log-cancel': 'Cancel',
+    // Auth screen
+    'guest-btn': 'Continue as Guest',
+    // Hub install card
+    'installCardTitle': 'Install App for Updates',
+    'installCardSub': 'Get notifications and full-screen experience',
+    'openInstallGuidanceCard': 'Install App',
+    // Hub daily challenge
+    'lbl-daily-challenge-badge': '⚡ Daily Challenge',
+    'lbl-camera-check': 'Camera verifies you',
+    // Celebration overlay
+    'celebTitle': 'Awesome!',
+    'celebSub': 'Task complete',
+    // Install modal
+    'installTitle': 'Install App — 3 Simple Steps',
+    'install-step-1-title': 'Tap the Share button',
+    'install-step-1-desc': '(Icon: square with arrow up) at the bottom of your browser.',
+    'install-step-2-title': 'Tap "Add to Home Screen"',
+    'install-step-2-desc': 'Adds a shortcut to your home screen.',
+    'install-step-3-title': 'Open from your home screen',
+    'install-step-3-desc': 'To enable notifications and full-screen experience.',
+    // PRO screen
+    'pro-hero-sub': 'The version that changes serious people.<br>Advanced tools. Community. Results.',
+    'pro-feat-label': "What's Included in PRO",
+    'pro-feat-1-title': 'Group Monk Mode',
+    'pro-feat-1-desc': 'Group discipline rooms — compete with friends in real time. Shared accountability. Double the results.',
+    'pro-feat-2-title': 'VIP Paths & Automation',
+    'pro-feat-2-desc': 'Full access to all learning paths: advanced fitness, business automation, elite-level habit building.',
+    'pro-feat-3-title': 'Advanced Monthly Analytics',
+    'pro-feat-3-desc': 'Monthly graphs, personal AI insights, and performance metrics showing exactly where you\'re growing.',
+    'pro-feat-4-title': 'Priority Support + Early Features',
+    'pro-feat-4-desc': 'First access to every new feature. Direct support. Influence the product roadmap.',
+    'pro-period-monthly': '/month',
+    'pro-sub-monthly': 'Billed monthly · Cancel anytime',
+    'pro-badge-annual': '🔥 Best Value',
+    'pro-period-annual': '/year',
+    'pro-sub-annual': 'Billed annually · Save ~40%',
+    'pro-paypal-error-msg': 'Error loading PayPal.',
+    'pro-paypal-retry': 'Try again',
+    'pro-social-proof': '🔒 Secure payment via PayPal · Cancel anytime · No commitment',
+    'pro-back-btn': '← Back to Dashboard',
+    // Hub stats / RPG block
+    'guestBanner': 'Guest mode – Sign up to save your progress',
+    'rpg-lbl-streak': 'Streak',
+    'rpg-sub-streak': 'days in a row',
+    'rpg-lbl-weekly': 'Weekly Reps',
+    'rpg-sub-weekly': 'All types',
+    'rpg-lbl-combo':  'Combo Bonus',
+    'rpg-sub-combo':  'Last multiplier',
+    'rpg-lbl-quest':  'Daily Quest',
+    'lbl-days-unit':  'Day Streak',
+    'lbl-today-done': 'Today',
+    'lbl-xp-label':   'Points',
+    'lbl-dc-start':   'Start Challenge →',
+    'lbl-quick-tasks': 'Quick Tasks',
+    'openInstallGuidanceLabel': 'Install App',
   },
   he: {
     dir: 'rtl',
@@ -5107,6 +5486,67 @@ const TRANSLATIONS = {
     'dq-quickreview-title': '✨ קבל סקירה מהירה על מצב היום שלך',
     'dq-quickreview-desc':  'בדוק את הסטטוס היומי וההתקדמות שלך.',
     'wl-workouts-label':    'אימונים',
+    // Elements with English HTML default — need HE translation
+    'closeInstallGuidance': 'סגור',
+    'reg-name':   'שמך הפרטי',
+    'inputName':  'שמך הפרטי',
+    'aiTipText':  'טוען...',
+    'workoutHint': 'תתמקם מול המצלמה — כשהשלד מופיע, תתחיל לרדת 👇',
+    // Auth
+    'guest-btn': 'המשך כמתאמן אורח',
+    // Install card
+    'installCardTitle': 'התקן אפליקציה לקבלת עדכונים',
+    'installCardSub': 'קבל התראות וחוויית מסך מלא',
+    'openInstallGuidanceCard': 'התקן אפליקציה',
+    // Daily challenge
+    'lbl-daily-challenge-badge': '⚡ אתגר יומי',
+    'lbl-camera-check': 'המצלמה בודקת אותך',
+    // Celebration
+    'celebTitle': 'מעולה!',
+    'celebSub': 'המשימה הושלמה',
+    // Install modal
+    'installTitle': 'התקנת האפליקציה — מדריך בשלושה שלבים',
+    'install-step-1-title': 'לחץ על כפתור השיתוף',
+    'install-step-1-desc': '(אייקון: ריבוע עם חץ כלפי מעלה) בתחתית הדפדפן.',
+    'install-step-2-title': 'גלול מטה ובחר "הוסף למסך הבית"',
+    'install-step-2-desc': 'יוסיף קיצור לאפליקציה על מסך הבית שלך.',
+    'install-step-3-title': 'פתח מהמסך הבית',
+    'install-step-3-desc': 'כדי לאפשר התראות וחוויית מסך מלא.',
+    // PRO screen
+    'pro-hero-sub': 'הגרסה שמשנה אנשים רציניים.<br>כלים מתקדמים. קהילה. תוצאות.',
+    'pro-feat-label': 'מה כלול ב-PRO',
+    'pro-feat-1-title': 'Monk Mode קבוצתי',
+    'pro-feat-1-desc': 'חדרי משמעת קבוצתיים — התחרות עם חברים בזמן אמת. אחריות משותפת. תוצאות כפולות.',
+    'pro-feat-2-title': 'מסלולי VIP ואוטומציה',
+    'pro-feat-2-desc': 'גישה מלאה לכל מסלולי הלמידה: כושר מתקדם, אוטומציה עסקית, בניית הרגלים של אנשי עילית.',
+    'pro-feat-3-title': 'אנליטיקה חודשית מתקדמת',
+    'pro-feat-3-desc': 'גרפים חודשיים, תובנות AI אישיות, ומדדי ביצועים שמראים בדיוק איפה אתה מתפתח.',
+    'pro-feat-4-title': 'פריוריטי תמיכה + תכונות מוקדמות',
+    'pro-feat-4-desc': 'גישה ראשונה לכל פיצ\'ר חדש. תמיכה ישירה. השפעה על רשימת הפיתוח.',
+    'pro-period-monthly': 'לחודש',
+    'pro-sub-monthly': 'חיוב חודשי · ביטול בכל עת',
+    'pro-badge-annual': '🔥 הכי משתלם',
+    'pro-period-annual': 'לשנה',
+    'pro-sub-annual': 'חיוב שנתי · חיסכון של ~40%',
+    'pro-paypal-error-msg': 'שגיאה בטעינת PayPal.',
+    'pro-paypal-retry': 'נסה שוב',
+    'pro-social-proof': '🔒 תשלום מאובטח דרך PayPal · ביטול בכל עת · ללא מחויבות',
+    'pro-back-btn': '← חזור לדשבורד',
+    // Hub stats / RPG block
+    'guestBanner': 'מצב אורח – הירשם כדי לשמור התקדמות',
+    'rpg-lbl-streak': 'רצף יומי',
+    'rpg-sub-streak': 'ימים רצופים',
+    'rpg-lbl-weekly': 'חזרות השבוע',
+    'rpg-sub-weekly': 'כל הסוגים',
+    'rpg-lbl-combo':  'בונוס קומבו',
+    'rpg-sub-combo':  'ממכפיל אחרון',
+    'rpg-lbl-quest':  'משימה יומית',
+    'lbl-days-unit':  'ימי רצף',
+    'lbl-today-done': 'היום',
+    'lbl-xp-label':   'נקודות',
+    'lbl-dc-start':   'התחל אתגר →',
+    'lbl-quick-tasks': 'משימות מהירות',
+    'openInstallGuidanceLabel': 'התקן אפליקציה',
   },
   es: {
     dir: 'ltr',
@@ -6810,10 +7250,43 @@ const PU_FRAMES_STABLE = 3;     // require this many consecutive frames before t
 const PU_REFRACTORY_MS = 500;   // ignore further counts for this long after counting
 const PU_INFER_FPS    = 15;     // 15fps gives mobile GPUs enough time per tick
 
+// Pull-up detector thresholds — tuned for phone-below camera angle
+const PL_BOTTOM_DEG       = 145;   // elbow > this = dead hang (no full lockout required)
+const PL_TOP_DEG          = 75;    // elbow < this = top position (contracted)
+const PL_TOP_Y_OFFSET     = 0.04;  // nose.y must be <= avgWrist.y + offset (Y inverted: smaller=higher)
+const PL_FRAMES_STABLE    = 3;     // consecutive frames required before state transition
+const PL_REFRACTORY_MS    = 700;   // min ms between counted reps
+const PL_SWING_X_THRESH   = 0.10;  // normalized: hip lateral drift beyond this = swinging
+const PL_KIPPING_Y_THRESH = 0.08;  // normalized: hip rise beyond this = kipping (Y inverted)
+const PAYPAL_CLIENT_ID = 'Ad2NSieqto98y5ECA0hv45F4Vek0bt_W7vmJn0HMyzG8hveJIybvAPFOujm_LZvuhsJagBsNmBphK1_l';
+const FCM_VAPID_KEY    = 'BE5m5XjfS23AwsXaoPvMg9vduH1WQmYrrXe8-uzQwrkh5byJHamvpHKYvFw9S3BJcjI5KUm3HU_XnzECxGyFXoU';
+
 /* Guard: prevents concurrent detectForVideo calls.
    MediaPipe requires monotonically increasing timestamps — overlapping
    async calls from setInterval throw silently and starve lastLandmarks. */
-let _inferBusy = false;
+let _inferBusy  = false;
+let _wakeLock   = null;
+
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch (e) {
+    console.warn('[wakeLock] acquire failed:', e.message);
+  }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock) { _wakeLock.release(); _wakeLock = null; }
+}
+
+// Re-acquire after tab becomes visible again (lock auto-releases on hide)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _pose && _pose.active) {
+    acquireWakeLock();
+  }
+});
 
 /* MediaPipe handles. Held at module scope so re-entries don't
    re-download the model. */
@@ -6829,10 +7302,17 @@ let _pose = {
   state:         'ready',        // pushup: 'ready'|'down'|'up' / jumprope: 'calibrating'|'ground'|'jump'
   downFrames:    0,
   upFrames:      0,
+  lowVisFrames:  0,
   lastCountAt:   0,
   startedAt:     0,
   lastFrameTime: 0,
   fpsAvg:        0,
+  lastRepAt:     0,
+  comboCount:    0,
+  comboMult:     1,
+  hipXRef:       null,           // pullup: lateral hip reference for swing detection
+  hipYRef:       null,           // pullup: vertical hip reference for kipping detection
+  isSwinging:    false,          // pullup: true when hip drift exceeds threshold
   boxing:        null,           // populated by startWorkout('boxing')
   jumprope:      null,           // populated by startWorkout('jumprope')
 };
@@ -6933,8 +7413,15 @@ async function startWorkout(exercise = 'pushup') {
   _pose.state       = 'ready';
   _pose.downFrames  = 0;
   _pose.upFrames    = 0;
+  _pose.lowVisFrames = 0;
   _pose.lastCountAt = 0;
   _pose.startedAt   = Date.now();
+  _pose.lastRepAt   = 0;
+  _pose.comboCount  = 0;
+  _pose.comboMult   = 1;
+  _pose.hipXRef     = null;
+  _pose.hipYRef     = null;
+  _pose.isSwinging  = false;
   _pose.boxing      = (exercise === 'boxing')    ? makeBoxingState()    : null;
   _pose.jumprope    = (exercise === 'jumprope')  ? makeJumpRopeState()  : null;
 
@@ -6943,6 +7430,7 @@ async function startWorkout(exercise = 'pushup') {
   const hudEl   = document.getElementById('boxingHud');
   if (titleEl) titleEl.textContent = exercise === 'boxing'   ? 'BOXING'
                                    : exercise === 'jumprope' ? 'JUMP ROPE'
+                                   : exercise === 'pullup'   ? 'PULL-UPS'
                                    : 'PUSH-UPS';
   if (hudEl)   hudEl.hidden        = (exercise !== 'boxing');
   if (stEl)    stEl.textContent    = exercise === 'boxing'   ? 'GUARD'
@@ -6973,6 +7461,20 @@ async function startWorkout(exercise = 'pushup') {
 
     if (loadEl) loadEl.hidden = true;
     _pose.active = true;
+    acquireWakeLock();
+    startComboRecording();
+    const hint = document.getElementById('workoutHint');
+    if (hint) {
+      const isHe = currentLang === 'he';
+      const hintMap = {
+        pushup:   isHe ? 'תתמקם מול המצלמה — כשהשלד מופיע, תתחיל לרדת 👇'    : 'Position in front of camera — when skeleton appears, start lowering 👇',
+        pullup:   isHe ? 'תלה מהמוט — כשתגיע למעלה, נספור אוטומטית ☝️'         : 'Hang from bar — AI counts when you reach the top ☝️',
+        boxing:   isHe ? 'קח תנוחת שמירה — ג\'אב כדי לספור אגרופים 🥊'          : 'Take your guard position — jab to count punches 🥊',
+        jumprope: isHe ? 'עמוד בפריים — התחל לקפוץ! 🪢'                         : 'Stand in frame — start jumping! 🪢',
+      };
+      hint.textContent = hintMap[exercise] || hintMap.pushup;
+      hint.style.opacity = '1';
+    }
     runPoseLoop();
   } catch (e) {
     console.warn('[workout] start failed:', e);
@@ -6989,6 +7491,12 @@ async function startWorkout(exercise = 'pushup') {
 
 function stopWorkoutInternals() {
   _pose.active = false;
+  releaseWakeLock();
+  stopComboRecording();
+  // Hide challenge HUD
+  const hud = document.getElementById('challengeHud');
+  if (hud) hud.style.display = 'none';
+  document.getElementById('clipSaveBtn')?.remove();
   if (_pose.rafId)      cancelAnimationFrame(_pose.rafId);
   _pose.rafId = null;
   if (_pose.inferTimer) clearInterval(_pose.inferTimer);
@@ -7001,8 +7509,8 @@ function stopWorkoutInternals() {
   if (v) v.srcObject = null;
   // Hide the boxing HUD on exit so re-entering the screen (push-ups
   // next time) doesn't briefly flash a stale HP bar.
-  const hud = document.getElementById('boxingHud');
-  if (hud) hud.hidden = true;
+  const boxingHud = document.getElementById('boxingHud');
+  if (boxingHud) boxingHud.hidden = true;
   const flash = document.getElementById('punchFlash');
   if (flash) flash.classList.remove('is-active');
 }
@@ -7072,18 +7580,23 @@ function finishWorkout() {
   // XP: push-ups = small bonus scaled by reps (capped). Boxing = sum of
   // banked pendingXp (1/punch + 25/defeat). Either way we apply it as a
   // single gainXP call so the level-up modal fires at most once.
+  // Apply combo multiplier to pushup XP
+  const finalComboMult = (exercise === 'pushup' && _pose.comboMult > 1) ? _pose.comboMult : 1;
+
   let xp = 0;
   if (reps >= 1) {
-    xp = boxingSnap
+    const baseXp = boxingSnap
       ? Math.min(200, boxingSnap.pendingXp)
       : jumpropeSnap
         ? Math.min(100, 5 + Math.floor(reps / 2))
         : Math.min(50, 5 + reps);
+    xp = Math.round(baseXp * finalComboMult);
     if (typeof gainXP === 'function') gainXP(xp);
     markMorningRoutine('workout', true);
   }
 
   const isHe = currentLang === 'he';
+  const comboSuffix = finalComboMult > 1 ? ` ×${finalComboMult.toFixed(1)} COMBO!` : '';
   let msg;
   if (boxingSnap) {
     msg = isHe
@@ -7092,11 +7605,21 @@ function finishWorkout() {
   } else if (jumpropeSnap) {
     msg = isHe ? `✓ ${reps} קפיצות · +${xp} XP` : `✓ ${reps} jumps · +${xp} XP`;
   } else {
-    msg = isHe ? `✓ ${reps} שכיבות נשמרו` : `✓ Saved ${reps} reps`;
+    msg = isHe
+      ? `✓ ${reps} שכיבות · +${xp} XP${comboSuffix}`
+      : `✓ ${reps} reps · +${xp} XP${comboSuffix}`;
   }
   showToast(msg);
+  logEvent('workout_complete', { exercise, reps, duration_sec: durSec });
   // All workout exercises complete the 'pushup' daily quest (the workout quest)
   markDailyQuestComplete('pushup');
+  setTimeout(renderRPGProgress, 400);
+
+  // Reset challenge state now that workout is over
+  const completedChallenge = _challenge;
+  _challenge = null;
+  const challengeHud = document.getElementById('challengeHud');
+  if (challengeHud) challengeHud.style.display = 'none';
 
   if (exercise === 'boxing' && entry.avgRetractMs !== null) {
     const prevLog = safeParse(localStorage.getItem('1pb_workouts'), []);
@@ -7108,6 +7631,11 @@ function finishWorkout() {
     showJumpRopeReview(entry, prev || null);
   } else {
     navigate('hub');
+  }
+
+  // Show flex/share sheet after a short delay (after review modal opens or hub loads)
+  if (reps > 0) {
+    setTimeout(() => showFlexBadgePreview(exercise, reps), 600);
   }
 }
 
@@ -7340,6 +7868,10 @@ function markDailyQuestComplete(task) {
   state[task] = true;
   saveDailyQuests(state);
   updateDailyQuestUI(state);
+  // Sync to Firestore keyed by today so cross-device completion persists
+  if (typeof syncUserToFirestore === 'function' && currentUser) {
+    syncUserToFirestore({ [`dailyQuests_${todayKey()}`]: state }).catch(() => {});
+  }
 }
 
 /* ISSUE 2 FIX: resetDailyQuests now clears ALL task-related localStorage
@@ -7625,59 +8157,627 @@ function showOnboardingGuide() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   PRO PAYWALL — WAITLIST VALIDATION
+   FEATURE 1 — INVITE-TO-FIGHT (Challenge URL)
 ═══════════════════════════════════════════════════════ */
 
-async function clickProWaitlist(plan) {
-  // Record interest in Firestore (no payment, validation only)
-  if (typeof syncUserToFirestore === 'function' &&
-      typeof isFirebaseConfigured === 'function' &&
-      isFirebaseConfigured() && currentUser) {
-    syncUserToFirestore({
-      clickedPro:      true,
-      clickedProPlan:  plan,           // 'monthly' | 'lifetime'
-      clickedProAt:    Date.now(),
-      isPro:           false,          // real upgrade handled manually for now
-    }).catch(() => {});
-  }
-  // localStorage fallback so we capture guest interest too
-  localStorage.setItem('1pb_clicked_pro', JSON.stringify({ plan, at: Date.now() }));
+let _challenge = null; // { exercise, target, challenger } — set from URL or after workout
 
-  showProWaitlistModal(plan);
+function generateChallengeURL(exercise, reps) {
+  const raw  = localStorage.getItem('1pb_name') || (currentUser && currentUser.displayName) || 'Champion';
+  const name = raw.replace(/[^א-ת\w ]/g, '').slice(0, 22).trim();
+  const base = location.origin + location.pathname.replace(/\/$/, '');
+  return `${base}?challenge=${encodeURIComponent(exercise)}&target=${reps}&challenger=${encodeURIComponent(name)}`;
 }
 
-function showProWaitlistModal(plan) {
-  const existing = document.getElementById('proWaitlistOverlay');
+function parseChallengeFromURL() {
+  const p = new URLSearchParams(location.search);
+  const exercise   = p.get('challenge');
+  const target     = parseInt(p.get('target'), 10);
+  const challenger = p.get('challenger');
+  if (!exercise || !target || isNaN(target) || !challenger) return null;
+  return { exercise, target, challenger };
+}
+
+function showChallengeModal(ch) {
+  const existing = document.getElementById('challengeEntry');
+  if (existing) existing.remove();
+  const isHe = currentLang === 'he';
+  const exName = {
+    pushup:   isHe ? 'שכיבות סמיכה' : 'Push-Ups',
+    boxing:   isHe ? 'קרב'           : 'Boxing',
+    jumprope: isHe ? 'חבל קפיצה'     : 'Jump Rope',
+  }[ch.exercise] || ch.exercise;
+
+  const el = document.createElement('div');
+  el.id = 'challengeEntry';
+  el.className = 'challenge-overlay';
+  el.innerHTML = `
+    <div class="challenge-flame">🔥</div>
+    <div class="challenge-vs">VS</div>
+    <div class="challenge-title">
+      ${isHe
+        ? `${ch.challenger} מאתגר אותך לדו-קרב!`
+        : `${ch.challenger} challenged you to a duel!`}
+    </div>
+    <div class="challenge-sub">
+      ${isHe
+        ? `עמוד מול המצלמה ונסה לעקוף את ${ch.target} ${exName}`
+        : `Face the camera and beat ${ch.target} ${exName}`}
+    </div>
+    <div class="challenge-target-badge">
+      <div class="challenge-target-num">${ch.target}</div>
+      <div class="challenge-target-lbl">${exName} ${isHe ? 'לעקוף' : 'to beat'}</div>
+    </div>
+    <button class="challenge-accept-btn" onclick="acceptChallenge()">
+      ${isHe ? '⚔️ קבל את האתגר!' : '⚔️ ACCEPT THE CHALLENGE!'}
+    </button>
+    <button class="challenge-decline-btn" onclick="document.getElementById('challengeEntry')?.remove();navigate('hub');">
+      ${isHe ? 'אולי מאוחר יותר' : 'Maybe later'}
+    </button>`;
+  document.body.appendChild(el);
+}
+
+function acceptChallenge() {
+  if (!_challenge) return;
+  document.getElementById('challengeEntry')?.remove();
+  // Wire up challenge HUD
+  const hud  = document.getElementById('challengeHud');
+  const name = document.getElementById('challengeHudName');
+  const them = document.getElementById('challengeHudThem');
+  if (hud && name && them) {
+    hud.style.display = '';
+    name.textContent  = `vs ${_challenge.challenger}`;
+    them.textContent  = _challenge.target;
+  }
+  startWorkout(_challenge.exercise);
+}
+
+function updateChallengeHUD(reps) {
+  if (!_challenge) return;
+  const el = document.getElementById('challengeHudYou');
+  if (el) el.textContent = reps;
+  // Visual beat indicator
+  if (reps >= _challenge.target) {
+    el.style.color = '#22c55e';
+    speakMotivation('combo10');
+  }
+}
+
+function showChallengeShareSheet(exercise, reps) {
+  // Called from finishWorkout — offers to challenge someone back
+  const isHe = currentLang === 'he';
+  const url   = generateChallengeURL(exercise, reps);
+  const text  = isHe
+    ? `סיימתי ${reps} ${exercise}! תנסה לעקוף אותי 💪`
+    : `I just crushed ${reps} ${exercise}! Can you beat me? 💪`;
+
+  if (navigator.share) {
+    navigator.share({ title: '1% Better — אתגר!', text, url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => {
+      showToast(isHe ? '🔗 קישור האתגר הועתק!' : '🔗 Challenge link copied!', 3000);
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   FEATURE 2 — FLEX BADGE (Canvas Story Generator)
+═══════════════════════════════════════════════════════ */
+
+function generateFlexBadge(opts) {
+  // opts: { exercise, reps, level, streak, name }
+  const { exercise = 'pushup', reps = 0, level = 1, streak = 0, name = 'Champion' } = opts;
+  const SIZE = 1080;
+  const cv   = document.createElement('canvas');
+  cv.width   = SIZE;
+  cv.height  = SIZE;
+  const ctx  = cv.getContext('2d');
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+  bg.addColorStop(0, '#08080f');
+  bg.addColorStop(0.6, '#120820');
+  bg.addColorStop(1, '#0f0810');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Grid lines (subtle)
+  ctx.strokeStyle = 'rgba(255,255,255,.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < SIZE; i += 80) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(SIZE, i); ctx.stroke();
+  }
+
+  // Top accent bar
+  const bar = ctx.createLinearGradient(0, 0, SIZE, 0);
+  bar.addColorStop(0, '#f59e0b');
+  bar.addColorStop(1, '#a855f7');
+  ctx.fillStyle = bar;
+  ctx.fillRect(0, 0, SIZE, 8);
+
+  // Logo
+  ctx.font = 'bold 52px Arial, sans-serif';
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillText('1% BETTER', 72, 100);
+
+  // Separator
+  ctx.strokeStyle = 'rgba(245,158,11,.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(72, 120); ctx.lineTo(SIZE - 72, 120); ctx.stroke();
+
+  // Exercise label
+  const exLabel = {
+    pushup:   'PUSH-UPS',
+    boxing:   'BOXING',
+    jumprope: 'JUMP ROPE',
+  }[exercise] || exercise.toUpperCase();
+  ctx.font = 'bold 68px Arial, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.fillText(exLabel, 72, 220);
+
+  // Rep count — massive
+  ctx.font = `bold ${reps >= 100 ? '260' : '310'}px Arial Black, sans-serif`;
+  const repGrad = ctx.createLinearGradient(0, 280, 0, 700);
+  repGrad.addColorStop(0, '#ffffff');
+  repGrad.addColorStop(1, '#f59e0b');
+  ctx.fillStyle = repGrad;
+  ctx.fillText(reps.toString(), 68, 660);
+
+  // "REPS" label
+  ctx.font = 'bold 60px Arial, sans-serif';
+  ctx.fillStyle = 'rgba(245,158,11,.7)';
+  ctx.fillText('REPS', 72, 740);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(255,255,255,.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(72, 780); ctx.lineTo(SIZE - 72, 780); ctx.stroke();
+
+  // Stats row
+  ctx.font = 'bold 42px Arial, sans-serif';
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillText(`LEVEL ${level}`, 72, 860);
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillText(`${streak}🔥`, 320, 860);
+
+  // Name
+  ctx.font = 'bold 48px Arial, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(name.toUpperCase(), 72, 940);
+
+  // Date watermark
+  ctx.font = '34px Arial, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.fillText(new Date().toLocaleDateString(), 72, 1010);
+
+  // Bottom accent
+  ctx.fillStyle = bar;
+  ctx.fillRect(0, SIZE - 8, SIZE, 8);
+
+  return cv;
+}
+
+async function shareFlexBadge(canvas) {
+  const isHe = currentLang === 'he';
+  return new Promise(resolve => {
+    canvas.toBlob(async blob => {
+      const file = new File([blob], '1percent-better-flex.png', { type: 'image/png' });
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: '1% Better',
+            text: isHe ? 'הצגתי את זה — האם תנסה?' : 'I crushed it — can you?',
+            files: [file],
+          });
+        } else {
+          // Fallback: trigger download
+          const url = URL.createObjectURL(blob);
+          const a   = document.createElement('a');
+          a.href = url; a.download = '1pb-flex.png';
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(isHe ? '📥 תמונה הורדה!' : '📥 Image downloaded!', 2500);
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') console.warn('[share]', e);
+      }
+      resolve();
+    }, 'image/png');
+  });
+}
+
+function showFlexBadgePreview(exercise, reps) {
+  const existing = document.getElementById('flexBadgeOverlay');
+  if (existing) existing.remove();
+  const isHe  = currentLang === 'he';
+  const xp    = loadXP ? loadXP().total : (state.xp || 0);
+  const level = getLevelFromXP ? getLevelFromXP(xp) : 1;
+  const streak= state.streak ? (state.streak.current || 0) : 0;
+  const name  = localStorage.getItem('1pb_name') || (currentUser && currentUser.displayName) || 'Champion';
+  const badge = generateFlexBadge({ exercise, reps, level, streak, name });
+
+  // Scale canvas to preview size
+  const previewSize = Math.min(window.innerWidth - 48, 360);
+  badge.style.cssText = `width:${previewSize}px;height:${previewSize}px;border-radius:16px;display:block;`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'flexBadgeOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:20px;';
+  overlay.innerHTML = `
+    <div style="font-family:var(--font-head);font-size:22px;color:#fff;letter-spacing:.06em;">
+      ${isHe ? '🏆 הישג שלך' : '🏆 YOUR FLEX'}
+    </div>
+    <div id="flexCanvasWrap"></div>
+    <div class="share-btn-row" style="width:100%;max-width:360px;">
+      <button class="share-btn share-btn-flex" id="shareBadgeBtn">
+        ${isHe ? '📤 שתף הישג' : '📤 Share Flex'}
+      </button>
+      <button class="share-btn share-btn-challenge" id="shareChallengeBtn">
+        ${isHe ? '⚔️ אתגר חבר' : '⚔️ Challenge'}
+      </button>
+    </div>
+    <button onclick="document.getElementById('flexBadgeOverlay')?.remove();"
+      style="background:none;border:none;color:#4b5563;font-size:13px;cursor:pointer;padding:8px;">
+      ${isHe ? 'סגור' : 'Close'}
+    </button>`;
+
+  overlay.querySelector('#flexCanvasWrap').appendChild(badge);
+  overlay.querySelector('#shareBadgeBtn').onclick   = () => shareFlexBadge(badge);
+  overlay.querySelector('#shareChallengeBtn').onclick = () => {
+    overlay.remove();
+    showChallengeShareSheet(exercise, reps);
+  };
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+/* ═══════════════════════════════════════════════════════
+   FEATURE 3 — COMBO CLIP (MediaRecorder rolling buffer)
+═══════════════════════════════════════════════════════ */
+
+let _recorder        = null;
+let _recChunks       = [];   // { blob: Blob, at: number }[]
+let _recActive       = false;
+const REC_BUFFER_MS  = 6000; // keep last 6s
+const REC_COMBO_TRIG = 5;    // start saving at combo ≥ 5
+const REC_MIME       = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4']
+                         .find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+function startComboRecording() {
+  if (_recActive || !window.MediaRecorder) return;
+  const canvas = document.getElementById('poseCanvas');
+  if (!canvas || !canvas.captureStream) return;
+  try {
+    const stream  = canvas.captureStream(25);
+    const opts    = REC_MIME ? { mimeType: REC_MIME } : {};
+    _recorder     = new MediaRecorder(stream, opts);
+    _recChunks    = [];
+    _recorder.addEventListener('dataavailable', e => {
+      if (!e.data || e.data.size === 0) return;
+      _recChunks.push({ blob: e.data, at: Date.now() });
+      // Evict chunks older than buffer window
+      const cutoff = Date.now() - REC_BUFFER_MS;
+      _recChunks = _recChunks.filter(c => c.at > cutoff);
+    });
+    _recorder.start(1000); // 1-second timeslices
+    _recActive = true;
+    const ind = document.getElementById('recIndicator');
+    if (ind) ind.classList.add('active');
+  } catch (e) {
+    console.warn('[recorder] start failed:', e.message);
+  }
+}
+
+function stopComboRecording() {
+  if (!_recActive || !_recorder) return;
+  try {
+    if (_recorder.state !== 'inactive') _recorder.stop();
+  } catch (_) {}
+  _recActive = false;
+  const ind = document.getElementById('recIndicator');
+  if (ind) ind.classList.remove('active');
+}
+
+async function offerComboClipDownload() {
+  if (_recChunks.length === 0) return;
+  const isHe = currentLang === 'he';
+
+  // Show save button that triggers download
+  const existing = document.getElementById('clipSaveBtn');
+  if (existing) return; // already showing
+
+  const btn = document.createElement('button');
+  btn.id        = 'clipSaveBtn';
+  btn.className = 'clip-save-btn';
+  btn.textContent = isHe
+    ? `🎬 שמור קליפ קומבו ×${_pose.comboCount}!`
+    : `🎬 Save ×${_pose.comboCount} Combo Clip!`;
+  btn.onclick = async () => {
+    btn.remove();
+    await saveComboClipNow();
+  };
+  document.body.appendChild(btn);
+  // Auto-hide after 8s if not tapped
+  setTimeout(() => btn?.remove(), 8000);
+}
+
+async function saveComboClipNow() {
+  const isHe = currentLang === 'he';
+  // Get last 5 seconds of chunks
+  const cutoff = Date.now() - 5000;
+  const recent = _recChunks.filter(c => c.at > cutoff).map(c => c.blob);
+  if (recent.length === 0) {
+    showToast(isHe ? 'אין קטעים לשמירה' : 'No clip data yet', 2000);
+    return;
+  }
+  const ext  = REC_MIME.includes('mp4') ? 'mp4' : 'webm';
+  const type = REC_MIME || 'video/webm';
+  const blob = new Blob(recent, { type });
+  const file = new File([blob], `1pb-combo.${ext}`, { type });
+
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: '1% Better — Combo',
+        text:  isHe ? `×${_pose.comboCount} קומבו! 🔥` : `×${_pose.comboCount} COMBO! 🔥`,
+        files: [file],
+      });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = `1pb-combo.${ext}`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(isHe ? '📥 קליפ הורד!' : '📥 Clip downloaded!', 2500);
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') showToast(isHe ? 'שגיאה בשמירה' : 'Save failed', 2500);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PRO PAYWALL — PAYPAL CHECKOUT
+═══════════════════════════════════════════════════════ */
+
+let _paypalSDKLoaded = false;
+let _paypalSDKLoading = false;
+
+function loadPaypalSDK() {
+  return new Promise((resolve, reject) => {
+    if (_paypalSDKLoaded && window.paypal) { resolve(); return; }
+    if (_paypalSDKLoading) {
+      const poll = setInterval(() => {
+        if (window.paypal) { clearInterval(poll); _paypalSDKLoaded = true; resolve(); }
+      }, 100);
+      return;
+    }
+    _paypalSDKLoading = true;
+    const script = document.createElement('script');
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
+    script.onload = () => { _paypalSDKLoaded = true; _paypalSDKLoading = false; resolve(); };
+    script.onerror = () => { _paypalSDKLoading = false; reject(new Error('PayPal SDK load failed')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function initProScreen() {
+  const loadingEl = document.getElementById('proPaypalLoading');
+  const errorEl   = document.getElementById('proPaypalError');
+  const monthly   = document.getElementById('paypalMonthly');
+  const annual    = document.getElementById('paypalAnnual');
+  if (!monthly || !annual) return;
+
+  // Clear previous renders
+  monthly.innerHTML = '';
+  annual.innerHTML  = '';
+  if (errorEl) errorEl.style.display = 'none';
+  if (loadingEl) loadingEl.style.display = 'block';
+
+  try {
+    await loadPaypalSDK();
+    if (loadingEl) loadingEl.style.display = 'none';
+    renderPaypalButton('paypalMonthly', '8.00',  'monthly');
+    renderPaypalButton('paypalAnnual',  '40.00', 'annual');
+  } catch (err) {
+    console.error('[pro] PayPal SDK error', err);
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (errorEl) errorEl.style.display = 'block';
+  }
+}
+
+function renderPaypalButton(containerId, amountUSD, planKey) {
+  if (!window.paypal) return;
+  window.paypal.Buttons({
+    style: {
+      shape:  'rect',
+      color:  'gold',
+      layout: 'vertical',
+      label:  'pay',
+    },
+    createOrder: (data, actions) => {
+      const isHe = currentLang === 'he';
+      return actions.order.create({
+        purchase_units: [{
+          amount: { value: amountUSD, currency_code: 'USD' },
+          description: planKey === 'annual'
+            ? '1% Better PRO — Annual'
+            : '1% Better PRO — Monthly',
+        }],
+      });
+    },
+    onApprove: async (data, actions) => {
+      const order = await actions.order.capture();
+      const orderId = order.id;
+
+      // Persist to Firestore
+      if (typeof syncUserToFirestore === 'function' &&
+          typeof isFirebaseConfigured === 'function' &&
+          isFirebaseConfigured() && currentUser) {
+        await syncUserToFirestore({
+          isPro:          true,
+          proPlan:        planKey,
+          paymentMethod:  'paypal',
+          paypalOrderId:  orderId,
+          proPurchasedAt: Date.now(),
+        }).catch(() => {});
+      }
+      // Persist locally for offline reads
+      localStorage.setItem('1pb_is_pro', JSON.stringify({
+        plan: planKey, orderId, at: Date.now(),
+      }));
+
+      logEvent('purchase', {
+        transaction_id: orderId,
+        value:          parseFloat(amountUSD),
+        currency:       'USD',
+        items: [{ item_id: `pro_${planKey}`, item_name: `PRO ${planKey}` }],
+      });
+
+      applyProBadge();
+      showProSuccessModal(planKey);
+    },
+    onError: (err) => {
+      console.error('[paypal] error', err);
+      logEvent('pro_payment_error', { plan: planKey });
+      const isHe = currentLang === 'he';
+      showToast(isHe ? '❌ שגיאה בתשלום — נסה שוב' : '❌ Payment error — please try again', 4000);
+    },
+    onCancel: () => {
+      logEvent('pro_payment_cancelled', { plan: planKey });
+      const isHe = currentLang === 'he';
+      showToast(isHe ? 'תשלום בוטל' : 'Payment cancelled', 2500);
+    },
+  }).render('#' + containerId);
+}
+
+function showProSuccessModal(plan) {
+  const existing = document.getElementById('proSuccessOverlay');
   if (existing) existing.remove();
 
   const isHe = currentLang === 'he';
   const overlay = document.createElement('div');
-  overlay.id = 'proWaitlistOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.id = 'proSuccessOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML = `
-    <div style="background:#0f0f1a;border:1px solid rgba(138,43,226,.4);border-radius:24px;padding:32px 24px;max-width:360px;width:100%;text-align:center;">
-      <div style="font-size:52px;margin-bottom:14px;">🎉</div>
-      <div style="font-family:var(--font-head);font-size:22px;font-weight:900;color:#fff;margin-bottom:12px;line-height:1.2;">
-        ${isHe ? 'גרסת ה-PRO נפתחת בקרוב!' : 'PRO is launching soon!'}
+    <div style="background:#0f0f1a;border:2px solid rgba(245,158,11,.6);border-radius:28px;padding:40px 28px;max-width:360px;width:100%;text-align:center;">
+      <div style="font-size:64px;margin-bottom:16px;animation:proSuccessCrown .5s ease-out;">👑</div>
+      <div style="font-family:var(--font-head);font-size:28px;font-weight:900;color:#f59e0b;margin-bottom:8px;letter-spacing:.04em;">
+        ${isHe ? 'ברוך הבא ל-PRO!' : 'Welcome to PRO!'}
       </div>
-      <div style="font-size:14px;color:#9ca3af;line-height:1.6;margin-bottom:20px;">
+      <div style="font-size:14px;color:#d1d5db;line-height:1.6;margin-bottom:24px;">
         ${isHe
-          ? 'גרסת ה-PRO נפתחת בקרוב ל-100 משתמשים ראשונים בלבד.\nשמרנו לך מקום ברשימה! 🙌'
-          : 'PRO is opening soon for the first 100 users only.\nWe saved your spot on the list! 🙌'}
+          ? `התשלום התקבל. ${plan === 'annual' ? 'מנוי שנתי' : 'מנוי חודשי'} פעיל עכשיו. 🎉`
+          : `Payment confirmed. ${plan === 'annual' ? 'Annual' : 'Monthly'} plan is now active. 🎉`}
       </div>
-      <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px 16px;margin-bottom:22px;font-size:13px;color:#fbbf24;">
-        ${isHe
-          ? `✅ תוכנית שנבחרה: ${plan === 'annual' ? 'מנוי שנתי — 150 ₪/שנה' : 'חודשי — 29 ₪/חודש'}`
-          : `✅ Plan selected: ${plan === 'annual' ? 'Annual — 150 ₪/year' : 'Monthly — 29 ₪/mo'}`}
-      </div>
-      <button onclick="document.getElementById('proWaitlistOverlay').remove();"
-        style="width:100%;padding:15px;background:linear-gradient(90deg,#a855f7,#f59e0b);border:none;border-radius:14px;color:#000;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
-        ${isHe ? '✓ נרשמתי לרשימה!' : '✓ I\'m on the list!'}
+      <button onclick="document.getElementById('proSuccessOverlay').remove();navigate('hub');"
+        style="width:100%;padding:16px;background:linear-gradient(90deg,#f59e0b,#a855f7);border:none;border-radius:16px;color:#000;font-weight:900;font-size:16px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
+        ${isHe ? '🚀 התחל את ה-PRO שלך!' : '🚀 Start your PRO journey!'}
       </button>
     </div>`;
 
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+// Legacy alias — kept in case old code references it
+function clickProWaitlist(plan) {
+  initProScreen();
+}
+
+function renderRPGProgress() {
+  const isHe = currentLang === 'he';
+
+  // Streak
+  const streak = loadStreak ? loadStreak() : safeParse(localStorage.getItem('1pb_streak'), {});
+  const streakVal = streak.current || 0;
+  const streakEl = document.getElementById('rpgStreak');
+  if (streakEl) streakEl.textContent = streakVal;
+
+  // Weekly reps — sum reps from workouts in last 7 days
+  const workouts = safeParse(localStorage.getItem('1pb_workouts'), []);
+  const weekAgo  = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const weeklyReps = workouts
+    .filter(w => w.at && w.at > weekAgo)
+    .reduce((sum, w) => sum + (w.reps || 0), 0);
+  const weeklyEl = document.getElementById('rpgWeeklyReps');
+  if (weeklyEl) weeklyEl.textContent = weeklyReps;
+
+  // Combo bonus from last session
+  const comboEl = document.getElementById('rpgComboBonus');
+  if (comboEl) {
+    const lastMult = _pose && _pose.comboMult > 1 ? _pose.comboMult : 1;
+    comboEl.textContent = `×${lastMult.toFixed(1)}`;
+    comboEl.className   = `rpg-stat-value ${lastMult > 1 ? 'gold' : ''}`;
+  }
+
+  // Daily quest status
+  const quests   = loadDailyQuests ? loadDailyQuests() : safeParse(localStorage.getItem('1pb_daily_quests'), {});
+  const questDone = quests && quests.pushup;
+  const questEl   = document.getElementById('rpgQuestStatus');
+  const questSub  = document.getElementById('rpg-sub-quest');
+  if (questEl) {
+    questEl.textContent = questDone ? '✅' : '⏳';
+    questEl.style.color = questDone ? '#22c55e' : '#f59e0b';
+  }
+  if (questSub) questSub.textContent = questDone
+    ? (isHe ? 'הושלם היום!' : 'Done today!')
+    : (isHe ? 'טרם הושלם' : 'Not yet done');
+
+  // Localise labels
+  if (isHe) {
+    const s = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    s('rpg-lbl-streak', 'רצף יומי');
+    s('rpg-sub-streak', `${streakVal === 1 ? 'יום' : 'ימים'} רצופים`);
+    s('rpg-lbl-weekly', 'חזרות השבוע');
+    s('rpg-sub-weekly', 'כל הסוגים');
+    s('rpg-lbl-combo',  'בונוס קומבו');
+    s('rpg-sub-combo',  'ממכפיל אחרון');
+    s('rpg-lbl-quest',  'משימה יומית');
+    s('lbl-ai-cta',     'התחל אימון שכיבות סמיכה');
+    s('lbl-ai-cta-sub', 'זיהוי AI · המצלמה סופרת בשבילך');
+  } else {
+    const s = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    s('rpg-lbl-streak', 'Streak');
+    s('rpg-sub-streak', `${streakVal === 1 ? 'day' : 'days'} in a row`);
+    s('rpg-lbl-weekly', 'Weekly Reps');
+    s('rpg-sub-weekly', 'All types');
+    s('rpg-lbl-combo',  'Combo Bonus');
+    s('rpg-sub-combo',  'Last multiplier');
+    s('rpg-lbl-quest',  'Daily Quest');
+    s('lbl-ai-cta',     'Start Push-Ups (AI)');
+    s('lbl-ai-cta-sub', 'AI tracking · camera counts for you');
+  }
+}
+
+function applyProBadge() {
+  const raw = localStorage.getItem('1pb_is_pro');
+  const isPro = raw ? safeParse(raw, null) : null;
+  const btn = document.getElementById('proEntryBtn');
+  if (!btn) return;
+  if (isPro) {
+    btn.textContent = '👑 PRO';
+    btn.style.cssText = [
+      'background:linear-gradient(90deg,rgba(245,158,11,.25),rgba(168,85,247,.25))',
+      'border:1.5px solid rgba(245,158,11,.85)',
+      'border-radius:99px',
+      'padding:5px 12px',
+      'font-size:11px',
+      'font-weight:900',
+      'color:#f59e0b',
+      'cursor:pointer',
+      'letter-spacing:.06em',
+      'white-space:nowrap',
+      'touch-action:manipulation',
+      'box-shadow:0 0 10px rgba(245,158,11,.35)',
+    ].join(';');
+    btn.onclick = () => { logEvent('pro_badge_tapped'); navigate('pro'); };
+  } else {
+    btn.textContent = '⭐ PRO';
+    btn.style.cssText = 'background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(168,85,247,.15));border:1px solid rgba(245,158,11,.45);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:800;color:#f59e0b;cursor:pointer;letter-spacing:.04em;white-space:nowrap;touch-action:manipulation;';
+    btn.onclick = () => { logEvent('pro_screen_opened',{source:'hub_btn'}); navigate('pro'); };
+  }
 }
 
 function showAppGuide() {
@@ -7721,25 +8821,123 @@ function showOnboarding() {
   showOnboardingGuide();
 }
 
+/* ═══════════════════════════════════════════════════════
+   COMBO SYSTEM + VOICE FEEDBACK
+═══════════════════════════════════════════════════════ */
+
+const COMBO_WINDOW_MS  = 2500;   // gap under this → combo grows
+const COMBO_MAX_MULT   = 2.0;    // cap multiplier at 2×
+
+const VOICE_LINES = {
+  combo3:  ['Keep going!',     'On fire!',        'That\'s it!'],
+  combo5:  ['Unstoppable!',    'Beast mode!',      'Let\'s go!'],
+  combo10: ['1% Better!',      'You\'re a machine!','Don\'t stop now!'],
+  rep5:    ['Five!',           'Five reps!',       'Halfway there!'],
+  rep10:   ['Ten!',            'Ten reps! Great!', 'Double digits!'],
+  rep20:   ['Twenty! On fire!','Twenty reps!',     'You\'re insane!'],
+};
+
+let _voiceEnabled = true;
+let _speechBusy   = false;
+
+function speakMotivation(lineKey) {
+  if (!_voiceEnabled || !window.speechSynthesis || _speechBusy) return;
+  const lines = VOICE_LINES[lineKey];
+  if (!lines) return;
+  const msg = lines[Math.floor(Math.random() * lines.length)];
+  const utt = new SpeechSynthesisUtterance(msg);
+  utt.rate   = 1.15;
+  utt.pitch  = 1.1;
+  utt.volume = 0.95;
+  utt.onstart = () => { _speechBusy = true; };
+  utt.onend   = () => { _speechBusy = false; };
+  utt.onerror = () => { _speechBusy = false; };
+  window.speechSynthesis.speak(utt);
+}
+
+function showComboUI(count, mult) {
+  let el = document.getElementById('comboDisplay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'comboDisplay';
+    el.style.cssText = [
+      'position:fixed','top:80px','left:50%','transform:translateX(-50%)',
+      'z-index:500','font-family:var(--font-head)','font-size:34px',
+      'color:#f59e0b','text-shadow:0 0 18px rgba(245,158,11,.7)',
+      'pointer-events:none','transition:opacity .35s',
+      'letter-spacing:.06em','opacity:0',
+    ].join(';');
+    document.body.appendChild(el);
+  }
+  el.textContent = `${count}× COMBO  ×${mult.toFixed(1)}`;
+  el.style.opacity = '1';
+  clearTimeout(el._hide);
+  el._hide = setTimeout(() => { el.style.opacity = '0'; }, 1600);
+}
+
+function onRepCounted(now) {
+  const gap = _pose.lastRepAt > 0 ? now - _pose.lastRepAt : Infinity;
+  _pose.lastRepAt = now;
+
+  // Combo logic
+  if (gap < COMBO_WINDOW_MS) {
+    _pose.comboCount++;
+    _pose.comboMult = Math.min(1 + _pose.comboCount * 0.1, COMBO_MAX_MULT);
+    if (_pose.comboCount >= 10) { showComboUI(_pose.comboCount, _pose.comboMult); speakMotivation('combo10'); }
+    else if (_pose.comboCount >= 5)  { showComboUI(_pose.comboCount, _pose.comboMult); speakMotivation('combo5'); }
+    else if (_pose.comboCount >= 3)  { showComboUI(_pose.comboCount, _pose.comboMult); speakMotivation('combo3'); }
+    else if (_pose.comboCount >= 2)  { showComboUI(_pose.comboCount, _pose.comboMult); }
+  } else {
+    _pose.comboCount = 0;
+    _pose.comboMult  = 1;
+    const el = document.getElementById('comboDisplay');
+    if (el) el.style.opacity = '0';
+  }
+
+  // Milestone voice lines (independent of combo)
+  const r = _pose.reps;
+  if      (r === 20) speakMotivation('rep20');
+  else if (r === 10) speakMotivation('rep10');
+  else if (r === 5)  speakMotivation('rep5');
+
+  // Update challenge HUD if active
+  if (_challenge) updateChallengeHUD(r);
+
+  // Offer combo clip download at combo threshold
+  if (_pose.comboCount === REC_COMBO_TRIG) {
+    offerComboClipDownload();
+  }
+
+  // Fade out instructional hint after first rep
+  if (r === 1) {
+    const hint = document.getElementById('workoutHint');
+    if (hint) hint.style.opacity = '0';
+  }
+}
+
 /** Push-up state machine. Returns true if a rep was counted this frame. */
 function pushupTick(landmarks) {
-  // MediaPipe pose indices: 11 L-shoulder, 12 R-shoulder, 13 L-elbow,
-  // 14 R-elbow, 15 L-wrist, 16 R-wrist. Each has .visibility ∈ [0,1].
   const lS = landmarks[11], rS = landmarks[12];
   const lE = landmarks[13], rE = landmarks[14];
   const lW = landmarks[15], rW = landmarks[16];
   if (!lS || !rS || !lE || !rE || !lW || !rW) return false;
 
-  // Use whichever side is more visible — handles the user being slightly
-  // off-axis to the camera.
   const lVis = (lS.visibility + lE.visibility + lW.visibility) / 3;
   const rVis = (rS.visibility + rE.visibility + rW.visibility) / 3;
   const use  = lVis >= rVis ? [lS, lE, lW] : [rS, rE, rW];
+
+  // Low visibility: decay counters gradually instead of freezing them.
+  // After ~0.7s of lost signal, fully reset to prevent phantom counts.
   if (Math.min(use[0].visibility, use[1].visibility, use[2].visibility) < 0.5) {
-    // Not enough confidence to count this frame — but don't reset the
-    // state machine, the user might just have a poor angle for a moment.
+    _pose.lowVisFrames++;
+    if (_pose.lowVisFrames > 10) {
+      _pose.downFrames  = 0;
+      _pose.upFrames    = 0;
+      _pose.lowVisFrames = 0;
+    }
     return false;
   }
+  _pose.lowVisFrames = 0;
 
   const elbow = angleDeg(use[0], use[1], use[2]);
 
@@ -7753,18 +8951,98 @@ function pushupTick(landmarks) {
     _pose.upFrames++;
     _pose.downFrames = 0;
     if (_pose.upFrames >= PU_FRAMES_STABLE) {
-      // Count only on a real down→up transition AND past refractory.
       const now = performance.now();
       if (_pose.state === 'down' && now - _pose.lastCountAt > PU_REFRACTORY_MS) {
         _pose.reps++;
         _pose.lastCountAt = now;
         _pose.state = 'up';
+        onRepCounted(now);   // combo + voice
         return true;
       }
       _pose.state = 'up';
     }
   } else {
-    // In between thresholds: don't reset counters, just drift.
+    // Dead zone: decay counters so oscillation here doesn't accumulate
+    _pose.downFrames = Math.max(0, _pose.downFrames - 1);
+    _pose.upFrames   = Math.max(0, _pose.upFrames   - 1);
+  }
+  return false;
+}
+
+/** Pull-up state machine. Returns true if a rep was counted this frame.
+ *  Tuned for phone-below-bar camera angle:
+ *  - Bottom: elbow > 145° (no painful full lockout needed)
+ *  - Top:    elbow < 75°  OR nose rises above avg-wrist Y (chin-over-bar proxy)
+ */
+function pullupTick(landmarks) {
+  const lS   = landmarks[11], rS   = landmarks[12];
+  const lE   = landmarks[13], rE   = landmarks[14];
+  const lW   = landmarks[15], rW   = landmarks[16];
+  const lHip = landmarks[23], rHip = landmarks[24];
+  const lKne = landmarks[25], rKne = landmarks[26];
+  const nose = landmarks[0];
+  if (!lS || !rS || !lE || !rE || !lW || !rW) return false;
+
+  const lVis = (lS.visibility + lE.visibility + lW.visibility) / 3;
+  const rVis = (rS.visibility + rE.visibility + rW.visibility) / 3;
+  const use  = lVis >= rVis ? { sh: lS, el: lE, wr: lW } : { sh: rS, el: rE, wr: rW };
+  const sh = use.sh, el = use.el, wr = use.wr;
+
+  if (Math.min(sh.visibility, el.visibility, wr.visibility) < 0.5) {
+    _pose.lowVisFrames++;
+    if (_pose.lowVisFrames > 10) {
+      _pose.downFrames = 0; _pose.upFrames = 0; _pose.lowVisFrames = 0;
+    }
+    return false;
+  }
+  _pose.lowVisFrames = 0;
+
+  const elbow = angleDeg(sh, el, wr);
+  const avgWristY = (lW.y + rW.y) / 2;
+  const chinAboveBar = nose && nose.visibility > 0.4 &&
+                       nose.y <= avgWristY + PL_TOP_Y_OFFSET;
+  const atTop    = elbow < PL_TOP_DEG || chinAboveBar;
+  const atBottom = elbow > PL_BOTTOM_DEG;
+
+  // Anti-swing / anti-kipping: track hip drift from bottom-position reference
+  const hipsOk = lHip && rHip && lHip.visibility > 0.3 && rHip.visibility > 0.3;
+  if (hipsOk) {
+    const hipX = (lHip.x + rHip.x) / 2;
+    const hipY = (lHip.y + rHip.y) / 2;
+    if (atBottom) {
+      _pose.hipXRef = _pose.hipXRef === null ? hipX : _pose.hipXRef * 0.75 + hipX * 0.25;
+      _pose.hipYRef = _pose.hipYRef === null ? hipY : _pose.hipYRef * 0.75 + hipY * 0.25;
+    }
+    if (_pose.hipXRef !== null) {
+      const driftX      = Math.abs(hipX - _pose.hipXRef);
+      const kippingRise = _pose.hipYRef !== null ? (_pose.hipYRef - hipY) : 0;
+      _pose.isSwinging  = driftX > PL_SWING_X_THRESH || kippingRise > PL_KIPPING_Y_THRESH;
+    }
+  }
+
+  if (atTop) {
+    _pose.upFrames++;
+    _pose.downFrames = 0;
+    if (_pose.upFrames >= PL_FRAMES_STABLE) { _pose.state = 'up'; }
+  } else if (atBottom) {
+    _pose.downFrames++;
+    _pose.upFrames = 0;
+    if (_pose.downFrames >= PL_FRAMES_STABLE) {
+      const now = performance.now();
+      if (_pose.state === 'up' &&
+          now - _pose.lastCountAt > PL_REFRACTORY_MS &&
+          !_pose.isSwinging) {
+        _pose.reps++;
+        _pose.lastCountAt = now;
+        _pose.state = 'down';
+        onRepCounted(now);
+        return true;
+      }
+      _pose.state = 'down';
+    }
+  } else {
+    _pose.downFrames = Math.max(0, _pose.downFrames - 1);
+    _pose.upFrames   = Math.max(0, _pose.upFrames   - 1);
   }
   return false;
 }
@@ -7845,6 +9123,7 @@ function jumpropeTick(landmarks) {
       jr.lastJumpAt     = now;
       _pose.reps++;
       _pose.lastCountAt = now;
+      onRepCounted(now);
       jr.airState = false;
       jr.peakRise = 0;
       _pose.state = 'ground';
@@ -8112,6 +9391,10 @@ function runPoseLoop() {
           if (pushupTick(lms) && navigator.vibrate) {
             try { navigator.vibrate(40); } catch (_) {}
           }
+        } else if (_pose.exercise === 'pullup') {
+          if (pullupTick(lms) && navigator.vibrate) {
+            try { navigator.vibrate(40); } catch (_) {}
+          }
         } else if (_pose.exercise === 'boxing') {
           const fired = boxingTick(lms);
           if (fired.length) {
@@ -8175,15 +9458,30 @@ function runPoseLoop() {
       };
 
       // ── Skeleton lines ──────────────────────────────────
-      const white = 'rgba(255,255,255,.45)';
-      drawLine(pts[11], pts[12], white);    // shoulders
-      drawLine(pts[11], pts[23], white);    // torso L
-      drawLine(pts[12], pts[24], white);    // torso R
-      drawLine(pts[23], pts[24], white);    // hips
+      const neonGreen = 'rgba(0,255,135,.55)';
+      // Core / torso — neon green glow
+      ctx.shadowBlur = 6; ctx.shadowColor = '#00ff87';
+      drawLine(pts[11], pts[12], neonGreen);    // shoulders
+      drawLine(pts[11], pts[23], neonGreen);    // torso L
+      drawLine(pts[12], pts[24], neonGreen);    // torso R
+      drawLine(pts[23], pts[24], neonGreen);    // hips
+      // Arms — neon cyan glow
+      ctx.shadowColor = '#00d4ff';
       drawLine(pts[11], pts[13], '#00d4ff', 3);  // L upper arm
       drawLine(pts[13], pts[15], '#00d4ff', 3);  // L forearm
       drawLine(pts[12], pts[14], '#00d4ff', 3);  // R upper arm
       drawLine(pts[14], pts[16], '#00d4ff', 3);  // R forearm
+      // Legs — neon green glow
+      ctx.shadowColor = '#00ff87';
+      drawLine(pts[23], pts[25], neonGreen, 3);  // L thigh
+      drawLine(pts[25], pts[27], neonGreen, 3);  // L shin
+      drawLine(pts[24], pts[26], neonGreen, 3);  // R thigh
+      drawLine(pts[26], pts[28], neonGreen, 3);  // R shin
+      // Feet — dimmer green
+      ctx.shadowBlur = 3;
+      drawLine(pts[27], pts[31], 'rgba(0,200,100,.45)', 2);  // L foot
+      drawLine(pts[28], pts[32], 'rgba(0,200,100,.45)', 2);  // R foot
+      ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
 
       if (_pose.exercise === 'boxing') {
         // ── Elbow dots (cyan) ─────────────────────────────────
@@ -8242,6 +9540,30 @@ function runPoseLoop() {
           ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
           ctx.fillText('Calibrating...', W / 2, barY - 6);
         }
+      } else if (_pose.exercise === 'pullup') {
+        // ── Pull-up: elbow + wrist + nose + hip stability ─────
+        ctx.shadowBlur = 8; ctx.shadowColor = '#00d4ff';
+        drawDot(pts[13], 8, '#00d4ff', '#000', 2);   // L elbow
+        drawDot(pts[14], 8, '#00d4ff', '#000', 2);   // R elbow
+        drawDot(pts[15], 10, '#00ff87', '#000', 2);  // L wrist
+        drawDot(pts[16], 10, '#00ff87', '#000', 2);  // R wrist
+        ctx.shadowBlur = 0;
+        // Nose dot — purple when chin-above-bar, white otherwise
+        if (pts[0] && pts[0].visibility > 0.3) {
+          const avgWristY = ((pts[15] ? pts[15].y : 0) + (pts[16] ? pts[16].y : 0)) / 2;
+          const chinUp = pts[0].y <= avgWristY + PL_TOP_Y_OFFSET;
+          drawDot(pts[0], 7, chinUp ? '#a855f7' : 'rgba(255,255,255,.6)', '#000', 2);
+        }
+        // Hip stability indicator — green = stable, orange/red = swinging/kipping
+        const hipColor = _pose.isSwinging ? '#f97316' : '#00ff87';
+        ctx.shadowBlur = _pose.isSwinging ? 10 : 5;
+        ctx.shadowColor = hipColor;
+        drawDot(pts[23], 11, hipColor, '#000', 2);   // L hip
+        drawDot(pts[24], 11, hipColor, '#000', 2);   // R hip
+        ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+        // Knee dots (dim cyan)
+        drawDot(pts[25], 8, 'rgba(0,212,255,.7)', '#000', 1.5);  // L knee
+        drawDot(pts[26], 8, 'rgba(0,212,255,.7)', '#000', 1.5);  // R knee
       } else {
         // ── Pushup: plain wrist + elbow dots ──────────────────
         drawDot(pts[13], 7, '#00d4ff', '#000', 2);
@@ -9473,8 +10795,66 @@ const FIREBASE_CONFIG = {
 };
 
 /* ── Init Firebase (only if config is set) ── */
-let fb = null, fbAuth = null, fbDB = null, fbStorage = null;
+let fb = null, fbAuth = null, fbDB = null, fbStorage = null, fbAnalytics = null, fbMessaging = null;
 let currentUser = null;
+
+function logEvent(eventName, params = {}) {
+  try { if (fbAnalytics) fbAnalytics.logEvent(eventName, params); } catch (_) {}
+}
+
+let _fcmMessageHandlerActive  = false;
+let _fcmTokenRefreshActive    = false;
+
+async function initFCM() {
+  if (!fbMessaging || FCM_VAPID_KEY === 'YOUR_VAPID_KEY_HERE') return;
+  try {
+    // Don't re-prompt if already granted or denied
+    const existingPerm = Notification.permission;
+    const perm = existingPerm === 'default'
+      ? await Notification.requestPermission()
+      : existingPerm;
+    if (perm !== 'granted') return;
+
+    const sw = await navigator.serviceWorker.getRegistration('/');
+    const token = await fbMessaging.getToken({
+      vapidKey:                  FCM_VAPID_KEY,
+      serviceWorkerRegistration: sw,
+    });
+    if (!token) return;
+
+    if (currentUser && typeof syncUserToFirestore === 'function') {
+      syncUserToFirestore({ fcmToken: token, fcmTokenUpdatedAt: Date.now() }).catch(() => {});
+    }
+    localStorage.setItem('1pb_fcm_token', token);
+
+    // Guard: register handlers only once per page load
+    if (!_fcmMessageHandlerActive) {
+      _fcmMessageHandlerActive = true;
+      fbMessaging.onMessage(payload => {
+        const title = payload.notification?.title || '1% Better';
+        const body  = payload.notification?.body  || '';
+        showToast(`🔔 ${title}${body ? ' — ' + body : ''}`, 5000);
+      });
+    }
+
+    // Token refresh — FCM rotates tokens periodically
+    if (!_fcmTokenRefreshActive) {
+      _fcmTokenRefreshActive = true;
+      fbMessaging.onTokenRefresh(async () => {
+        try {
+          const newToken = await fbMessaging.getToken({ vapidKey: FCM_VAPID_KEY });
+          if (!newToken) return;
+          localStorage.setItem('1pb_fcm_token', newToken);
+          if (currentUser && typeof syncUserToFirestore === 'function') {
+            syncUserToFirestore({ fcmToken: newToken, fcmTokenUpdatedAt: Date.now() }).catch(() => {});
+          }
+        } catch (e) { console.warn('[FCM] token refresh failed:', e.message); }
+      });
+    }
+  } catch (e) {
+    console.warn('[FCM] init failed:', e.message);
+  }
+}
 
 function isFirebaseConfigured() {
   return FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY';
@@ -9486,10 +10866,12 @@ function isFirebaseConfigured() {
     return;
   }
   try {
-    fb        = firebase.initializeApp(FIREBASE_CONFIG);
-    fbAuth    = firebase.auth();
-    fbDB      = firebase.firestore();
-    fbStorage = firebase.storage();
+    fb           = firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth       = firebase.auth();
+    fbDB         = firebase.firestore();
+    fbStorage    = firebase.storage();
+    fbAnalytics  = firebase.analytics();
+    fbMessaging  = firebase.messaging();
 
     // Offline persistence.
     // NOTE: enablePersistence() is deprecated in Firebase v10 (the modular
@@ -9569,19 +10951,28 @@ function clearAuthErrors() {
   document.getElementById('register-error').textContent = '';
 }
 
+// In-memory fallback for browsers (Instagram IAB) that block localStorage
+window._1pbGuestMem = false;
+
+function _lsGet(key)       { try { return localStorage.getItem(key); }    catch (_) { return null; } }
+function _lsSet(key, val)  { try { localStorage.setItem(key, val); }      catch (_) {} }
+function _lsDel(key)       { try { localStorage.removeItem(key); }        catch (_) {} }
+
 function isGuestSession() {
-  return localStorage.getItem('isGuest') === 'true';
+  return window._1pbGuestMem || _lsGet('isGuest') === 'true';
 }
 
 function setGuestSession(enabled) {
-  if (enabled) localStorage.setItem('isGuest', 'true');
-  else localStorage.removeItem('isGuest');
+  window._1pbGuestMem = !!enabled;
+  if (enabled) _lsSet('isGuest', 'true');
+  else         _lsDel('isGuest');
 }
 
 function updateGuestModeUI() {
   const banner = document.getElementById('guestBanner');
   if (!banner) return;
-  banner.hidden = !isGuestSession();
+  // Use style.display — the CSS rule `display:flex` overrides the `hidden` attribute
+  banner.style.display = isGuestSession() ? '' : 'none';
 }
 
 function updateHubSimplifiedUI() {
@@ -9596,9 +10987,23 @@ function updateHubSimplifiedUI() {
 }
 
 function continueAsGuest() {
-  setGuestSession(true);
-  hideAuthScreen();
-  initApp();
+  const btn = document.getElementById('guest-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+
+  try {
+    setGuestSession(true);          // sets both _1pbGuestMem and tries localStorage
+    hideAuthScreen();
+    initApp();
+  } catch (err) {
+    // Blocked environment (Instagram IAB, strict privacy mode, etc.)
+    // Fall back to pure in-memory guest session so the user can still train
+    console.warn('[guest] localStorage/auth blocked, using memory fallback:', err.message);
+    window._1pbGuestMem = true;     // isGuestSession() will return true
+    try { hideAuthScreen(); } catch (_) {}
+    try { initApp(); }        catch (_) {}
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
 }
 
 function setAuthLoading(btnId, loading) {
@@ -9627,53 +11032,69 @@ function authErrorMsg(code) {
   return msgs[code] || (isHe ? 'שגיאה לא ידועה' : 'An error occurred. Try again.');
 }
 
+function _showAuthError(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) el.textContent = msg;
+}
+
 async function doEmailLogin() {
-  if (!isFirebaseConfigured()) { offlineLogin(); return; }
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
+  if (!isFirebaseConfigured() || !fbAuth) { offlineLogin(); return; }
+  const emailEl = document.getElementById('login-email');
+  const passEl  = document.getElementById('login-password');
+  const email   = emailEl ? emailEl.value.trim() : '';
+  const pass    = passEl  ? passEl.value         : '';
   if (!email || !pass) {
-    document.getElementById('login-error').textContent = currentLang === 'he' ? 'מלא את כל השדות' : 'Fill in all fields';
+    _showAuthError('login-error', currentLang === 'he' ? 'מלא את כל השדות' : 'Fill in all fields');
     return;
   }
   setAuthLoading('login-btn', true);
   try {
     await fbAuth.signInWithEmailAndPassword(email, pass);
+    logEvent('login', { method: 'email' });
+    // success → onAuthStateChanged fires → onUserSignedIn hides auth screen
   } catch(e) {
-    document.getElementById('login-error').textContent = authErrorMsg(e.code);
+    console.warn('[login]', e);
+    _showAuthError('login-error', authErrorMsg(e.code));
+  } finally {
     setAuthLoading('login-btn', false);
   }
 }
 
 async function doEmailRegister() {
-  if (!isFirebaseConfigured()) { offlineLogin(); return; }
-  const name  = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pass  = document.getElementById('reg-password').value;
+  if (!isFirebaseConfigured() || !fbAuth) { offlineLogin(); return; }
+  const name  = (document.getElementById('reg-name')     || {}).value?.trim() || '';
+  const email = (document.getElementById('reg-email')    || {}).value?.trim() || '';
+  const pass  = (document.getElementById('reg-password') || {}).value          || '';
   const isHe  = currentLang === 'he';
   if (!name || !email || !pass) {
-    document.getElementById('register-error').textContent = isHe ? 'מלא את כל השדות' : 'Fill in all fields';
+    _showAuthError('register-error', isHe ? 'מלא את כל השדות' : 'Fill in all fields');
     return;
   }
   setAuthLoading('register-btn', true);
   try {
     const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
-    // Save name so onboarding can pre-fill it
-    localStorage.setItem('1pb_name', name);
+    _lsSet('1pb_name', name);
+    logEvent('sign_up', { method: 'email' });
   } catch(e) {
-    document.getElementById('register-error').textContent = authErrorMsg(e.code);
+    console.warn('[register]', e);
+    _showAuthError('register-error', authErrorMsg(e.code));
+  } finally {
     setAuthLoading('register-btn', false);
   }
 }
 
 async function doGoogleLogin() {
-  if (!isFirebaseConfigured()) { offlineLogin(); return; }
+  if (!isFirebaseConfigured() || !fbAuth) { offlineLogin(); return; }
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     await fbAuth.signInWithPopup(provider);
+    logEvent('login', { method: 'google' });
   } catch(e) {
-    const errEl = document.getElementById('login-error') || document.getElementById('register-error');
-    if (errEl) errEl.textContent = authErrorMsg(e.code);
+    console.warn('[google login]', e);
+    const msg = authErrorMsg(e.code);
+    _showAuthError('login-error', msg);
+    _showAuthError('register-error', msg);
   }
 }
 
@@ -9760,7 +11181,11 @@ function resetPerUserRuntime() {
   _pose.state       = 'ready';
   _pose.downFrames  = 0;
   _pose.upFrames    = 0;
+  _pose.lowVisFrames = 0;
   _pose.lastCountAt = 0;
+  _pose.lastRepAt   = 0;
+  _pose.comboCount  = 0;
+  _pose.comboMult   = 1;
   _pose.boxing      = null;
   // Audio context too — different user = different gesture chain on
   // iOS. Creating a fresh one on next punch is cheap (~ms).
@@ -9824,6 +11249,8 @@ async function onUserSignedIn(user) {
   // initApp → init → initOnboarding will show or hide the onboarding panel
   // based on the (now-correct) localStorage state.
   initApp();
+  applyProBadge();
+  setTimeout(initFCM, 3000); // defer so it doesn't block app init
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -9854,6 +11281,10 @@ async function loadUserFromFirestore(uid) {
       if (d.ironWill)       localStorage.setItem(IRON_WILL_KEY,        JSON.stringify(d.ironWill));
       if (d.morningRoutine) localStorage.setItem(MORNING_ROUTINE_KEY,  JSON.stringify(d.morningRoutine));
       if (d.workouts)       localStorage.setItem('1pb_workouts',       JSON.stringify(d.workouts));
+      if (d.isPro)          localStorage.setItem('1pb_is_pro',         JSON.stringify({ plan: d.proPlan || 'pro', at: d.proPurchasedAt || Date.now() }));
+      // Restore today's quest completion state from Firestore
+      const dqKey = `dailyQuests_${todayKey()}`;
+      if (d[dqKey])         localStorage.setItem('1pb_daily_quests',   JSON.stringify(d[dqKey]));
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
@@ -10107,6 +11538,13 @@ function initApp() {
   updateGuestModeUI();
   applySavedPrefsAndInit();
   if (isFirebaseConfigured()) addSignOutToSettings();
+  setTimeout(renderRPGProgress, 300);
+  // Parse challenge URL params — show modal after a short delay so app is visible
+  const ch = parseChallengeFromURL();
+  if (ch) {
+    _challenge = ch;
+    setTimeout(() => showChallengeModal(ch), 800);
+  }
 }
 
 /* ── If Firebase not configured, run normally ── */
@@ -10179,7 +11617,7 @@ if (!isFirebaseConfigured()) {
 <!-- Fixed Install App button (Hub) -->
 <button id="openInstallGuidance" class="install-fixed-btn pulse" aria-hidden="false" title="Install App">
   <span class="dot" aria-hidden="true"></span>
-  <span>התקן אפליקציה</span>
+  <span id="openInstallGuidanceLabel">Install App</span>
 </button>
 
 <script>

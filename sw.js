@@ -1,18 +1,18 @@
 // ═══════════════════════════════════════════════
-// 1% Better — Service Worker v1.0
+// 1% Better — Service Worker v1.2.0
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME = '1pb-v1.1.2-fix';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = '1pb-v1.2.0';
+const OFFLINE_URL = '/index.html';
 const ALLOWED_CROSS_ORIGINS = [
   'cdn.jsdelivr.net',
   'storage.googleapis.com',
 ];
 
 const PRE_CACHE = [
-  '/1percent-better.html',
+  '/',
+  '/index.html',
   '/manifest.json',
-  '/offline.html',
   '/icon-192.png',
   '/icon-512.png',
 ];
@@ -78,7 +78,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => {
         if (request.mode === 'navigate') {
           return caches.match(OFFLINE_URL)
-            .then(r => r || caches.match('/1percent-better.html'));
+            .then(r => r || caches.match('/'));
         }
         return Response.error();
       });
@@ -88,18 +88,24 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('message', event => {
   const data = event.data;
-  if (!data || data.type !== 'CACHE_URLS') return;
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      Promise.all(
-        data.urls.map(url =>
-          cache.add(url).catch(err =>
-            console.warn('[SW] cache-url failed for', url, err)
+  if (!data) return;
+  if (data.type === 'CACHE_URLS') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(cache =>
+        Promise.all(
+          data.urls.map(url =>
+            cache.add(url).catch(err =>
+              console.warn('[SW] cache-url failed for', url, err)
+            )
           )
         )
       )
-    )
-  );
+    );
+    return;
+  }
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ── PUSH NOTIFICATIONS (Phase 6 placeholder) ─────
@@ -111,7 +117,7 @@ self.addEventListener('push', event => {
     icon:  data.icon  || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
     tag:   data.tag   || 'daily-reminder',
-    data:  { url: data.url || '/1percent-better.html' },
+    data:  { url: data.url || '/' },
     actions: [
       { action: 'open',    title: '🚀 פתח' },
       { action: 'dismiss', title: 'אחר כך' },
@@ -126,7 +132,7 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'dismiss') return;
-  const url = event.notification.data?.url || '/1percent-better.html';
+  const url = event.notification.data?.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       const existing = list.find(c => c.url.includes('1percent-better'));
@@ -148,18 +154,3 @@ async function syncPendingPosts() {
   // Will read pending posts from IndexedDB and send to server
   console.log('[SW] Background sync: sync-posts');
 }
-// --- ACTIVATE: מנקה קאש ישן כדי שהתיקונים יופיעו מיד ---
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cache);
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
