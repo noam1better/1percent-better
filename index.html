@@ -1186,12 +1186,87 @@
   }
 
   .guest-banner {
-    width: 100%; padding: 12px 14px; border-radius: 14px;
-    background: rgba(251, 191, 36, 0.16);
+    width: 100%; padding: 10px 14px; border-radius: 14px;
+    background: rgba(251, 191, 36, 0.12);
     border: 1px solid rgba(251, 191, 36, 0.35);
-    color: #fbbf24; font-size: 13px; text-align: center;
-    margin-bottom: 14px; display: flex; justify-content: center; align-items: center;
+    color: #fbbf24; font-size: 13px; font-weight: 600;
+    margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; gap: 8px;
   }
+  .guest-banner-arrow {
+    background: rgba(251,191,36,.2); border: none; border-radius: 99px;
+    padding: 4px 10px; font-size: 11px; font-weight: 800; color: #fbbf24; cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* Guest upgrade card (hub) */
+  .guest-upgrade-card {
+    margin: 0 20px 16px;
+    background: linear-gradient(135deg, rgba(251,191,36,.07), rgba(249,115,22,.07));
+    border: 1px solid rgba(251,191,36,.3); border-radius: 14px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .gu-icon { font-size: 28px; flex-shrink: 0; }
+  .gu-body { flex: 1; }
+  .gu-title { font-size: 14px; font-weight: 700; color: #fbbf24; margin-bottom: 2px; }
+  .gu-sub   { font-size: 12px; color: #888; line-height: 1.4; }
+  .gu-btn {
+    background: linear-gradient(90deg, #fbbf24, #f97316);
+    border: none; border-radius: 99px; padding: 9px 16px;
+    font-size: 12px; font-weight: 800; color: #000; cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; letter-spacing: .02em;
+  }
+
+  /* Social follow section */
+  .social-follow { padding: 0 20px 16px; }
+  .social-follow-label {
+    font-size: 11px; font-weight: 700; color: #444; letter-spacing: .09em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .social-btns { display: flex; gap: 10px; }
+  .social-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 13px 10px; border-radius: 12px;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    cursor: pointer; transition: transform .1s, opacity .1s; user-select: none;
+  }
+  .social-btn:active { transform: scale(.95); opacity: .85; }
+  .social-btn.instagram {
+    background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+    color: #fff;
+  }
+  .social-btn.tiktok {
+    background: #0e0e0e; border: 1px solid #2a2a2a; color: #fff;
+  }
+
+  /* Guest link sheet modal */
+  .guest-link-overlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,.82); display: none;
+    align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  }
+  .guest-link-overlay.open { display: flex; }
+  .guest-link-sheet {
+    background: #111; border-radius: 22px 22px 0 0;
+    padding: 20px 24px 44px; width: 100%; max-width: 480px;
+    border-top: 1px solid #222; animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .gl-handle { width: 36px; height: 4px; border-radius: 4px; background: #2a2a2a; margin: 0 auto 22px; }
+  .gl-title { font-family: var(--font-head); font-size: 28px; letter-spacing: .02em; margin-bottom: 6px; }
+  .gl-sub { font-size: 14px; color: #888; line-height: 1.55; margin-bottom: 20px; }
+  .gl-perks { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .gl-perk { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #bbb; }
+  .gl-perk-icon { font-size: 18px; flex-shrink: 0; }
+  .gl-google-btn {
+    width: 100%; padding: 15px; border-radius: 12px;
+    background: #fff; border: none; font-size: 15px; font-weight: 700; color: #111;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    cursor: pointer; margin-bottom: 10px; transition: opacity .15s;
+  }
+  .gl-google-btn:active { opacity: .88; }
+  .gl-dismiss { width: 100%; padding: 12px; background: transparent; border: none; color: #444; font-size: 13px; cursor: pointer; }
 
   /* ══ LEARNING PATHS ═════════════════════════════════ */
   .lp-header { padding: 24px 20px 8px; }
@@ -2898,7 +2973,10 @@
     <!-- HEADER -->
     <div class="top-header">
       <div class="logo">1%<span>BETTER</span></div>
-      <div class="guest-banner" id="guestBanner" style="display:none">Guest mode – Sign up to save your progress</div>
+      <div class="guest-banner" id="guestBanner" style="display:none" onclick="showGuestLinkModal()">
+        <span>⚠ Guest mode — progress not saved</span>
+        <button class="guest-banner-arrow" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <button onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
           style="background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(168,85,247,.15));border:1px solid rgba(245,158,11,.45);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:800;color:#f59e0b;cursor:pointer;letter-spacing:.04em;white-space:nowrap;touch-action:manipulation;"
@@ -3153,6 +3231,31 @@
         <div class="ai-tip-text" id="aiTipText">Loading...</div>
       </div>
       <button class="tip-refresh" onclick="refreshTip('hub')" title="New tip">↻</button>
+    </div>
+
+    <!-- GUEST UPGRADE CTA -->
+    <div class="guest-upgrade-card" id="guestUpgradeCard" style="display:none">
+      <div class="gu-icon">🔒</div>
+      <div class="gu-body">
+        <div class="gu-title" id="gu-title-text">Don't lose your progress!</div>
+        <div class="gu-sub" id="gu-sub-text">Streaks · habits · workout history at risk</div>
+      </div>
+      <button class="gu-btn" onclick="showGuestLinkModal()">Secure →</button>
+    </div>
+
+    <!-- FOLLOW US -->
+    <div class="social-follow">
+      <div class="social-follow-label" id="social-follow-label">Follow the movement</div>
+      <div class="social-btns">
+        <a class="social-btn instagram" id="social-instagram-btn" href="INSTAGRAM_PLACEHOLDER" target="_blank" rel="noopener noreferrer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          Instagram
+        </a>
+        <a class="social-btn tiktok" id="social-tiktok-btn" href="TIKTOK_PLACEHOLDER" target="_blank" rel="noopener noreferrer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.52V6.74a4.86 4.86 0 01-1.02-.05z"/></svg>
+          TikTok
+        </a>
+      </div>
     </div>
 
     <div style="height:100px;"></div>
@@ -3700,6 +3803,31 @@
     <button class="notif-modal-later" id="nm-later-btn" onclick="dismissNotifModal()">
       Maybe later
     </button>
+  </div>
+</div>
+
+<!-- ══ GUEST LINK MODAL ══ -->
+<div class="guest-link-overlay" id="guestLinkOverlay" onclick="if(event.target===this)hideGuestLinkModal()">
+  <div class="guest-link-sheet" id="guestLinkSheet">
+    <div class="gl-handle"></div>
+    <div class="gl-title" id="gl-title">Lock In Your Gains 🔥</div>
+    <div class="gl-sub" id="gl-sub">Sign in to save your streaks, habits, and workout history — forever.</div>
+    <div class="gl-perks">
+      <div class="gl-perk"><span class="gl-perk-icon">🔥</span> <span id="gl-perk-1">Streaks preserved across all devices</span></div>
+      <div class="gl-perk"><span class="gl-perk-icon">📅</span> <span id="gl-perk-2">Custom habits & daily quests backed up</span></div>
+      <div class="gl-perk"><span class="gl-perk-icon">🔔</span> <span id="gl-perk-3">Push notifications stay active</span></div>
+      <div class="gl-perk"><span class="gl-perk-icon">🏆</span> <span id="gl-perk-4">XP and level progress secured</span></div>
+    </div>
+    <button class="gl-google-btn" onclick="linkGuestWithGoogle()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      <span id="gl-google-label">Continue with Google</span>
+    </button>
+    <button class="gl-dismiss" id="gl-dismiss-label" onclick="hideGuestLinkModal()">Maybe later</button>
   </div>
 </div>
 
@@ -5333,7 +5461,10 @@ const TRANSLATIONS = {
     'pro-social-proof': '🔒 Secure payment via PayPal · Cancel anytime · No commitment',
     'pro-back-btn': '← Back to Dashboard',
     // Hub stats / RPG block
-    'guestBanner': 'Guest mode – Sign up to save your progress',
+    'guestBanner': 'Guest mode — progress not saved',
+    'gu-title-text': "Don't lose your progress!",
+    'gu-sub-text': 'Streaks · habits · workout history at risk',
+    'social-follow-label': 'Follow the movement',
     'rpg-lbl-streak': 'Streak',
     'rpg-sub-streak': 'days in a row',
     'rpg-lbl-weekly': 'Weekly Reps',
@@ -5533,7 +5664,10 @@ const TRANSLATIONS = {
     'pro-social-proof': '🔒 תשלום מאובטח דרך PayPal · ביטול בכל עת · ללא מחויבות',
     'pro-back-btn': '← חזור לדשבורד',
     // Hub stats / RPG block
-    'guestBanner': 'מצב אורח – הירשם כדי לשמור התקדמות',
+    'guestBanner': 'מצב אורח — ההתקדמות לא נשמרת',
+    'gu-title-text': 'אל תאבד את ההתקדמות!',
+    'gu-sub-text': 'רצפים · הרגלים · היסטוריית אימונים בסכנה',
+    'social-follow-label': 'עקוב אחרינו',
     'rpg-lbl-streak': 'רצף יומי',
     'rpg-sub-streak': 'ימים רצופים',
     'rpg-lbl-weekly': 'חזרות השבוע',
@@ -5643,6 +5777,10 @@ const TRANSLATIONS = {
     'dq-monkmode-title': '🧠 Monk Mode (دقيقة)', 'dq-monkmode-desc': 'افتح الدليل. عزّز تركيزك.',
     'dq-quickreview-title': '✨ مراجعة سريعة', 'dq-quickreview-desc': 'راجع تقدّمك اليوم.',
     'wl-workouts-label': 'التدريبات',
+    'guestBanner': 'وضع الضيف — التقدم غير محفوظ',
+    'gu-title-text': 'لا تفقد تقدمك!',
+    'gu-sub-text': 'السلاسل · العادات · تاريخ التمارين في خطر',
+    'social-follow-label': 'تابعنا',
   },
   ru: {
     dir: 'ltr',
@@ -10712,6 +10850,7 @@ function isFirebaseConfigured() {
     fbAuth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
+        window._1pbGuestMem = false;
         localStorage.removeItem('isGuest');
         onUserSignedIn(user);
       } else if (isGuestSession()) {
@@ -10790,11 +10929,63 @@ function setGuestSession(enabled) {
   else         _lsDel('isGuest');
 }
 
+/* ── Social media URLs — update before going live ── */
+const SOCIAL_INSTAGRAM_URL = 'INSTAGRAM_PLACEHOLDER'; // e.g. https://instagram.com/1percentbetter
+const SOCIAL_TIKTOK_URL    = 'TIKTOK_PLACEHOLDER';    // e.g. https://tiktok.com/@1percentbetter
+
 function updateGuestModeUI() {
-  const banner = document.getElementById('guestBanner');
-  if (!banner) return;
-  // Use style.display — the CSS rule `display:flex` overrides the `hidden` attribute
-  banner.style.display = isGuestSession() ? '' : 'none';
+  const isGuest = isGuestSession();
+  const banner  = document.getElementById('guestBanner');
+  const card    = document.getElementById('guestUpgradeCard');
+  if (banner) banner.style.display = isGuest ? '' : 'none';
+  if (card)   card.style.display   = isGuest ? '' : 'none';
+
+  if (isGuest && localStorage.getItem('1pb_onboarded') &&
+      !localStorage.getItem('1pb_guest_nudge_shown')) {
+    localStorage.setItem('1pb_guest_nudge_shown', '1');
+    setTimeout(showGuestLinkModal, 5000);
+  }
+}
+
+function showGuestLinkModal() {
+  const overlay = document.getElementById('guestLinkOverlay');
+  if (!overlay) return;
+  const isHe = currentLang === 'he';
+  const isAr = currentLang === 'ar';
+  const isRTL = isHe || isAr;
+  const sheet = document.getElementById('guestLinkSheet');
+  if (sheet) sheet.dir = isRTL ? 'rtl' : 'ltr';
+
+  const localize = (id, he, ar, en) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = isHe ? he : isAr ? ar : en;
+  };
+  localize('gl-title',        'נעל את ההתקדמות שלך 🔥',   'احفظ تقدمك 🔥',          'Lock In Your Gains 🔥');
+  localize('gl-sub',          'התחבר כדי לשמור רצפים, הרגלים והיסטוריית אימונים — לנצח.', 'سجّل الدخول لحفظ سلاسلك وعاداتك وتاريخ تمارينك — للأبد.', 'Sign in to save your streaks, habits, and workout history — forever.');
+  localize('gl-perk-1',       'רצפים נשמרים בכל המכשירים',  'السلاسل محفوظة على جميع الأجهزة',  'Streaks preserved across all devices');
+  localize('gl-perk-2',       'הרגלים ומשימות יומיות מגובים', 'العادات والمهام اليومية مدعومة',   'Custom habits & daily quests backed up');
+  localize('gl-perk-3',       'התראות דחיפה ממשיכות לעבוד',  'الإشعارات تبقى نشطة',              'Push notifications stay active');
+  localize('gl-perk-4',       'XP ורמה מאובטחים',            'نقاط XP والمستوى محمية',           'XP and level progress secured');
+  localize('gl-google-label', 'כניסה עם Google',             'الدخول عبر Google',                'Continue with Google');
+  localize('gl-dismiss-label','אולי מאוחר יותר',             'ربما لاحقاً',                      'Maybe later');
+
+  overlay.classList.add('open');
+}
+
+function hideGuestLinkModal() {
+  document.getElementById('guestLinkOverlay')?.classList.remove('open');
+}
+
+async function linkGuestWithGoogle() {
+  hideGuestLinkModal();
+  await doGoogleLogin();
+}
+
+function updateSocialLinks() {
+  const ig = document.getElementById('social-instagram-btn');
+  const tt = document.getElementById('social-tiktok-btn');
+  if (ig && SOCIAL_INSTAGRAM_URL !== 'INSTAGRAM_PLACEHOLDER') ig.href = SOCIAL_INSTAGRAM_URL;
+  if (tt && SOCIAL_TIKTOK_URL    !== 'TIKTOK_PLACEHOLDER')    tt.href = SOCIAL_TIKTOK_URL;
 }
 
 function updateHubSimplifiedUI() {
@@ -11358,6 +11549,7 @@ function addSignOutToSettings() {
 /* ── initApp: called after auth resolved ── */
 function initApp() {
   updateGuestModeUI();
+  updateSocialLinks();
   applySavedPrefsAndInit();
   if (isFirebaseConfigured()) addSignOutToSettings();
   setTimeout(renderRPGProgress, 300);
