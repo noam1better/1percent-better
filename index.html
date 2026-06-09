@@ -2973,9 +2973,9 @@
     <!-- HEADER -->
     <div class="top-header">
       <div class="logo">1%<span>BETTER</span></div>
-      <div class="guest-banner" id="guestBanner" style="display:none" onclick="showGuestLinkModal()">
-        <span>⚠ Guest mode — progress not saved</span>
-        <button class="guest-banner-arrow" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
+      <div class="guest-banner" id="guestBannerWrap" style="display:none" onclick="showGuestLinkModal()">
+        <span id="guestBanner">⚠ Guest mode — progress not saved</span>
+        <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <button onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
@@ -5461,9 +5461,10 @@ const TRANSLATIONS = {
     'pro-social-proof': '🔒 Secure payment via PayPal · Cancel anytime · No commitment',
     'pro-back-btn': '← Back to Dashboard',
     // Hub stats / RPG block
-    'guestBanner': 'Guest mode — progress not saved',
-    'gu-title-text': "Don't lose your progress!",
-    'gu-sub-text': 'Streaks · habits · workout history at risk',
+    'guestBanner': '⚠ Guest mode — progress not saved',
+    'guest-banner-secure': 'Secure →',
+    'gu-title-text': "Protect your streak!",
+    'gu-sub-text': 'Back up your account with one tap',
     'social-follow-label': 'Follow the movement',
     'rpg-lbl-streak': 'Streak',
     'rpg-sub-streak': 'days in a row',
@@ -5664,9 +5665,10 @@ const TRANSLATIONS = {
     'pro-social-proof': '🔒 תשלום מאובטח דרך PayPal · ביטול בכל עת · ללא מחויבות',
     'pro-back-btn': '← חזור לדשבורד',
     // Hub stats / RPG block
-    'guestBanner': 'מצב אורח — ההתקדמות לא נשמרת',
-    'gu-title-text': 'אל תאבד את ההתקדמות!',
-    'gu-sub-text': 'רצפים · הרגלים · היסטוריית אימונים בסכנה',
+    'guestBanner': '⚠ מצב אורח — ההתקדמות לא נשמרת',
+    'guest-banner-secure': '← אבטח',
+    'gu-title-text': 'שמור על ה-Streak שלך!',
+    'gu-sub-text': 'גבה את החשבון בלחיצה אחת',
     'social-follow-label': 'עקוב אחרינו',
     'rpg-lbl-streak': 'רצף יומי',
     'rpg-sub-streak': 'ימים רצופים',
@@ -5777,9 +5779,10 @@ const TRANSLATIONS = {
     'dq-monkmode-title': '🧠 Monk Mode (دقيقة)', 'dq-monkmode-desc': 'افتح الدليل. عزّز تركيزك.',
     'dq-quickreview-title': '✨ مراجعة سريعة', 'dq-quickreview-desc': 'راجع تقدّمك اليوم.',
     'wl-workouts-label': 'التدريبات',
-    'guestBanner': 'وضع الضيف — التقدم غير محفوظ',
-    'gu-title-text': 'لا تفقد تقدمك!',
-    'gu-sub-text': 'السلاسل · العادات · تاريخ التمارين في خطر',
+    'guestBanner': '⚠ وضع الضيف — التقدم غير محفوظ',
+    'guest-banner-secure': '← تأمين',
+    'gu-title-text': 'احمِ سلسلتك!',
+    'gu-sub-text': 'انسخ احتياطياً بنقرة واحدة',
     'social-follow-label': 'تابعنا',
   },
   ru: {
@@ -10934,11 +10937,11 @@ const SOCIAL_INSTAGRAM_URL = 'INSTAGRAM_PLACEHOLDER'; // e.g. https://instagram.
 const SOCIAL_TIKTOK_URL    = 'TIKTOK_PLACEHOLDER';    // e.g. https://tiktok.com/@1percentbetter
 
 function updateGuestModeUI() {
-  const isGuest = isGuestSession();
-  const banner  = document.getElementById('guestBanner');
-  const card    = document.getElementById('guestUpgradeCard');
-  if (banner) banner.style.display = isGuest ? '' : 'none';
-  if (card)   card.style.display   = isGuest ? '' : 'none';
+  const isGuest     = isGuestSession();
+  const bannerWrap  = document.getElementById('guestBannerWrap');
+  const card        = document.getElementById('guestUpgradeCard');
+  if (bannerWrap) bannerWrap.style.display = isGuest ? '' : 'none';
+  if (card)       card.style.display       = isGuest ? '' : 'none';
 
   if (isGuest && localStorage.getItem('1pb_onboarded') &&
       !localStorage.getItem('1pb_guest_nudge_shown')) {
@@ -11295,9 +11298,12 @@ async function loadUserFromFirestore(uid) {
       if (d.morningRoutine) localStorage.setItem(MORNING_ROUTINE_KEY,  JSON.stringify(d.morningRoutine));
       if (d.workouts)       localStorage.setItem('1pb_workouts',       JSON.stringify(d.workouts));
       if (d.isPro)          localStorage.setItem('1pb_is_pro',         JSON.stringify({ plan: d.proPlan || 'pro', at: d.proPurchasedAt || Date.now() }));
-      // Restore today's quest completion state from Firestore
       const dqKey = `dailyQuests_${todayKey()}`;
       if (d[dqKey])         localStorage.setItem('1pb_daily_quests',   JSON.stringify(d[dqKey]));
+    } else if (localStorage.getItem('1pb_onboarded') === '1') {
+      // No Firestore doc yet — guest upgrading to a real account.
+      // Push all local data up so it's secured in the cloud immediately.
+      await migrateGuestDataToFirestore(uid);
     }
     // Load activity log
     const actSnap = await fbDB.collection('users').doc(uid)
@@ -11309,6 +11315,71 @@ async function loadUserFromFirestore(uid) {
     }
   } catch(e) {
     console.warn('[Firestore] Load failed — using local cache:', e);
+  }
+}
+
+/* Migrate all local guest data to Firestore after a guest upgrades their account */
+async function migrateGuestDataToFirestore(uid) {
+  if (!fbDB) return;
+  const _parse = (key, fallback) => {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  };
+  try {
+    const name     = localStorage.getItem('1pb_name')      || '';
+    const lang     = localStorage.getItem('1pb_lang')      || 'en';
+    const goal     = localStorage.getItem('1pb_goal')      || '';
+    const habits   = _parse('1pb_habits',  []);
+    const xp       = _parse('1pb_xp',      { total: 0 });
+    const streak   = _parse('1pb_streak',  null);
+    const workouts = _parse('1pb_workouts', null);
+    const fcmToken = localStorage.getItem('1pb_fcm_token') || '';
+
+    const payload = {
+      uid,
+      name,
+      lang,
+      goal,
+      habits,
+      xp,
+      onboarded:         true,
+      migratedFromGuest: true,
+      migratedAt:        firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt:         firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    if (streak)   payload.streak   = streak;
+    if (workouts) payload.workouts = workouts;
+    if (fcmToken) {
+      payload.fcmToken          = fcmToken;
+      payload.fcmTokenUpdatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      payload.fcmTokens         = firebase.firestore.FieldValue.arrayUnion(fcmToken);
+    }
+
+    await fbDB.collection('users').doc(uid).set(payload, { merge: true });
+
+    // Migrate activity log entries to sub-collection via batched write
+    const actLog = _parse('1pb_activity', null);
+    if (actLog && typeof actLog === 'object') {
+      const entries = Object.entries(actLog).slice(0, 490); // Firestore batch max 500
+      if (entries.length) {
+        const batch = fbDB.batch();
+        entries.forEach(([dateKey, data]) => {
+          batch.set(
+            fbDB.collection('users').doc(uid).collection('activity').doc(dateKey),
+            data
+          );
+        });
+        await batch.commit();
+      }
+    }
+
+    console.log('[migration] Guest → account: data secured for uid', uid);
+    const isHe = currentLang === 'he', isAr = currentLang === 'ar';
+    showToast(isHe ? '✅ הנתונים שלך נשמרו בענן!' :
+              isAr ? '✅ تم حفظ بياناتك في السحابة!' :
+                     '✅ Your data is secured in the cloud!');
+  } catch(e) {
+    console.warn('[migration] Guest data migration failed:', e);
   }
 }
 
