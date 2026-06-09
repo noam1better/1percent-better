@@ -6700,6 +6700,8 @@ async function grantNotifPermission() {
     if (result === 'granted') {
       showToast(isHe ? '🔔 התראות הופעלו!' : '🔔 Notifications enabled!');
       scheduleLocalNotifications();
+      // Get FCM token now that we have permission — saves to Firestore for campaigns
+      initFCM().catch(() => {});
     } else {
       showToast(isHe ? '🔕 לא הופעלו' : '🔕 Notifications not enabled');
     }
@@ -10807,14 +10809,10 @@ let _fcmTokenRefreshActive    = false;
 
 async function initFCM() {
   if (!fbMessaging || FCM_VAPID_KEY === 'YOUR_VAPID_KEY_HERE') return;
+  // Never auto-prompt. The app asks via showNotifModal() / grantNotifPermission().
+  // This function only registers the token when permission is already granted.
+  if (Notification.permission !== 'granted') return;
   try {
-    // Don't re-prompt if already granted or denied
-    const existingPerm = Notification.permission;
-    const perm = existingPerm === 'default'
-      ? await Notification.requestPermission()
-      : existingPerm;
-    if (perm !== 'granted') return;
-
     const sw = await navigator.serviceWorker.getRegistration('/');
     const token = await fbMessaging.getToken({
       vapidKey:                  FCM_VAPID_KEY,
@@ -10822,12 +10820,10 @@ async function initFCM() {
     });
     if (!token) return;
 
-    if (currentUser && typeof syncUserToFirestore === 'function') {
-      syncUserToFirestore({ fcmToken: token, fcmTokenUpdatedAt: Date.now() }).catch(() => {});
-    }
     localStorage.setItem('1pb_fcm_token', token);
+    _saveFCMToken(token);
 
-    // Guard: register handlers only once per page load
+    // Foreground message → show toast instead of a system notification
     if (!_fcmMessageHandlerActive) {
       _fcmMessageHandlerActive = true;
       fbMessaging.onMessage(payload => {
@@ -10837,7 +10833,7 @@ async function initFCM() {
       });
     }
 
-    // Token refresh — FCM rotates tokens periodically
+    // FCM rotates tokens periodically — keep Firestore in sync
     if (!_fcmTokenRefreshActive) {
       _fcmTokenRefreshActive = true;
       fbMessaging.onTokenRefresh(async () => {
@@ -10845,15 +10841,39 @@ async function initFCM() {
           const newToken = await fbMessaging.getToken({ vapidKey: FCM_VAPID_KEY });
           if (!newToken) return;
           localStorage.setItem('1pb_fcm_token', newToken);
-          if (currentUser && typeof syncUserToFirestore === 'function') {
-            syncUserToFirestore({ fcmToken: newToken, fcmTokenUpdatedAt: Date.now() }).catch(() => {});
-          }
+          _saveFCMToken(newToken);
         } catch (e) { console.warn('[FCM] token refresh failed:', e.message); }
       });
     }
   } catch (e) {
     console.warn('[FCM] init failed:', e.message);
   }
+}
+
+/**
+ * Persist FCM token to Firestore under the user doc.
+ *
+ * Fields written:
+ *   fcmToken         – latest token (for single-device lookups)
+ *   fcmTokenUpdatedAt – server timestamp
+ *   fcmTokens        – array of all tokens across devices (arrayUnion keeps it
+ *                       deduplicated); Firebase Console campaigns can target
+ *                       the whole array via Cloud Functions, and the Firestore
+ *                       doc gives you a clean target list for all 5 daily campaigns.
+ *   lang             – user's current language (so server-side can localise push copy)
+ *   platform         – 'web'
+ */
+function _saveFCMToken(token) {
+  if (!currentUser || !fbDB) return;
+  const ref = userDoc();
+  if (!ref) return;
+  ref.set({
+    fcmToken:          token,
+    fcmTokenUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    fcmTokens:         firebase.firestore.FieldValue.arrayUnion(token),
+    lang:              currentLang || 'en',
+    platform:          'web',
+  }, { merge: true }).catch(e => console.warn('[FCM] token save failed:', e.message));
 }
 
 function isFirebaseConfigured() {
