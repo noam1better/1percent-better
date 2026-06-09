@@ -6013,212 +6013,71 @@ function renderSavedLogs() {
 /* ═══════════════════════════════════════════════════════
    ONBOARDING
 ═══════════════════════════════════════════════════════ */
-const OB_TOTAL = 7; // 0:lang 1:welcome 2:proof 3:name 4:habits 5:level 6:ready
-let obStep   = 0;
-let obHabits = [];
-let obXP     = 0;
-let obLang   = 'en'; // default English
+const OB_TOTAL = 3; // 0:lang  1:who+goal  2:habits
+let obStep        = 0;
+let obHabits      = [];
+let obGoal        = null;
+let obCustomHabit = '';
+let obLang        = 'en';
 
-/* ── Onboarding copy per language ── */
+/* ── Onboarding copy — en / he / ar only ── */
 const OB_COPY = {
   en: {
     dir: 'ltr',
-    'ob-lang-title':   'Choose Language',
-    'ob-lang-body':    'Pick your preferred language.\nYou can change this later in Settings.',
-    'ob-welcome-title':'Welcome to',
-    'ob-welcome-body': 'Lock in <strong>1% progress every day</strong>.<br><br>Consistency beats perfection.',
-    'ob-proof-title':  'Prove You Did It',
-    'ob-proof-body':   'Every completed task needs a <strong>photo proof</strong>.<br><br>No photo? <strong>No photo, no credit</strong>.<br>Action beats intent.',
-    'ob-name-title':   'What\'s your name?',
-    'ob-name-body':    'Your name appears on your profile and progress record.',
-    'ob-name-ph':      'שמך הפרטי...',
-    'ob-habits-title': 'Pick Your Habits',
-    'ob-habits-body':  'Choose at least 2 areas you want to work on',
-    'ob-level-title':  'What\'s Your Level?',
-    'ob-level-body':   'Tasks will be tailored accordingly',
-    'ob-lv-1':         'Beginner',      'ob-lv-1-desc': 'Not active / just starting out',
-    'ob-lv-2':         'Intermediate',  'ob-lv-2-desc': 'Training a few times a week',
-    'ob-lv-3':         'Skilled',       'ob-lv-3-desc': 'Training almost every day',
-    'ob-lv-4':         'Elite',         'ob-lv-4-desc': 'Athlete / high-level performer',
-    'ob-h-running':    'Running',   'ob-h-gym':     'Gym',
-    'ob-h-cali':       'Calisthenics','ob-h-reading': 'Reading',
-    'ob-h-meditate':   'Meditation', 'ob-h-sleep':   'Sleep',
-    'ob-h-learn':      'Learning',   'ob-h-journal': 'Journal',
-    'ob-h-hydrate':    'Hydration',
-    'ob-ready-body':   'Your streak starts <strong>today</strong>.<br><br>Every task you complete brings you <strong>1% closer</strong>.',
-    'ob-ready-title-pre': 'Ready, ',
-    'ob-ready-title-suf': '!',
-    'obNextBtn':       'Continue →',
-    'obSkipBtn':       'Skip',
-    'ob-toast-habits': '⚠ Pick at least 2 habits',
-    'ob-toast-name':   'Please enter your name...',
+    'ob-lang-title':     'Choose Language',
+    'ob-who-title':      'Who are you,\nand why are you here?',
+    'ob-who-name-ph':    'Your first name (optional)',
+    'ob-goal-stronger':  'Get Stronger',
+    'ob-goal-fit':       'Get Fit',
+    'ob-goal-habits':    'Build Better Habits',
+    'ob-goal-learn':     'Learn & Grow',
+    'ob-goal-focus':     'Find Focus',
+    'ob-goal-monk':      'Monk Mode',
+    'ob-habits-title':   'What do you want to work on?',
+    'ob-habits-body':    'Pick at least 2',
+    'ob-h-other-ph':     'Type your own habit...',
+    'obNextBtn':         'Continue →',
+    'obSkipBtn':         'Skip',
+    'ob-toast-habits':   '⚠ Pick at least 2 habits',
+    'ob-toast-goal':     '⚠ Pick a goal to continue',
   },
   he: {
     dir: 'rtl',
-    'ob-lang-title':   'בחר שפה',
-    'ob-lang-body':    'בחר את השפה המועדפת עליך.\nניתן לשנות מאוחר יותר בהגדרות.',
-    'ob-welcome-title':'ברוך הבא ל',
-    'ob-welcome-body': 'כל יום אתה יכול להיות <strong>1% טוב יותר</strong>.<br><br>זה לא על שלמות — זה על <strong>עקביות</strong>.',
-    'ob-proof-title':  'תוכיח שעשית',
-    'ob-proof-body':   'כל משימה שמסיים — <strong>מצלם הוכחה</strong>.<br><br>בלי תמונה? <strong>לא נחשב</strong>.<br>זה מה שמפריד בין דיבור למציאות.',
-    'ob-name-title':   'איך קוראים לך?',
-    'ob-name-body':    'השם שלך יופיע בפרופיל ובפיד הקהילתי.',
-    'ob-name-ph':      'שם פרטי...',
-    'ob-habits-title': 'בחר הרגלים',
-    'ob-habits-body':  'בחר לפחות 2 תחומים שתרצה לעבוד עליהם',
-    'ob-level-title':  'מה הרמה שלך?',
-    'ob-level-body':   'המשימות יותאמו בהתאם',
-    'ob-lv-1':         'מתחיל',    'ob-lv-1-desc': 'לא מתאמן / הרגע מתחיל',
-    'ob-lv-2':         'מתקדם',    'ob-lv-2-desc': 'מתאמן כמה פעמים בשבוע',
-    'ob-lv-3':         'מיומן',    'ob-lv-3-desc': 'מתאמן כמעט כל יום',
-    'ob-lv-4':         'עילית',    'ob-lv-4-desc': 'ספורטאי / מתאמן ברמה גבוהה',
-    'ob-h-running':    'ריצה',     'ob-h-gym':     'כושר',
-    'ob-h-cali':       'קליסתניקס','ob-h-reading': 'קריאה',
-    'ob-h-meditate':   'מדיטציה',  'ob-h-sleep':   'שינה',
-    'ob-h-learn':      'למידה',    'ob-h-journal': 'יומן',
-    'ob-h-hydrate':    'מים',
-    'ob-ready-body':   'הרצף שלך מתחיל <strong>היום</strong>.<br><br>כל משימה שתסיים תקרב אותך ל-<strong>1% טוב יותר</strong>.',
-    'ob-ready-title-pre': 'מוכן, ',
-    'ob-ready-title-suf': '!',
-    'obNextBtn':       'המשך →',
-    'obSkipBtn':       'דלג',
-    'ob-toast-habits': '⚠ בחר לפחות 2 הרגלים',
-    'ob-toast-name':   'נא להזין שם...',
-  },
-  es: {
-    dir: 'ltr',
-    'ob-lang-title':   'Elige el idioma',
-    'ob-lang-body':    'Elige tu idioma preferido.\nPuedes cambiarlo después en Ajustes.',
-    'ob-welcome-title':'Bienvenido a',
-    'ob-welcome-body': 'Cada día puedes ser <strong>1% mejor</strong>.<br><br>No se trata de perfección — se trata de <strong>consistencia</strong>.',
-    'ob-proof-title':  'Demuéstralo',
-    'ob-proof-body':   'Cada tarea necesita una <strong>foto como prueba</strong>.<br><br>¿Sin foto? <strong>No cuenta</strong>.',
-    'ob-name-title':   '¿Cómo te llamas?',
-    'ob-name-body':    'Tu nombre aparecerá en tu perfil y en el feed.',
-    'ob-name-ph':      'Nombre...',
-    'ob-habits-title': 'Elige tus hábitos',
-    'ob-habits-body':  'Elige al menos 2 áreas en las que quieras trabajar',
-    'ob-level-title':  '¿Cuál es tu nivel?',
-    'ob-level-body':   'Las tareas se adaptarán en consecuencia',
-    'ob-lv-1':'Principiante','ob-lv-1-desc':'Sin actividad / comenzando',
-    'ob-lv-2':'Intermedio',  'ob-lv-2-desc':'Entreno pocas veces por semana',
-    'ob-lv-3':'Avanzado',    'ob-lv-3-desc':'Entreno casi todos los días',
-    'ob-lv-4':'Élite',       'ob-lv-4-desc':'Atleta / alto rendimiento',
-    'ob-h-running':'Correr','ob-h-gym':'Gimnasio','ob-h-cali':'Calistenia',
-    'ob-h-reading':'Lectura','ob-h-meditate':'Meditación','ob-h-sleep':'Sueño',
-    'ob-h-learn':'Aprender','ob-h-journal':'Diario','ob-h-hydrate':'Hidratación',
-    'ob-ready-body':'Tu racha empieza <strong>hoy</strong>.<br><br>Cada tarea te acerca <strong>1% más</strong>.',
-    'ob-ready-title-pre':'¡Listo, ','ob-ready-title-suf':'!',
-    'obNextBtn':'Continuar →','obSkipBtn':'Omitir',
-    'ob-toast-habits':'⚠ Elige al menos 2 hábitos','ob-toast-name':'Por favor escribe tu nombre...',
-  },
-  fr: {
-    dir: 'ltr',
-    'ob-lang-title':   'Choisir la langue',
-    'ob-lang-body':    'Choisissez votre langue préférée.\nModifiable plus tard dans les Réglages.',
-    'ob-welcome-title':'Bienvenue sur',
-    'ob-welcome-body': 'Chaque jour, vous pouvez être <strong>1% meilleur</strong>.<br><br>Pas de perfection — juste de la <strong>régularité</strong>.',
-    'ob-proof-title':  'Prouvez-le',
-    'ob-proof-body':   'Chaque tâche nécessite une <strong>photo preuve</strong>.<br><br>Sans photo ? <strong>Ça ne compte pas</strong>.',
-    'ob-name-title':   'Comment vous appelez-vous ?',
-    'ob-name-body':    'Votre nom apparaîtra sur votre profil et dans le fil.',
-    'ob-name-ph':      'Prénom...',
-    'ob-habits-title': 'Choisissez vos habitudes',
-    'ob-habits-body':  'Choisissez au moins 2 domaines',
-    'ob-level-title':  'Quel est votre niveau ?',
-    'ob-level-body':   'Les tâches seront adaptées en conséquence',
-    'ob-lv-1':'Débutant',     'ob-lv-1-desc':'Pas actif / débutant',
-    'ob-lv-2':'Intermédiaire','ob-lv-2-desc':'Entraînement quelques fois par semaine',
-    'ob-lv-3':'Confirmé',     'ob-lv-3-desc':'Presque tous les jours',
-    'ob-lv-4':'Élite',        'ob-lv-4-desc':'Athlète / haute performance',
-    'ob-h-running':'Course','ob-h-gym':'Salle','ob-h-cali':'Callisthénie',
-    'ob-h-reading':'Lecture','ob-h-meditate':'Méditation','ob-h-sleep':'Sommeil',
-    'ob-h-learn':'Apprentissage','ob-h-journal':'Journal','ob-h-hydrate':'Hydratation',
-    'ob-ready-body':'Votre série commence <strong>aujourd\'hui</strong>.<br><br>Chaque tâche vous rapproche <strong>de 1%</strong>.',
-    'ob-ready-title-pre':'Prêt, ','ob-ready-title-suf':" !",
-    'obNextBtn':'Continuer →','obSkipBtn':'Passer',
-    'ob-toast-habits':'⚠ Choisissez au moins 2 habitudes','ob-toast-name':'Veuillez entrer votre prénom...',
+    'ob-lang-title':     'בחר שפה',
+    'ob-who-title':      'מי אתה,\nולמה אתה כאן?',
+    'ob-who-name-ph':    'שם פרטי (לא חובה)',
+    'ob-goal-stronger':  'להתחזק',
+    'ob-goal-fit':       'להיות בכושר',
+    'ob-goal-habits':    'לבנות הרגלים',
+    'ob-goal-learn':     'ללמוד ולצמוח',
+    'ob-goal-focus':     'למצוא שקט',
+    'ob-goal-monk':      'Monk Mode',
+    'ob-habits-title':   'על מה אתה רוצה לעבוד?',
+    'ob-habits-body':    'בחר לפחות 2',
+    'ob-h-other-ph':     'כתוב הרגל משלך...',
+    'obNextBtn':         '← המשך',
+    'obSkipBtn':         'דלג',
+    'ob-toast-habits':   '⚠ בחר לפחות 2 הרגלים',
+    'ob-toast-goal':     '⚠ בחר מטרה להמשך',
   },
   ar: {
     dir: 'rtl',
-    'ob-lang-title':   'اختر اللغة',
-    'ob-lang-body':    'اختر لغتك المفضلة.\nيمكنك تغييرها لاحقًا في الإعدادات.',
-    'ob-welcome-title':'مرحبًا بك في',
-    'ob-welcome-body': 'كل يوم يمكنك أن تكون <strong>أفضل بنسبة 1%</strong>.<br><br>ليس الأمر عن الكمال — بل عن <strong>الاستمرارية</strong>.',
-    'ob-proof-title':  'أثبت أنك فعلت',
-    'ob-proof-body':   'كل مهمة تكتمل تحتاج <strong>صورة دليل</strong>.<br><br>بدون صورة؟ <strong>لا يُحتسب</strong>.',
-    'ob-name-title':   'ما اسمك؟',
-    'ob-name-body':    'سيظهر اسمك في ملفك الشخصي وفي خلاصة المجتمع.',
-    'ob-name-ph':      'الاسم الأول...',
-    'ob-habits-title': 'اختر عاداتك',
-    'ob-habits-body':  'اختر مجالين على الأقل',
-    'ob-level-title':  'ما مستواك؟',
-    'ob-level-body':   'ستُكيَّف المهام وفقًا لذلك',
-    'ob-lv-1':'مبتدئ',    'ob-lv-1-desc':'غير نشط / بداية',
-    'ob-lv-2':'متوسط',    'ob-lv-2-desc':'تدريب بضع مرات أسبوعيًا',
-    'ob-lv-3':'متقدم',    'ob-lv-3-desc':'تدريب يومي تقريبًا',
-    'ob-lv-4':'نخبة',     'ob-lv-4-desc':'رياضي / أداء عالٍ',
-    'ob-h-running':'الجري','ob-h-gym':'الصالة','ob-h-cali':'كاليستينكس',
-    'ob-h-reading':'القراءة','ob-h-meditate':'التأمل','ob-h-sleep':'النوم',
-    'ob-h-learn':'التعلم','ob-h-journal':'اليوميات','ob-h-hydrate':'الترطيب',
-    'ob-ready-body':'سلسلتك تبدأ <strong>اليوم</strong>.<br><br>كل مهمة تقربك <strong>بنسبة 1%</strong>.',
-    'ob-ready-title-pre':'جاهز، ','ob-ready-title-suf':'!',
-    'obNextBtn':'متابعة →','obSkipBtn':'تخطي',
-    'ob-toast-habits':'⚠ اختر مجالين على الأقل','ob-toast-name':'يرجى إدخال اسمك...',
-  },
-  ru: {
-    dir: 'ltr',
-    'ob-lang-title':   'Выберите язык',
-    'ob-lang-body':    'Выберите предпочитаемый язык.\nМожно изменить позже в Настройках.',
-    'ob-welcome-title':'Добро пожаловать в',
-    'ob-welcome-body': 'Каждый день ты можешь стать <strong>на 1% лучше</strong>.<br><br>Не о совершенстве — о <strong>последовательности</strong>.',
-    'ob-proof-title':  'Докажи, что сделал',
-    'ob-proof-body':   'Каждое задание требует <strong>фото-доказательство</strong>.<br><br>Без фото? <strong>Не считается</strong>.',
-    'ob-name-title':   'Как тебя зовут?',
-    'ob-name-body':    'Имя появится в профиле и в ленте.',
-    'ob-name-ph':      'Имя...',
-    'ob-habits-title': 'Выбери привычки',
-    'ob-habits-body':  'Выбери минимум 2 области',
-    'ob-level-title':  'Какой у тебя уровень?',
-    'ob-level-body':   'Задания будут адаптированы',
-    'ob-lv-1':'Новичок',    'ob-lv-1-desc':'Не занимаюсь / только начинаю',
-    'ob-lv-2':'Средний',    'ob-lv-2-desc':'Тренировки несколько раз в неделю',
-    'ob-lv-3':'Опытный',    'ob-lv-3-desc':'Тренировки почти каждый день',
-    'ob-lv-4':'Элита',      'ob-lv-4-desc':'Спортсмен / высокий уровень',
-    'ob-h-running':'Бег','ob-h-gym':'Зал','ob-h-cali':'Калистеника',
-    'ob-h-reading':'Чтение','ob-h-meditate':'Медитация','ob-h-sleep':'Сон',
-    'ob-h-learn':'Учёба','ob-h-journal':'Дневник','ob-h-hydrate':'Вода',
-    'ob-ready-body':'Твоя серия начинается <strong>сегодня</strong>.<br><br>Каждое задание делает тебя <strong>на 1% лучше</strong>.',
-    'ob-ready-title-pre':'Готов, ','ob-ready-title-suf':'!',
-    'obNextBtn':'Продолжить →','obSkipBtn':'Пропустить',
-    'ob-toast-habits':'⚠ Выбери минимум 2 области','ob-toast-name':'Пожалуйста, введи имя...',
-  },
-  pt: {
-    dir: 'ltr',
-    'ob-lang-title':   'Escolha o idioma',
-    'ob-lang-body':    'Escolha seu idioma preferido.\nPode mudar depois nas Configurações.',
-    'ob-welcome-title':'Bem-vindo ao',
-    'ob-welcome-body': 'Cada dia você pode ser <strong>1% melhor</strong>.<br><br>Não é sobre perfeição — é sobre <strong>consistência</strong>.',
-    'ob-proof-title':  'Prove que fez',
-    'ob-proof-body':   'Cada tarefa precisa de uma <strong>foto de prova</strong>.<br><br>Sem foto? <strong>Não conta</strong>.',
-    'ob-name-title':   'Qual é o seu nome?',
-    'ob-name-body':    'Seu nome aparecerá no perfil e no feed.',
-    'ob-name-ph':      'Nome...',
-    'ob-habits-title': 'Escolha seus hábitos',
-    'ob-habits-body':  'Escolha pelo menos 2 áreas',
-    'ob-level-title':  'Qual é o seu nível?',
-    'ob-level-body':   'As tarefas serão adaptadas',
-    'ob-lv-1':'Iniciante',   'ob-lv-1-desc':'Inativo / começando agora',
-    'ob-lv-2':'Intermediário','ob-lv-2-desc':'Treino algumas vezes por semana',
-    'ob-lv-3':'Avançado',    'ob-lv-3-desc':'Treino quase todos os dias',
-    'ob-lv-4':'Elite',       'ob-lv-4-desc':'Atleta / alto desempenho',
-    'ob-h-running':'Corrida','ob-h-gym':'Academia','ob-h-cali':'Calistenia',
-    'ob-h-reading':'Leitura','ob-h-meditate':'Meditação','ob-h-sleep':'Sono',
-    'ob-h-learn':'Aprender','ob-h-journal':'Diário','ob-h-hydrate':'Hidratação',
-    'ob-ready-body':'Sua sequência começa <strong>hoje</strong>.<br><br>Cada tarefa te aproxima <strong>1% mais</strong>.',
-    'ob-ready-title-pre':'Pronto, ','ob-ready-title-suf':'!',
-    'obNextBtn':'Continuar →','obSkipBtn':'Pular',
-    'ob-toast-habits':'⚠ Escolha pelo menos 2 hábitos','ob-toast-name':'Por favor insira seu nome...',
+    'ob-lang-title':     'اختر اللغة',
+    'ob-who-title':      'من أنت،\nولماذا أنت هنا؟',
+    'ob-who-name-ph':    'اسمك الأول (اختياري)',
+    'ob-goal-stronger':  'اكتسب قوة',
+    'ob-goal-fit':       'ابقَ بصحة',
+    'ob-goal-habits':    'بناء عادات أفضل',
+    'ob-goal-learn':     'تعلم وانمُ',
+    'ob-goal-focus':     'اجد التركيز',
+    'ob-goal-monk':      'وضع الرهبان',
+    'ob-habits-title':   'ما الذي تريد العمل عليه؟',
+    'ob-habits-body':    'اختر مجالين على الأقل',
+    'ob-h-other-ph':     'اكتب عادتك الخاصة...',
+    'obNextBtn':         '← متابعة',
+    'obSkipBtn':         'تخطي',
+    'ob-toast-habits':   '⚠ اختر مجالين على الأقل',
+    'ob-toast-goal':     '⚠ اختر هدفًا للمتابعة',
   },
 };
 
@@ -6240,30 +6099,11 @@ function applyObCopy(lang) {
     obEl.style.fontFamily = isRTL ? "'Heebo', sans-serif" : "'DM Sans', sans-serif";
   }
 
-  // Update all translatable elements
-  Object.keys(c).forEach(id => {
-    if (id === 'dir') return;
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === 'ob-welcome-body' || id === 'ob-proof-body' ||
-        id === 'ob-ready-body')   { el.innerHTML = c[id]; return; }
-    if (el.tagName === 'INPUT')   { el.placeholder = c[id]; return; }
-    el.textContent = c[id];
-  });
-
-  // Welcome title special case (has 1% Better span)
-  const wt = document.getElementById('ob-welcome-title');
-  if (wt) wt.innerHTML = c['ob-welcome-title'] + ' <span>1% Better</span>';
-
-  // Button arrows flip for RTL
+  // Button labels
   const nextBtn = document.getElementById('obNextBtn');
-  if (nextBtn) nextBtn.textContent = c['obNextBtn'];
+  if (nextBtn) nextBtn.textContent = c['obNextBtn'] || 'Continue →';
   const skipBtn = document.getElementById('obSkipBtn');
-  if (skipBtn) skipBtn.textContent = c['obSkipBtn'];
-
-  // Name placeholder
-  const nameInput = document.getElementById('obNameInput');
-  if (nameInput) nameInput.placeholder = c['ob-name-ph'];
+  if (skipBtn) skipBtn.textContent = c['obSkipBtn'] || 'Skip';
 }
 
 function initOnboarding() {
@@ -6275,12 +6115,11 @@ function initOnboarding() {
     return;
   }
 
-  // Reset flow state so re-entries (e.g. sign-out → new sign-in) start
-  // fresh instead of resuming a stale obStep with an empty container.
-  obStep   = 0;
-  obHabits = [];
-  obXP     = 0;
-  obLang   = localStorage.getItem('1pb_lang') || 'en';
+  obStep        = 0;
+  obHabits      = [];
+  obGoal        = null;
+  obCustomHabit = '';
+  obLang        = localStorage.getItem('1pb_lang') || 'en';
 
   ob.classList.remove('hidden');
   applyObCopy(obLang);
@@ -6299,11 +6138,9 @@ function buildObDots() {
 }
 
 function renderSlideContent(step) {
-  const c    = OB_COPY[obLang] || OB_COPY.en;
-  const isHe = obLang === 'he';
-  const isAr = obLang === 'ar';
-  const isRTL = isHe || isAr;
-  const cont = document.getElementById('obSlideContent');
+  const c     = OB_COPY[obLang] || OB_COPY.en;
+  const isRTL = obLang === 'he' || obLang === 'ar';
+  const cont  = document.getElementById('obSlideContent');
   if (!cont) return;
 
   cont.dir = isRTL ? 'rtl' : 'ltr';
@@ -6311,74 +6148,72 @@ function renderSlideContent(step) {
 
   const slides = {
     0: `<div style="font-size:60px;margin-bottom:16px;">🌍</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:28px;font-weight:800;margin-bottom:10px;">${c['ob-lang-title']||'Choose Language'}</div>
-        <div style="font-size:14px;color:#888;margin-bottom:16px;">${(c['ob-lang-body']||'').replace(/\n/,'<br>')}</div>
-        <div id="obLangGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:8px;">${renderLangGrid()}</div>`,
+        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:28px;font-weight:800;margin-bottom:20px;">${c['ob-lang-title']||'Choose Language'}</div>
+        <div id="obLangGrid" style="display:grid;grid-template-columns:1fr;gap:10px;width:100%;">${renderLangGrid()}</div>`,
 
-    1: `<div style="font-size:60px;margin-bottom:16px;">⚡</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:30px;font-weight:800;margin-bottom:10px;">${c['ob-welcome-title']||'Welcome to'} <span style="color:#00ff87;">1% Better</span></div>
-        <div style="font-size:15px;color:#888;line-height:1.6;">${c['ob-welcome-body']||''}</div>`,
+    1: `<div style="font-size:48px;margin-bottom:12px;">⚡</div>
+        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:24px;font-weight:800;margin-bottom:16px;white-space:pre-line;">${c['ob-who-title']||'Who are you?'}</div>
+        <input id="obNameInput" type="text" placeholder="${c['ob-who-name-ph']||'Your first name (optional)'}" maxlength="20" autocomplete="given-name"
+          style="width:100%;padding:13px 16px;background:#1c1c1c;border:1.5px solid rgba(0,255,135,.3);border-radius:12px;color:#f0f0f0;font-size:15px;text-align:${isRTL?'right':'left'};font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;" />
+        <div id="obGoalGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">${renderGoalGrid(c, isRTL)}</div>`,
 
-    2: `<div style="font-size:60px;margin-bottom:16px;">📷</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:30px;font-weight:800;margin-bottom:10px;">${c['ob-proof-title']||'Prove It'}</div>
-        <div style="font-size:15px;color:#888;line-height:1.6;">${c['ob-proof-body']||''}</div>
-        <div style="margin-top:16px;padding:12px 18px;background:rgba(0,255,135,.08);border:1px solid rgba(0,255,135,.2);border-radius:12px;font-size:13px;color:#00ff87;">📸 ${isHe?'המצלמה בודקת אותך':'Camera verifies you'}</div>`,
-
-    3: `<div style="font-size:60px;margin-bottom:16px;">👤</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:30px;font-weight:800;margin-bottom:10px;">${c['ob-name-title']||"What's your name?"}</div>
-        <div style="font-size:14px;color:#888;margin-bottom:16px;">${c['ob-name-body']||''}</div>
-        <input id="obNameInput" type="text" placeholder="${c['ob-name-ph']||'First name...'}" maxlength="20" autocomplete="given-name"
-          style="width:100%;padding:15px 16px;background:#1c1c1c;border:1.5px solid rgba(0,255,135,.4);border-radius:12px;color:#f0f0f0;font-size:16px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;" />`,
-
-    4: `<div style="font-size:48px;margin-bottom:12px;">🎯</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:26px;font-weight:800;margin-bottom:8px;">${c['ob-habits-title']||'Pick Habits'}</div>
-        <div style="font-size:13px;color:#888;margin-bottom:12px;">${c['ob-habits-body']||'Choose at least 2'}</div>
-        <div id="obHabitsGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;">${renderHabitsGrid()}</div>`,
-
-    5: `<div style="font-size:48px;margin-bottom:12px;">🏅</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:26px;font-weight:800;margin-bottom:8px;">${c['ob-level-title']||"Your Level?"}</div>
-        <div style="font-size:13px;color:#888;margin-bottom:12px;">${c['ob-level-body']||'Tasks will be tailored'}</div>
-        <div style="display:flex;flex-direction:column;gap:10px;width:100%;">${renderLevelOptions(c)}</div>`,
-
-    6: `<div style="font-size:60px;margin-bottom:16px;">🚀</div>
-        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:30px;font-weight:800;margin-bottom:10px;">${c['ob-ready-title-pre']||'Ready, '}<span style="color:#00ff87;" id="obReadyName">Champion</span>${c['ob-ready-title-suf']||'!'}</div>
-        <div style="font-size:15px;color:#888;line-height:1.6;">${c['ob-ready-body']||''}</div>
-        <div style="margin-top:20px;padding:8px 20px;background:rgba(0,255,135,.1);border:1px solid rgba(0,255,135,.2);border-radius:99px;font-size:13px;color:#00ff87;font-weight:700;">🌱 ${isHe?'מתחיל':'Beginner'} · 0 XP</div>`,
+    2: `<div style="font-size:48px;margin-bottom:8px;">🎯</div>
+        <div style="font-family:${isRTL?'Heebo':'Bebas Neue'},sans-serif;font-size:24px;font-weight:800;margin-bottom:4px;">${c['ob-habits-title']||'What do you want to work on?'}</div>
+        <div style="font-size:13px;color:#888;margin-bottom:12px;">${c['ob-habits-body']||'Pick at least 2'}</div>
+        <div id="obHabitsGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;">${renderHabitsGrid()}</div>
+        ${obHabits.includes('other') ? `<input id="obCustomHabitInput" type="text" placeholder="${c['ob-h-other-ph']||'Type your own habit...'}" maxlength="30"
+          style="width:100%;margin-top:10px;padding:12px 16px;background:#1c1c1c;border:1.5px solid rgba(0,255,135,.4);border-radius:12px;color:#f0f0f0;font-size:14px;text-align:${isRTL?'right':'left'};font-family:inherit;outline:none;box-sizing:border-box;"
+          oninput="obCustomHabit=this.value.trim()" value="${obCustomHabit.replace(/"/g,'&quot;')}" />` : ''}`,
   };
 
   cont.innerHTML = slides[step] || '';
 
-  // Focus name on step 3
-  if (step === 3) setTimeout(() => document.getElementById('obNameInput')?.focus(), 300);
-
-  // Update ready name on step 6
-  if (step === 6) {
-    const savedName = document.getElementById('obNameInput')?.value.trim() ||
-      localStorage.getItem('1pb_name') || (isHe ? 'לוחם' : 'Champion');
-    const nameEl = document.getElementById('obReadyName');
-    if (nameEl) nameEl.textContent = savedName;
+  if (step === 1) setTimeout(() => document.getElementById('obNameInput')?.focus(), 300);
+  if (step === 2 && obHabits.includes('other')) {
+    setTimeout(() => document.getElementById('obCustomHabitInput')?.focus(), 100);
   }
+}
+
+function renderGoalGrid(c, isRTL) {
+  const goals = [
+    {id:'stronger', icon:'💪'},
+    {id:'fit',      icon:'🏃'},
+    {id:'habits',   icon:'📅'},
+    {id:'learn',    icon:'🧠'},
+    {id:'focus',    icon:'🎯'},
+    {id:'monk',     icon:'🧘'},
+  ];
+  return goals.map(g => {
+    const picked = obGoal === g.id;
+    const label  = c[`ob-goal-${g.id}`] || g.id;
+    return `<div onclick="pickObGoal('${g.id}')" data-goal="${g.id}"
+      style="padding:14px 8px;border-radius:12px;background:${picked?'rgba(0,255,135,.12)':'#141414'};border:1.5px solid ${picked?'rgba(0,255,135,.6)':'#222'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;transition:all .15s;">
+      <span style="font-size:26px;">${g.icon}</span>
+      <span style="font-size:12px;font-weight:700;color:${picked?'#00ff87':'#ccc'};">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function pickObGoal(id) {
+  obGoal = id;
+  renderSlideContent(1);
 }
 
 function renderLangGrid() {
   const langs = [
-    {id:'en', flag:'🇺🇸', name:'English',    native:'English'},
-    {id:'he', flag:'🇮🇱', name:'Hebrew',     native:'עברית'},
-    {id:'es', flag:'🇪🇸', name:'Spanish',    native:'Español'},
-    {id:'fr', flag:'🇫🇷', name:'French',     native:'Français'},
-    {id:'ar', flag:'🇸🇦', name:'Arabic',     native:'العربية'},
-    {id:'ru', flag:'🇷🇺', name:'Russian',    native:'Русский'},
-    {id:'pt', flag:'🇧🇷', name:'Portuguese', native:'Português'},
+    {id:'en', flag:'🇺🇸', name:'English',  native:'English'},
+    {id:'he', flag:'🇮🇱', name:'Hebrew',   native:'עברית'},
+    {id:'ar', flag:'🇸🇦', name:'Arabic',   native:'العربية'},
   ];
   return langs.map(l => `
     <div onclick="pickObLangById('${l.id}')" data-lang="${l.id}" id="ol-${l.id}"
-      style="padding:12px 10px;border-radius:10px;background:${obLang===l.id?'rgba(0,255,135,.1)':'#141414'};border:1.5px solid ${obLang===l.id?'rgba(0,255,135,.5)':'#222'};cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;">
-      <span style="font-size:22px;">${l.flag}</span>
+      style="padding:14px 16px;border-radius:12px;background:${obLang===l.id?'rgba(0,255,135,.1)':'#141414'};border:1.5px solid ${obLang===l.id?'rgba(0,255,135,.5)':'#222'};cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .15s;">
+      <span style="font-size:26px;">${l.flag}</span>
       <div>
-        <div style="font-size:13px;font-weight:700;color:${obLang===l.id?'#00ff87':'#f0f0f0'};">${l.name}</div>
-        <div style="font-size:10px;color:#666;">${l.native}</div>
+        <div style="font-size:14px;font-weight:700;color:${obLang===l.id?'#00ff87':'#f0f0f0'};">${l.name}</div>
+        <div style="font-size:11px;color:#666;">${l.native}</div>
       </div>
-      ${obLang===l.id?'<span style="margin-left:auto;color:#00ff87;">✓</span>':''}
+      ${obLang===l.id?'<span style="margin-left:auto;color:#00ff87;font-size:18px;">✓</span>':''}
     </div>`).join('');
 }
 
@@ -6397,23 +6232,23 @@ function pickObLangById(lang) {
 
 function renderHabitsGrid() {
   const habits = [
-    {id:'running',  icon:'🏃', he:'ריצה',        en:'Running'},
-    {id:'gym',      icon:'🏋️', he:'כושר',         en:'Gym'},
-    {id:'cali',     icon:'🤸', he:'קליסתניקס',   en:'Calisthenics'},
-    {id:'reading',  icon:'📚', he:'קריאה',        en:'Reading'},
-    {id:'meditate', icon:'🧘', he:'מדיטציה',     en:'Meditation'},
-    {id:'sleep',    icon:'😴', he:'שינה',         en:'Sleep'},
-    {id:'learn',    icon:'🧠', he:'למידה',        en:'Learning'},
-    {id:'journal',  icon:'📝', he:'יומן',         en:'Journal'},
-    {id:'hydrate',  icon:'💧', he:'מים',          en:'Hydration'},
+    {id:'running',  icon:'🏃', he:'ריצה',       ar:'جري',       en:'Running'},
+    {id:'gym',      icon:'🏋️', he:'כושר',        ar:'صالة',      en:'Gym'},
+    {id:'cali',     icon:'🤸', he:'קליסתניקס',  ar:'كاليسث',    en:'Calisthenics'},
+    {id:'reading',  icon:'📚', he:'קריאה',       ar:'قراءة',     en:'Reading'},
+    {id:'meditate', icon:'🧘', he:'מדיטציה',    ar:'تأمل',      en:'Meditation'},
+    {id:'learn',    icon:'🧠', he:'למידה',       ar:'تعلم',      en:'Learning'},
+    {id:'journal',  icon:'📝', he:'יומן',        ar:'يوميات',    en:'Journal'},
+    {id:'hydrate',  icon:'💧', he:'מים',         ar:'ماء',       en:'Hydration'},
+    {id:'other',    icon:'✏️', he:'אחר...',      ar:'أخرى...',   en:'Other...'},
   ];
-  const isHe = obLang === 'he';
   return habits.map(h => {
     const picked = obHabits.includes(h.id);
-    return `<div onclick="toggleObHabit('${h.id}',this)" data-id="${h.id}"
+    const label  = obLang === 'he' ? h.he : obLang === 'ar' ? h.ar : h.en;
+    return `<div onclick="toggleObHabit('${h.id}')" data-id="${h.id}"
       style="padding:12px 6px;border-radius:10px;background:${picked?'rgba(0,255,135,.1)':'#141414'};border:1.5px solid ${picked?'rgba(0,255,135,.5)':'#222'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;">
-      <span style="font-size:24px;">${h.icon}</span>
-      <span style="font-size:12px;font-weight:600;color:${picked?'#00ff87':'#f0f0f0'};">${isHe?h.he:h.en}</span>
+      <span style="font-size:22px;">${h.icon}</span>
+      <span style="font-size:11px;font-weight:600;color:${picked?'#00ff87':'#f0f0f0'};">${label}</span>
     </div>`;
   }).join('');
 }
@@ -6421,61 +6256,30 @@ function renderHabitsGrid() {
 function toggleObHabit(id) {
   if (obHabits.includes(id)) {
     obHabits = obHabits.filter(h => h !== id);
+    if (id === 'other') obCustomHabit = '';
   } else {
     obHabits.push(id);
   }
-  renderSlideContent(4);
+  renderSlideContent(2);
 }
 
-function renderLevelOptions(c) {
-  const levels = [
-    {xp:0,    icon:'🌱', key1:'ob-lv-1', key2:'ob-lv-1-desc'},
-    {xp:100,  icon:'⚡', key1:'ob-lv-2', key2:'ob-lv-2-desc'},
-    {xp:500,  icon:'🔥', key1:'ob-lv-3', key2:'ob-lv-3-desc'},
-    {xp:1400, icon:'🏆', key1:'ob-lv-4', key2:'ob-lv-4-desc'},
-  ];
-  return levels.map((l,i) => `
-    <div onclick="pickObLevelXP(${l.xp},this)" data-xp="${l.xp}"
-      style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;background:${obXP===l.xp?'rgba(0,255,135,.08)':'#141414'};border:1.5px solid ${obXP===l.xp?'rgba(0,255,135,.4)':'#222'};cursor:pointer;">
-      <span style="font-size:26px;">${l.icon}</span>
-      <div style="text-align:${obLang==='he'||obLang==='ar'?'right':'left'};">
-        <div style="font-size:14px;font-weight:700;color:${obXP===l.xp?'#f0f0f0':'#888'};">${c[l.key1]||''}</div>
-        <div style="font-size:12px;color:#555;margin-top:2px;">${c[l.key2]||''}</div>
-      </div>
-      ${obXP===l.xp?'<span style="margin-left:auto;color:#00ff87;font-size:18px;">✓</span>':''}
-    </div>`).join('');
-}
-
-function pickObLevelXP(xp) {
-  obXP = xp;
-  const c = OB_COPY[obLang] || OB_COPY.en;
-  renderSlideContent(5);
-}
 
 function updateObStep() {
-  const c = OB_COPY[obLang] || OB_COPY.en;
-
-  // Render slide content dynamically
   renderSlideContent(obStep);
 
-  // Dots
   document.querySelectorAll('.ob-dot').forEach((d, i) =>
     d.classList.toggle('active', i === obStep));
 
-  // Button / skip
   const btn  = document.getElementById('obNextBtn');
   const skip = document.getElementById('obSkipBtn');
   if (!btn) return;
 
   if (obStep === OB_TOTAL - 1) {
-    btn.textContent    = obLang === 'he' ? '🚀 בואו נתחיל!' :
-                         obLang === 'ar' ? '🚀 لنبدأ!' :
-                         obLang === 'es' ? '🚀 ¡Empecemos!' :
-                         obLang === 'fr' ? '🚀 Commençons !' :
-                         obLang === 'ru' ? '🚀 Начнём!' :
-                         obLang === 'pt' ? '🚀 Vamos lá!' : '🚀 Let\'s Go!';
+    btn.textContent = obLang === 'he' ? '🚀 בואו נתחיל!' :
+                      obLang === 'ar' ? '🚀 لنبدأ!' : '🚀 Let\'s Go!';
     if (skip) skip.style.display = 'none';
   } else {
+    const c = OB_COPY[obLang] || OB_COPY.en;
     btn.textContent = c['obNextBtn'] || 'Continue →';
     if (skip) skip.style.display = '';
   }
@@ -6486,18 +6290,24 @@ function obNext() {
   const c = OB_COPY[obLang] || OB_COPY.en;
   obInteracted = true;
 
-  if (obStep === 3) {
-    const name = document.getElementById('obNameInput')?.value.trim();
-    if (!name) {
-      const inp = document.getElementById('obNameInput');
-      if (inp) { inp.style.borderColor = 'rgba(255,56,96,.6)'; inp.focus(); }
+  if (obStep === 1) {
+    if (!obGoal) {
+      showToast(c['ob-toast-goal'] || '⚠ Pick a goal to continue');
       return;
     }
+    const name = document.getElementById('obNameInput')?.value.trim();
+    if (name) localStorage.setItem('1pb_name', name);
   }
 
-  if (obStep === 4 && obHabits.length < 2) {
-    showToast(c['ob-toast-habits'] || '⚠ Pick at least 2 habits');
-    return;
+  if (obStep === 2) {
+    if (obHabits.length < 2) {
+      showToast(c['ob-toast-habits'] || '⚠ Pick at least 2 habits');
+      return;
+    }
+    if (obHabits.includes('other')) {
+      const inp = document.getElementById('obCustomHabitInput');
+      obCustomHabit = (inp ? inp.value.trim() : obCustomHabit);
+    }
   }
 
   if (obStep < OB_TOTAL - 1) { obStep++; updateObStep(); }
@@ -6520,7 +6330,6 @@ function toggleHabit(el) {
 function pickLevel(el) {
   document.querySelectorAll('.ob-level-opt').forEach(o => o.classList.remove('picked'));
   el.classList.add('picked');
-  obXP = parseInt(el.dataset.xp) || 0;
 }
 
 function finishOnboarding() {
@@ -6528,18 +6337,18 @@ function finishOnboarding() {
     localStorage.getItem('1pb_name') ||
     (obLang === 'he' ? 'אלוף' : obLang === 'ar' ? 'بطل' : 'Champion');
 
-  // Save everything
+  const habitsToSave = obHabits.filter(h => h !== 'other');
+  if (obCustomHabit) habitsToSave.push(obCustomHabit);
+
   localStorage.setItem('1pb_name',      name);
   localStorage.setItem('1pb_lang',      obLang);
-  localStorage.setItem('1pb_habits',    JSON.stringify(obHabits.length ? obHabits : ['running','cali']));
-  localStorage.setItem('1pb_xp',        JSON.stringify({ total: obXP }));
+  localStorage.setItem('1pb_habits',    JSON.stringify(habitsToSave.length ? habitsToSave : ['running','cali']));
+  localStorage.setItem('1pb_goal',      obGoal || '');
   localStorage.setItem('1pb_onboarded', '1');
 
-  // Apply language to the main app
   const chip = document.querySelector(`.lang-chip[data-lang="${obLang}"]`);
   if (chip) setLang(obLang, chip);
 
-  // Apply name
   const initial = name.charAt(0).toUpperCase();
   document.querySelectorAll('.avatar, .profile-avatar, #hubAvatar, #profileAvatar')
     .forEach(el => el.textContent = initial);
@@ -6550,12 +6359,9 @@ function finishOnboarding() {
   const inp = document.getElementById('inputName');
   if (inp) inp.value = name;
 
-  // Apply XP / level
-  state.xp = obXP;
   renderXP();
   renderQuickTasks();
 
-  // Animate out
   const ob = document.getElementById('onboarding');
   ob.style.transition = 'opacity .5s, transform .5s';
   ob.style.opacity    = '0';
@@ -6564,10 +6370,6 @@ function finishOnboarding() {
     ob.classList.add('hidden');
     const welcomeMsg = obLang === 'he' ? `ברוך הבא, ${name}! 🔥` :
                        obLang === 'ar' ? `أهلًا، ${name}! 🔥` :
-                       obLang === 'es' ? `¡Bienvenido, ${name}! 🔥` :
-                       obLang === 'fr' ? `Bienvenue, ${name} ! 🔥` :
-                       obLang === 'ru' ? `Добро пожаловать, ${name}! 🔥` :
-                       obLang === 'pt' ? `Bem-vindo, ${name}! 🔥` :
                                          `Welcome, ${name}! 🔥`;
     celebrateCompletion(welcomeMsg, '', 0);
   }, 500);
@@ -11174,7 +10976,7 @@ async function doSignOut() {
   wipePerUserStorage();
   await fbAuth.signOut();
   // Reset in-memory onboarding flow so the next sign-in re-renders cleanly.
-  obStep = 0; obHabits = []; obXP = 0; obInteracted = false;
+  obStep = 0; obHabits = []; obGoal = null; obCustomHabit = ''; obInteracted = false;
 }
 
 /** Stop everything that's tied to the *currently signed-in user*: the
