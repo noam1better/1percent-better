@@ -13,12 +13,13 @@ import ClientPreviewPage from './pages/ClientPreviewPage'
 import PricingPage from './pages/PricingPage'
 import DynamicWebsitePage from './pages/DynamicWebsitePage'
 import LegalPage from './pages/LegalPage'
+import AIBoxingCoach from './pages/AIBoxingCoach'
 import GlobalAIAssistant from './components/GlobalAIAssistant'
 import { ToastContainer } from './components/Toast'
 
 function AssistantGuard() {
   const { pathname } = useLocation()
-  const hide = ['/', '/onboarding', '/demo', '/builder', '/site-preview'].includes(pathname) ||
+  const hide = ['/', '/onboarding', '/demo', '/builder', '/site-preview', '/boxing-coach'].includes(pathname) ||
                pathname.startsWith('/dashboard') ||
                pathname.startsWith('/s/')
   return hide ? null : <GlobalAIAssistant />
@@ -43,7 +44,8 @@ export default function App() {
           <Route path="/privacy"    element={<LegalPage type="privacy" />} />
           <Route path="/terms"      element={<LegalPage type="terms" />} />
           <Route path="/ai"         element={<AIGeneratePage />} />
-          <Route path="/growth"     element={<GrowthPage />} />
+          <Route path="/growth"        element={<GrowthPage />} />
+          <Route path="/boxing-coach" element={<AIBoxingCoach />} />
           <Route path="/s/:slug"    element={<PublicSitePage />} />
           <Route
             path="/account"

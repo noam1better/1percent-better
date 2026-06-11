@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+my-new-idea/node_modules/
+functions/node_modules/
+
+# Build outputs (generated at deploy time — not committed)
+boxing-coach/
+my-new-idea/dist/
+dist/
+
+# Firebase cache
+.firebase/hosting*.cache
+
+# Environment files with secrets
+.env.local
+.env.*.local
+my-new-idea/.env.local
+my-new-idea/.env.*.local
+
+# OS / editors
+.DS_Store
+*.sw?
+.idea/
+.vscode/
+
+# Misc
+*.log

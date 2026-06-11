@@ -580,6 +580,20 @@
 }
 .ob-biztype-icon { font-size: 26px; line-height: 1; }
 .ob-biztype-label { font-size: 11.5px; font-weight: 600; color: var(--ob-text2); text-align: center; }
+.ob-biztype-btn--custom {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-color: rgba(124,58,237,0.3);
+  background: linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(99,102,241,0.04) 100%);
+}
+.ob-biztype-btn--custom:hover {
+  border-color: rgba(124,58,237,0.6);
+  background: linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(99,102,241,0.08) 100%);
+}
+.ob-biztype-btn--custom .ob-biztype-label { font-size: 13px; color: var(--ob-purple2); }
 
 /* Options grid (single select) */
 .ob-options-grid {

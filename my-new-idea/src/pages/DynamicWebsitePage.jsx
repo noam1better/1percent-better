@@ -652,12 +652,13 @@ export default function DynamicWebsitePage({ custom = {} }) {
   }, [])
 
   const hasData = Boolean(biz.bizType)
-  const config  = BIZ_CONFIGS[biz.bizType] || BIZ_CONFIGS.restaurant
+  const effectiveBizType = biz._layoutBizType || biz.bizType
+  const config  = BIZ_CONFIGS[effectiveBizType] || BIZ_CONFIGS.startup
   // prefer styleVibe → theme, fallback to style field
   const themeKey  = VIBE_THEME_MAP[biz.styleVibe] || biz.style || 'modern'
   const baseTheme = STYLE_THEMES[themeKey] || STYLE_THEMES.modern
   // Each bizType gets its own bg world; patch only non-luxe/classic themes
-  const bizPatch  = (themeKey === 'modern' || themeKey === 'bold') ? (BIZ_THEME_PATCHES[biz.bizType] || {}) : {}
+  const bizPatch  = (themeKey === 'modern' || themeKey === 'bold') ? (BIZ_THEME_PATCHES[effectiveBizType] || {}) : {}
   const theme     = { ...baseTheme, ...bizPatch }
   const accent    = theme.forceAccent || config.accent
   const rgb     = hexToRgb(accent)
@@ -740,7 +741,7 @@ export default function DynamicWebsitePage({ custom = {} }) {
   }
 
   return (
-    <div className={`dw-root dw-dna--${biz.bizType || 'default'}${isClassic ? ' dw-classic' : ''}${isBold ? ' dw-bold' : ''}`} style={cssVars}>
+    <div className={`dw-root dw-dna--${effectiveBizType || 'default'}${isClassic ? ' dw-classic' : ''}${isBold ? ' dw-bold' : ''}`} style={cssVars}>
 
       {/* ── NAV ── */}
       <nav className={`dw-nav${scrolled ? ' dw-nav--sticky' : ''}`}>
@@ -767,8 +768,8 @@ export default function DynamicWebsitePage({ custom = {} }) {
       {heroLayout === 'pro' ? (
         /* ── PRO layout: clean split, trust-first (lawyer, accounting) ── */
         <section className="dw-hero dw-hero--pro">
-          {HERO_IMAGES[biz.bizType] && (
-            <div className="dw-hero-photo dw-hero-photo--pro" style={{ backgroundImage: `url(${HERO_IMAGES[biz.bizType]})` }} aria-hidden="true" />
+          {HERO_IMAGES[effectiveBizType] && (
+            <div className="dw-hero-photo dw-hero-photo--pro" style={{ backgroundImage: `url(${HERO_IMAGES[effectiveBizType]})` }} aria-hidden="true" />
           )}
           <div className="dw-hero-overlay dw-hero-overlay--pro" aria-hidden="true" />
           <div className="dw-container dw-hero-pro-inner">
@@ -790,7 +791,7 @@ export default function DynamicWebsitePage({ custom = {} }) {
             </div>
             <div className="dw-hero-pro-panel">
               <div className="dw-hero-pro-cred">
-                <span className="dw-hero-pro-cred-n">{biz.bizType === 'accounting' ? '15+' : '20+'}</span>
+                <span className="dw-hero-pro-cred-n">{effectiveBizType === 'accounting' ? '15+' : '20+'}</span>
                 <span className="dw-hero-pro-cred-l">שנות ניסיון</span>
               </div>
               <div className="dw-hero-pro-badges">
@@ -809,8 +810,8 @@ export default function DynamicWebsitePage({ custom = {} }) {
         /* ── LUXE layout: centered elegant (beauty) ── */
         <section className="dw-hero dw-hero--luxe">
           <div className="dw-hero-glow" aria-hidden="true" />
-          {HERO_IMAGES[biz.bizType] && (
-            <div className="dw-hero-photo" style={{ backgroundImage: `url(${HERO_IMAGES[biz.bizType]})` }} aria-hidden="true" />
+          {HERO_IMAGES[effectiveBizType] && (
+            <div className="dw-hero-photo" style={{ backgroundImage: `url(${HERO_IMAGES[effectiveBizType]})` }} aria-hidden="true" />
           )}
           <div className="dw-hero-overlay" aria-hidden="true" />
           <div className="dw-hero-luxe-inner">
@@ -841,10 +842,10 @@ export default function DynamicWebsitePage({ custom = {} }) {
         /* ── HERO layout: full image background (default, gym, shop, restaurant, startup) ── */
         <section className={`dw-hero${heroLayout === 'tech' ? ' dw-hero--tech' : ''}`}>
           <div className="dw-hero-glow" aria-hidden="true" />
-          {HERO_IMAGES[biz.bizType] && (
+          {HERO_IMAGES[effectiveBizType] && (
             <div
               className="dw-hero-photo"
-              style={{ backgroundImage: `url(${HERO_IMAGES[biz.bizType]})` }}
+              style={{ backgroundImage: `url(${HERO_IMAGES[effectiveBizType]})` }}
               aria-hidden="true"
             />
           )}
@@ -882,9 +883,9 @@ export default function DynamicWebsitePage({ custom = {} }) {
       )}
 
       {/* ── DNA: full-width stats / credentials bar ── */}
-      {biz.bizType === 'gym' && <GymStatsBar />}
-      {biz.bizType === 'startup' && <StartupMetrics />}
-      {(biz.bizType === 'lawyer' || biz.bizType === 'accounting') && <CredentialsBar bizType={biz.bizType} />}
+      {effectiveBizType === 'gym' && <GymStatsBar />}
+      {effectiveBizType === 'startup' && <StartupMetrics />}
+      {(effectiveBizType === 'lawyer' || effectiveBizType === 'accounting') && <CredentialsBar bizType={effectiveBizType} />}
 
       {/* ── PROOF BAR (if proofTypes set) ── */}
       {proofTypes.length > 0 && (
@@ -901,20 +902,20 @@ export default function DynamicWebsitePage({ custom = {} }) {
       )}
 
       {/* ── DNA: pre-services unique sections ── */}
-      {biz.bizType === 'beauty'     && <BeautyRitual />}
-      {biz.bizType === 'gym'        && <GymTransformation />}
-      {biz.bizType === 'restaurant' && <RestaurantMenu primaryCta={primaryCta} ctaLabel={ctaLabel} />}
+      {effectiveBizType === 'beauty'     && <BeautyRitual />}
+      {effectiveBizType === 'gym'        && <GymTransformation />}
+      {effectiveBizType === 'restaurant' && <RestaurantMenu primaryCta={primaryCta} ctaLabel={ctaLabel} />}
 
       {/* ── SERVICES — per-vertical layout ── */}
-      {(biz.bizType === 'lawyer' || biz.bizType === 'accounting')
+      {(effectiveBizType === 'lawyer' || effectiveBizType === 'accounting')
         ? <LawServicesSection services={services} copy={copy} />
-        : biz.bizType === 'gym'
+        : effectiveBizType === 'gym'
           ? <GymServicesSection services={services} copy={copy} />
-          : biz.bizType === 'beauty'
+          : effectiveBizType === 'beauty'
             ? <BeautyServicesSection services={services} copy={copy} />
-            : biz.bizType === 'flooring'
+            : effectiveBizType === 'flooring'
               ? <FlooringServicesSection services={services} copy={copy} />
-              : biz.bizType === 'restaurant'
+              : effectiveBizType === 'restaurant'
                 ? <RestaurantServicesSection services={services} copy={copy} />
                 : (
                   <section className="dw-section" id="services">
@@ -938,7 +939,7 @@ export default function DynamicWebsitePage({ custom = {} }) {
       }
 
       {/* ── DNA: post-services unique sections ── */}
-      {biz.bizType === 'flooring' && <FlooringMaterials />}
+      {effectiveBizType === 'flooring' && <FlooringMaterials />}
 
       {/* ── DIFFERENTIATOR STRIP ── */}
       <div className="dw-strip">

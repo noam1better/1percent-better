@@ -3177,6 +3177,11 @@
         <div class="wl-btn-label">BOXING</div>
         <div class="wl-btn-sub">AI punch tracker</div>
       </button>
+      <button class="wl-btn boxing" style="border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06);" onclick="window.location.href='/boxing-coach'">
+        <div class="wl-btn-icon">🧠</div>
+        <div class="wl-btn-label" style="font-size:11px;">AI COACH</div>
+        <div class="wl-btn-sub" style="color:rgba(168,85,247,.8);">PRO · Full session</div>
+      </button>
       <button class="wl-btn pushup" onclick="startWorkout('pushup')">
         <div class="wl-btn-icon">💪</div>
         <div class="wl-btn-label">PUSH-UPS</div>
@@ -4920,12 +4925,12 @@ function filterFeed(filter, chip) {
    9. TOAST
 ═══════════════════════════════════════════════════════ */
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, ms = 2800) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -11636,6 +11641,19 @@ function addSignOutToSettings() {
   settingsScreen.appendChild(row);
 }
 
+/* ── Sticker scan reward — fires once per device ── */
+function checkStickerReward() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('ref') !== 'sticker') return;
+  if (localStorage.getItem('1pb_sticker_reward_shown')) return;
+  localStorage.setItem('1pb_sticker_reward_shown', '1');
+  const isHe = navigator.language && navigator.language.startsWith('he');
+  const msg = isHe
+    ? 'הטבת לוחם הופעלה! ⚔️ קיבלת שבוע PRO מתנה על סריקת המדבקה בעיר. המאמן האישי שלך פתוח!'
+    : 'Warrior Reward Activated! ⚔️ You\'ve unlocked 1 week of FREE PRO access for scanning our street sticker. Your AI Coach is ready!';
+  setTimeout(() => showToast(msg, 5000), 1000);
+}
+
 /* ── initApp: called after auth resolved ── */
 function initApp() {
   updateGuestModeUI();
@@ -11643,6 +11661,7 @@ function initApp() {
   applySavedPrefsAndInit();
   if (isFirebaseConfigured()) addSignOutToSettings();
   setTimeout(renderRPGProgress, 300);
+  checkStickerReward();
   // Parse challenge URL params — show modal after a short delay so app is visible
   const ch = parseChallengeFromURL();
   if (ch) {

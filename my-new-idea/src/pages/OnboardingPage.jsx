@@ -13,6 +13,7 @@ const BIZ_TYPES = [
   { id: 'accounting',  icon: '📊', label: 'ראיית חשבון'   },
   { id: 'shop',        icon: '🛍️', label: 'חנות'           },
   { id: 'startup',     icon: '🚀', label: 'סטארטאפ'       },
+  { id: 'custom',      icon: '✨', label: 'אחר / מותאם אישית' },
 ]
 const BIZ_MAP = Object.fromEntries(BIZ_TYPES.map(b => [b.id, b]))
 
@@ -55,7 +56,8 @@ const CINEMATIC_STEPS = [
 const FINAL_STEP = { icon: '🚀', title: 'האתר שלכם מוכן!', sub: 'מוכן לפרסום ולהביא לקוחות אמיתיים' }
 
 function buildAiDecisions(bizData) {
-  const bizLabel = BIZ_MAP[bizData.bizType]?.label || 'עסק'
+  const effectiveBizType = bizData._layoutBizType || bizData.bizType
+  const bizLabel = BIZ_MAP[effectiveBizType]?.label || bizData.bizDescription || 'עסק'
   const VIBE_DESC = {
     luxury: 'כהה, זהב, אווירת פרמיום',
     modern: 'נקי, טכנולוגי, חדשני',
@@ -85,7 +87,9 @@ const QUESTIONS = [
     id: 'bizType',
     ask: () => 'נתחיל! 🎯 מה סוג העסק שלכם?',
     type: 'biztype',
-    react: v => `${BIZ_MAP[v]?.icon || '✨'} ${BIZ_MAP[v]?.label || v} — שוק תחרותי עם המון ביקוש. בואו נבנה עמדה שמבדלת אתכם! 🎯`,
+    react: v => v === 'custom'
+      ? 'מעולה! ✨ בואו נגלה ביחד מה הכי מתאים לכם — שאלות קצרות שיעזרו לי לבנות אתר שמרגיש כאילו תוכנן במיוחד בשבילכם.'
+      : `${BIZ_MAP[v]?.icon || '✨'} ${BIZ_MAP[v]?.label || v} — שוק תחרותי עם המון ביקוש. בואו נבנה עמדה שמבדלת אתכם! 🎯`,
     save: v => ({ bizType: v }),
     validate: v => !!v,
   },
@@ -237,6 +241,42 @@ const QUESTIONS = [
   },
 ]
 
+// ─── Custom business deep-interview questions ─────────────────────────
+const CUSTOM_QUESTIONS = [
+  {
+    id: 'bizDescription',
+    ask: () => 'ספרו לי — מה העסק שלכם עושה? ✨\nמה אתם מציעים ללקוחות שלכם?',
+    type: 'text',
+    placeholder: 'לדוגמה: קליניקת פיזיותרפיה, חברת ניקיון לעסקים, מאמן כושר אישי',
+    react: v => `"${v}" — כבר רואה את האתר מתגבש. בואו נמשיך לבנות את העמדה שלכם! 🔥`,
+    save: v => ({ bizDescription: v }),
+    validate: v => v?.trim()?.length > 2,
+  },
+  {
+    id: 'customCategory',
+    ask: () => 'לאיזה עולם תוכן הכי קרוב העסק שלכם? 🎯\nזה יקבע את הלייאאוט, הצבעים והאווירה.',
+    type: 'options',
+    options: [
+      { id: 'beauty',     label: 'יופי / טיפוח / בריאות',   icon: '💆' },
+      { id: 'lawyer',     label: 'שירות מקצועי / ייעוץ',    icon: '👔' },
+      { id: 'restaurant', label: 'אוכל / אירוח / פנאי',     icon: '🍴' },
+      { id: 'gym',        label: 'ספורט / כושר / חינוך',    icon: '🏃' },
+      { id: 'startup',    label: 'טכנולוגיה / מוצר דיגיטל', icon: '💻' },
+      { id: 'flooring',   label: 'בנייה / שיפוץ / מלאכה',   icon: '🏠' },
+    ],
+    react: () => 'מצוין! הלייאאוט, הצבעים והטיפוגרפיה יותאמו לעולם שבחרתם. ✅',
+    save: v => ({ _layoutBizType: v }),
+    validate: v => !!v,
+  },
+]
+
+function getActiveQuestions(data) {
+  if (data.bizType === 'custom') {
+    return [QUESTIONS[0], ...CUSTOM_QUESTIONS, ...QUESTIONS.slice(1)]
+  }
+  return QUESTIONS
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────
 
 function IntroScreen({ onStart }) {
@@ -251,7 +291,7 @@ function IntroScreen({ onStart }) {
           <span className="ob-intro-title-sub">הדירקטור לעיצוב ה-AI שלכם</span>
         </h1>
         <p className="ob-intro-desc">
-          אשאל אתכם <strong>12 שאלות קצרות</strong> — ואצור אתר שמוכר, עיצוב שמרשים,
+          אשאל אתכם <strong>כמה שאלות קצרות</strong> — ואצור אתר שמוכר, עיצוב שמרשים,
           ואסטרטגיה שמביאה לקוחות.
         </p>
         <div className="ob-intro-features">
@@ -413,7 +453,11 @@ function QuestionInput({ q, textVal, setTextVal, fieldVals, setFieldVals, multiS
       <div className="ob-input-area">
         <div className="ob-biztype-grid">
           {BIZ_TYPES.map(b => (
-            <button key={b.id} className="ob-biztype-btn" onClick={() => onAnswer(b.id, `${b.icon} ${b.label}`)}>
+            <button
+              key={b.id}
+              className={`ob-biztype-btn${b.id === 'custom' ? ' ob-biztype-btn--custom' : ''}`}
+              onClick={() => onAnswer(b.id, `${b.icon} ${b.label}`)}
+            >
               <span className="ob-biztype-icon">{b.icon}</span>
               <span className="ob-biztype-label">{b.label}</span>
             </button>
@@ -644,7 +688,8 @@ export default function OnboardingPage() {
   }
 
   function handleAnswer(val, displayText) {
-    const q = QUESTIONS[qIdx]
+    const activeQs = getActiveQuestions(bizData)
+    const q = activeQs[qIdx]
     setMessages(m => [...m, { id: Date.now() + 1, role: 'user', text: displayText || String(val) }])
     setAwait(false)
     setText('')
@@ -655,8 +700,9 @@ export default function OnboardingPage() {
     const newData = { ...bizData, ...saved }
     setBizData(newData)
 
+    const newQs = getActiveQuestions(newData)
     const nextIdx = qIdx + 1
-    const isLast = nextIdx >= QUESTIONS.length
+    const isLast = nextIdx >= newQs.length
     const reaction = q.react(val, newData)
 
     setTimeout(() => {
@@ -668,7 +714,7 @@ export default function OnboardingPage() {
           setTimeout(() => startGenerating(newData), 700)
         } else {
           setQIdx(nextIdx)
-          const nextQ = QUESTIONS[nextIdx]
+          const nextQ = newQs[nextIdx]
           setTimeout(() => addAiMsg(nextQ.ask(newData), 800), 300)
         }
       }, 700)
@@ -676,7 +722,8 @@ export default function OnboardingPage() {
   }
 
   function handleSkip() {
-    const q = QUESTIONS[qIdx]
+    const activeQs = getActiveQuestions(bizData)
+    const q = activeQs[qIdx]
     const saved = q.save('', bizData)
     const newData = { ...bizData, ...saved }
     setBizData(newData)
@@ -684,12 +731,13 @@ export default function OnboardingPage() {
     setText('')
     setFields({})
     setMulti([])
+    const newQs = getActiveQuestions(newData)
     const nextIdx = qIdx + 1
-    if (nextIdx >= QUESTIONS.length) {
+    if (nextIdx >= newQs.length) {
       startGenerating(newData)
     } else {
       setQIdx(nextIdx)
-      setTimeout(() => addAiMsg(QUESTIONS[nextIdx].ask(newData), 600), 200)
+      setTimeout(() => addAiMsg(newQs[nextIdx].ask(newData), 600), 200)
     }
   }
 
@@ -738,8 +786,9 @@ export default function OnboardingPage() {
   if (phase === 'intro') return <IntroScreen onStart={startChatSimple} />
   if (phase === 'generating') return <GeneratingScreen bizData={bizData} onComplete={() => navigate('/preview')} />
 
-  const currentQ = QUESTIONS[qIdx]
-  const progress = Math.round((qIdx / QUESTIONS.length) * 100)
+  const activeQs = getActiveQuestions(bizData)
+  const currentQ = activeQs[qIdx]
+  const progress = Math.round((qIdx / activeQs.length) * 100)
 
   return (
     <div className="ob-chat-root">
@@ -751,7 +800,7 @@ export default function OnboardingPage() {
           <span>BusinessBuilder <span className="ob-chat-logo-ai">AI</span></span>
         </div>
         <div className="ob-chat-progress-wrap">
-          <span className="ob-chat-q-num">{qIdx + 1} / {QUESTIONS.length}</span>
+          <span className="ob-chat-q-num">{qIdx + 1} / {activeQs.length}</span>
           <div className="ob-chat-progress-bar">
             <div className="ob-chat-progress-fill" style={{ width: `${progress}%` }} />
           </div>

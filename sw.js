@@ -110,14 +110,22 @@ self.addEventListener('message', event => {
 
 // ── PUSH NOTIFICATIONS (Phase 6 placeholder) ─────
 self.addEventListener('push', event => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || '1% Better 🔥';
+  let raw = {};
+  try { raw = event.data ? event.data.json() : {}; } catch (_) {}
+
+  // Handle both flat format (local scheduler / legacy) and FCM server format.
+  // FCM Admin SDK with webpush.data sends flat keys directly.
+  // FCM Admin SDK with notification field wraps inside raw.notification.
+  const title = raw.title || raw.notification?.title || '1% Better 🔥';
+  const body  = raw.body  || raw.notification?.body  || 'הרצף שלך מחכה לך — בוא תוכיח את זה';
+  const icon  = raw.icon  || raw.notification?.icon  || '/icon-192.png';
+  const badge = raw.badge || raw.notification?.badge || '/icon-192.png';
+  const tag   = raw.tag   || 'daily-reminder';
+  const url   = raw.url   || raw.data?.url           || '/#hub';
+
   const options = {
-    body:  data.body  || 'הרצף שלך מחכה לך — בוא תוכיח את זה',
-    icon:  data.icon  || '/icon-192.png',
-    badge: data.badge || '/icon-192.png',
-    tag:   data.tag   || 'daily-reminder',
-    data:  { url: data.url || '/' },
+    body, icon, badge, tag,
+    data:  { url },
     actions: [
       { action: 'open',    title: '🚀 פתח' },
       { action: 'dismiss', title: 'אחר כך' },
