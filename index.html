@@ -166,6 +166,23 @@
   }
   .hub-help-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.2); }
 
+  .pro-entry-btn {
+    height: 34px;
+    background: linear-gradient(90deg, rgba(245,158,11,.15), rgba(168,85,247,.15));
+    border: 1px solid rgba(245,158,11,.45);
+    border-radius: 99px;
+    padding: 0 12px;
+    font-size: 11px; font-weight: 800;
+    color: #f59e0b;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    touch-action: manipulation;
+    flex-shrink: 0;
+    display: flex; align-items: center;
+    transition: opacity .15s;
+  }
+  .pro-entry-btn:active { opacity: .75; }
+
   .daily-progress-summary {
     display: grid;
     gap: 10px;
@@ -410,8 +427,11 @@
 
   /* ── TOP HEADER ──────────────────────────────────── */
   .top-header {
-    padding: 24px 20px 12px;
+    /* Top padding absorbs the iOS status-bar / Dynamic-Island safe area.
+       max() keeps 20px minimum so desktop layout is unchanged. */
+    padding: max(20px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 12px;
     display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
   }
   .logo { font-family: var(--font-head); font-size: 28px; letter-spacing: .04em; }
   .logo span { color: var(--green); }
@@ -2977,11 +2997,10 @@
         <span id="guestBanner">⚠ Guest mode — progress not saved</span>
         <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
-          style="background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(168,85,247,.15));border:1px solid rgba(245,158,11,.45);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:800;color:#f59e0b;cursor:pointer;letter-spacing:.04em;white-space:nowrap;touch-action:manipulation;"
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button class="pro-entry-btn" onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
           id="proEntryBtn">⭐ PRO</button>
-        <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works" style="position:static;width:38px;height:38px;">?</button>
+        <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works">?</button>
         <div class="avatar" onclick="navigate('profile')" id="hubAvatar">?</div>
       </div>
     </div>
