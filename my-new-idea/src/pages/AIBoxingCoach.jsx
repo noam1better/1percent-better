@@ -201,6 +201,20 @@ export default function AIBoxingCoach() {
     () => !!localStorage.getItem('1pb_fitness_onboarded')
   )
 
+  // Monk Mode
+  const [monkMode, setMonkMode] = useState(() => !!localStorage.getItem('1pb_monk_mode'))
+  const monkStreak = (() => {
+    try { return JSON.parse(localStorage.getItem('1pb_streak') || '{}').current || 0 } catch { return 0 }
+  })()
+  const toggleMonkMode = () => {
+    setMonkMode(prev => {
+      const next = !prev
+      if (next) localStorage.setItem('1pb_monk_mode', '1')
+      else localStorage.removeItem('1pb_monk_mode')
+      return next
+    })
+  }
+
   // Mode
   const [mode, setMode] = useState(null) // null | 'boxing' | 'muay-thai'
 
@@ -695,12 +709,40 @@ export default function AIBoxingCoach() {
   // ── Render: mode selector ─────────────────────────────────────────
   if (mode === null) {
     return (
-      <div className="bc-mode-select">
+      <div className={`bc-mode-select${monkMode ? ' bc-monk-mode' : ''}`}>
         <button className="bc-ms-exit" onClick={() => window.location.href = '/'}>חזרה לתפריט</button>
         <div className="bc-ms-content">
           <div className="bc-ms-eyebrow">🥋 AI COACH</div>
           <h1 className="bc-ms-title">Choose Your Style</h1>
           <p className="bc-ms-sub">Select a training mode to begin your session</p>
+
+          {/* Monk Mode toggle */}
+          <button
+            className={`bc-monk-toggle${monkMode ? ' bc-monk-toggle--active' : ''}`}
+            onClick={toggleMonkMode}
+            dir="rtl"
+          >
+            <span className="bc-monk-switch" aria-hidden="true" />
+            <span className="bc-monk-toggle-label">
+              <span className="bc-monk-toggle-title">🧎 מצב נזיר</span>
+              <span className="bc-monk-toggle-sub">משמעת מקסימלית · פוקוס מלא</span>
+            </span>
+          </button>
+
+          {/* Active badge */}
+          {monkMode && (
+            <div className="bc-monk-badge" dir="rtl">
+              <span className="bc-monk-badge-icon">🔥</span>
+              <div className="bc-monk-badge-text">
+                <div className="bc-monk-badge-title">מצב נזיר פעיל</div>
+                <div className="bc-monk-badge-sub">
+                  {monkStreak > 0 ? `יום ${monkStreak} ברצף · אפס תירוצים` : 'אפס תירוצים · מקסימום פוקוס'}
+                </div>
+              </div>
+              <span className="bc-monk-badge-streak">{monkStreak > 0 ? `🔥×${monkStreak}` : ''}</span>
+            </div>
+          )}
+
           <div className="bc-ms-cards">
             <button className="bc-ms-card" onClick={() => {
               setMode('boxing')
@@ -810,7 +852,7 @@ export default function AIBoxingCoach() {
   const modeName = mode === 'muay-thai' ? 'Muay Thai' : 'Classic Boxing'
 
   return (
-    <div className="bc-root">
+    <div className={`bc-root${monkMode ? ' bc-monk-mode' : ''}`}>
       <canvas ref={overlayRef} className="bc-overlay-canvas" style={{ transform: mirror }} />
       <video  ref={videoRef}   className="bc-video" autoPlay playsInline muted style={{ transform: mirror }} />
       <div className="bc-vignette" />

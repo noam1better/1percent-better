@@ -6708,10 +6708,31 @@ const DAILY_NOTIF_SCHEDULE = [
     body:  'השעה כבר 20:00 — כנס להשלים את ה-1% שלך ותישאר במשחק.' },
 ];
 
+const MONK_NOTIF_SCHEDULE = [
+  { tag: '1pb-morning',  hour:  8, min: 0,
+    title: '🧎 מונק מוד פעיל.',
+    body:  'בוקר טוב. אפס תירוצים, מקסימום פוקוס היום.' },
+  { tag: '1pb-midday',   hour: 12, min: 0,
+    title: '🎯 נשארים במסלול.',
+    body:  'חצי יום עבר, אל תתן להסחות דעת להפיל אותך.' },
+  { tag: '1pb-learning', hour: 15, min: 0,
+    title: '📚 זמן מוח.',
+    body:  'כנס למסלול הלמידה שלך עכשיו. תבנה את העתיד שלך.' },
+  { tag: '1pb-workout',  hour: 18, min: 0,
+    title: '🥊 ללא פשרות.',
+    body:  'זמן לאימון. תעלה על הסטארט, המצלמה מחכה.' },
+  { tag: '1pb-streak',   hour: 20, min: 0,
+    title: '🔥 מבחן המשמעת האחרון.',
+    body:  'השעה 20:00. אם לא תשלים את ה-1% שלך עכשיו, הרצף נשבר ומתחילים מאפס.' },
+];
+
 async function scheduleLocalNotifications() {
   if (Notification.permission !== 'granted') return;
 
   clearScheduledNotifs(); // clear any existing setTimeout timers
+
+  const isMonkMode = !!localStorage.getItem('1pb_monk_mode');
+  const schedule = isMonkMode ? MONK_NOTIF_SCHEDULE : DAILY_NOTIF_SCHEDULE;
 
   const now = new Date();
   let reg = null;
@@ -6730,7 +6751,7 @@ async function scheduleLocalNotifications() {
     } catch (_) {}
 
     let count = 0;
-    for (const slot of DAILY_NOTIF_SCHEDULE) {
+    for (const slot of schedule) {
       const target = new Date(now);
       target.setHours(slot.hour, slot.min, 0, 0);
       if (target <= now) target.setDate(target.getDate() + 1); // tomorrow if already past
@@ -6761,7 +6782,7 @@ async function scheduleLocalNotifications() {
   } else {
     // Fallback: setTimeout (only fires while page is open)
     let count = 0;
-    for (const slot of DAILY_NOTIF_SCHEDULE) {
+    for (const slot of schedule) {
       const target = new Date(now);
       target.setHours(slot.hour, slot.min, 0, 0);
       if (target <= now) continue; // already passed today — skip

@@ -1166,3 +1166,134 @@
   border: 1px solid rgba(255,255,255,.1);
   backdrop-filter: blur(6px);
 }
+
+/* ═══ MONK MODE ═════════════════════════════════ */
+
+/* Toggle button */
+.bc-monk-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  width: 100%;
+  max-width: 420px;
+  margin: 4px 0;
+  text-align: right;
+}
+.bc-monk-toggle:hover {
+  border-color: rgba(220,38,38,.4);
+  background: rgba(220,38,38,.05);
+}
+.bc-monk-toggle--active {
+  border-color: #dc2626;
+  background: rgba(220,38,38,.08);
+}
+
+/* Pill switch */
+.bc-monk-switch {
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.15);
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+  display: block;
+}
+.bc-monk-toggle--active .bc-monk-switch { background: #dc2626; }
+.bc-monk-switch::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: transform .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.bc-monk-toggle--active .bc-monk-switch::after { transform: translateX(18px); }
+
+/* Toggle label text */
+.bc-monk-toggle-label { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.bc-monk-toggle-title {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.bc-monk-toggle-sub {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 12px;
+  color: #64748b;
+}
+.bc-monk-toggle--active .bc-monk-toggle-sub { color: rgba(220,38,38,.8); }
+
+/* Active badge */
+.bc-monk-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(220,38,38,.07);
+  border: 1px solid rgba(220,38,38,.28);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 420px;
+  animation: bc-monk-pulse 2.5s ease-in-out infinite;
+}
+@keyframes bc-monk-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  50%       { box-shadow: 0 0 20px 3px rgba(220,38,38,.14); }
+}
+.bc-monk-badge-icon { font-size: 24px; flex-shrink: 0; }
+.bc-monk-badge-text { flex: 1; }
+.bc-monk-badge-title {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.bc-monk-badge-sub {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 2px;
+}
+.bc-monk-badge-streak {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 20px;
+  color: #dc2626;
+  letter-spacing: .04em;
+}
+
+/* Global monk mode theme overrides */
+.bc-monk-mode.bc-mode-select::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(220,38,38,.1) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+.bc-monk-mode.bc-root {
+  background: #040408;
+}
+.bc-monk-mode .bc-hud-top {
+  border-bottom-color: rgba(220,38,38,.25);
+}
+.bc-monk-mode .bc-timer {
+  text-shadow: 0 0 24px rgba(220,38,38,.45);
+}
+.bc-monk-mode .bc-ctrl-start {
+  background: #dc2626;
+  box-shadow: 0 0 24px rgba(220,38,38,.35);
+}
+.bc-monk-mode .bc-round-badge {
+  border-color: rgba(220,38,38,.35);
+  background: rgba(220,38,38,.08);
+}
