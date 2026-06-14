@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../services/firebase'
 import { useAuth } from '../context/AuthContext'
+import { toast } from '../components/Toast'
 import './AIBoxingCoach.css'
 
 // ── Tier config ───────────────────────────────────────────────────
@@ -41,6 +42,23 @@ const COMBO_INTERVAL_MS = 12_000
 
 const ORDINALS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
                   'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve']
+
+// ── Form tips per mode ────────────────────────────────────────────
+const BOXING_TIPS = [
+  'Keep your guard tight between every combo.',
+  'Exhale sharply on each punch — it adds power.',
+  'Stay light on your feet. Weight on the balls.',
+  'Snap punches back fast — don\'t push them.',
+  'Rotate your shoulder fully on the cross.',
+]
+
+const MUAY_THAI_TIPS = [
+  'Chamber your knee high before throwing a kick.',
+  'Rotate your hip fully on every roundhouse.',
+  'Keep your guard up when throwing kicks.',
+  'Use the shin, not the foot, on roundhouse kicks.',
+  'Tighten your core when blocking leg kicks.',
+]
 
 // ── Vision constants ──────────────────────────────────────────────
 const GUARD_THRESHOLD     = 0.10
@@ -259,12 +277,17 @@ export default function AIBoxingCoach() {
     return () => clearTimeout(t)
   }, [phase, round])
 
-  // ── TTS: rest announcement ────────────────────────────────────────
+  // ── TTS: rest announcement + round-complete toast ─────────────────
   useEffect(() => {
     if (phase !== 'rest') return
     const t = setTimeout(() => speakRef.current?.('Rest! Next round coming up.'), 200)
+    const remaining = TIERS.active.maxRounds - round
+    toast.success(
+      `⚡ Round ${round} Complete!`,
+      remaining > 0 ? `${remaining} round${remaining === 1 ? '' : 's'} to go. Stay sharp!` : null
+    )
     return () => clearTimeout(t)
-  }, [phase])
+  }, [phase, round])
 
   // ── Combo engine ──────────────────────────────────────────────────
   useEffect(() => {
@@ -369,6 +392,8 @@ export default function AIBoxingCoach() {
       setShowProModal(true)
     } else {
       setMode('muay-thai')
+      const tip = MUAY_THAI_TIPS[Math.floor(Math.random() * MUAY_THAI_TIPS.length)]
+      setTimeout(() => toast.info('💡 Muay Thai Tip', tip), 2200)
     }
   }
 
@@ -554,6 +579,7 @@ export default function AIBoxingCoach() {
       (ps.guardDownStart != null ? performance.now() - ps.guardDownStart : 0)
 
     if (isFreeNow) {
+      toast.streak('⚡ 2 Minutes Done!', 'Go PRO to unlock full 12-round sessions.')
       setPhase('idle')
       setCurrentCombo(null)
       setTimeout(() => {
@@ -563,6 +589,8 @@ export default function AIBoxingCoach() {
       }, 1400)
       return
     }
+
+    toast.success('🏆 Session Complete!', `${ps.punchCount} strikes tracked. Elite work.`)
 
     setReport({
       rounds:        TIERS.active.maxRounds,
@@ -611,7 +639,11 @@ export default function AIBoxingCoach() {
           <h1 className="bc-ms-title">Choose Your Style</h1>
           <p className="bc-ms-sub">Select a training mode to begin your session</p>
           <div className="bc-ms-cards">
-            <button className="bc-ms-card" onClick={() => setMode('boxing')}>
+            <button className="bc-ms-card" onClick={() => {
+              setMode('boxing')
+              const tip = BOXING_TIPS[Math.floor(Math.random() * BOXING_TIPS.length)]
+              setTimeout(() => toast.info('💡 Boxing Tip', tip), 2200)
+            }}>
               <div className="bc-ms-card-glow bc-ms-card-glow--boxing" />
               <span className="bc-ms-icon">🥊</span>
               <span className="bc-ms-name">Classic Boxing</span>
