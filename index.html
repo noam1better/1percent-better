@@ -6685,60 +6685,94 @@ function dismissNotifModal() {
   localStorage.setItem('1pb_notif_asked', '1');
 }
 
-/* ── Schedule local notifications via Notification API ── */
-function scheduleLocalNotifications() {
-  if (Notification.permission !== 'granted') return;
-  const prefs = loadNotifPrefs();
+/* ── 5-slot daily notification schedule ──────────────────────────────
+   Primary:  Notification Triggers API (showTrigger) — fires in background
+             on Chrome/Edge for Android even when the app is closed.
+   Fallback: setTimeout — fires only while the page is open (all browsers).
+   ─────────────────────────────────────────────────────────────────── */
+const DAILY_NOTIF_SCHEDULE = [
+  { tag: ‘1pb-morning’,  hour:  8, min: 0,
+    title: ‘⚡ בוקר טוב!’,
+    body:  ‘איך אתה מייצר את ה-1% הטוב ביותר שלך היום?’ },
+  { tag: ‘1pb-midday’,   hour: 12, min: 0,
+    title: ‘🎯 חצי יום עבר!’,
+    body:  ‘זמן לעצור, לקחת נשימה ולחזור לפוקוס.’ },
+  { tag: ‘1pb-learning’, hour: 15, min: 0,
+    title: ‘📚 משקיעים בראש’,
+    body:  ‘כנס למסלול הלמידה שלך והתקדם עוד צעד אחד היום.’ },
+  { tag: ‘1pb-workout’,  hour: 18, min: 0,
+    title: ‘🥊 הזמן לזוז!’,
+    body:  ‘כנס לסיבוב איגרוף או מואי טאי מהיר ותוציא קצת אנרגיה!’ },
+  { tag: ‘1pb-streak’,   hour: 20, min: 0,
+    title: ‘🔥 הרצף בסכנה!’,
+    body:  ‘השעה כבר 20:00 — כנס להשלים את ה-1% שלך ותישאר במשחק.’ },
+];
 
-  // Clear existing scheduled timers
-  clearScheduledNotifs();
+async function scheduleLocalNotifications() {
+  if (Notification.permission !== ‘granted’) return;
 
-  const [h, m] = (prefs.time || '20:00').split(':').map(Number);
-  const now    = new Date();
-  const target = new Date();
-  target.setHours(h, m, 0, 0);
-  if (target <= now) target.setDate(target.getDate() + 1); // tomorrow
+  clearScheduledNotifs(); // clear any existing setTimeout timers
 
-  const msUntil = target - now;
-  const isHe    = currentLang === 'he';
+  const now = new Date();
+  let reg = null;
+  try { reg = await navigator.serviceWorker.ready; } catch (_) {}
 
-  /* Daily reminder */
-  if (prefs.reminder) {
-    const tid = setTimeout(() => {
-      const streak = state.streak?.current || 1;
-      const alreadyDone = checkTodayDone();
-      if (!alreadyDone) {
-        fireNotification(
-          isHe ? '🔥 1% Better — המשימה היומית ממתינה' : '🔥 1% Better — Today‘s task is waiting',
-          isHe ? `יום ${streak} ברצף. המשימה היומית עדיין לא סגורה.` : `Day ${streak} streak. Your daily task is still open.`,
-          'daily-reminder',
-          '/#hub'
-        );
+  const supportsShowTrigger =
+    reg &&
+    typeof TimestampTrigger !== ‘undefined’ &&
+    ‘showTrigger’ in Notification.prototype;
+
+  if (supportsShowTrigger) {
+    // Cancel any existing 1pb triggered notifications, then re-register
+    try {
+      const existing = await reg.getNotifications({ includeTriggered: true });
+      existing.forEach(n => { if (n.tag?.startsWith(‘1pb-’)) n.close(); });
+    } catch (_) {}
+
+    let count = 0;
+    for (const slot of DAILY_NOTIF_SCHEDULE) {
+      const target = new Date(now);
+      target.setHours(slot.hour, slot.min, 0, 0);
+      if (target <= now) target.setDate(target.getDate() + 1); // tomorrow if already past
+
+      try {
+        await reg.showNotification(slot.title, {
+          body:        slot.body,
+          icon:        ‘/icon-192.png’,
+          badge:       ‘/icon-192.png’,
+          tag:         slot.tag,
+          dir:         ‘rtl’,
+          lang:        ‘he’,
+          data:        { url: ‘/#hub’ },
+          vibrate:     [100, 50, 100],
+          actions:     [
+            { action: ‘open’,    title: ‘🚀 פתח’ },
+            { action: ‘dismiss’, title: ‘אחר כך’ },
+          ],
+          showTrigger: new TimestampTrigger(target.getTime()),
+        });
+        count++;
+      } catch (e) {
+        console.warn(‘[1PB] showTrigger failed for’, slot.tag, e);
       }
-    }, msUntil);
-    _notifTimers.push(tid);
-  }
-
-  /* Streak danger alert — 2h before midnight */
-  if (prefs.streak) {
-    const midnight = new Date();
-    midnight.setHours(22, 0, 0, 0);
-    if (midnight <= now) midnight.setDate(midnight.getDate() + 1);
-    const msToMidnight = midnight - now;
-    if (msToMidnight > 0) {
-      const tid = setTimeout(() => {
-        const alreadyDone = checkTodayDone();
-        if (!alreadyDone) {
-          fireNotification(
-            isHe ? '⚠️ הרצף שלך בסכנה' : '⚠️ Your streak is at risk',
-            isHe ? 'נותרו 2 שעות לשמור על ה-1% היומי שלך.' : '2 hours left to protect your daily 1%.',
-            'streak-danger',
-            '/#hub'
-          );
-        }
-      }, msToMidnight);
-      _notifTimers.push(tid);
     }
+    console.log(`[1PB] ${count}/5 notifications scheduled via Notification Triggers API`);
+
+  } else {
+    // Fallback: setTimeout (only fires while page is open)
+    let count = 0;
+    for (const slot of DAILY_NOTIF_SCHEDULE) {
+      const target = new Date(now);
+      target.setHours(slot.hour, slot.min, 0, 0);
+      if (target <= now) continue; // already passed today — skip
+
+      const tid = setTimeout(() => {
+        fireNotification(slot.title, slot.body, slot.tag, ‘/#hub’);
+      }, target - now);
+      _notifTimers.push(tid);
+      count++;
+    }
+    if (count > 0) console.log(`[1PB] ${count} notifications scheduled via setTimeout`);
   }
 }
 
@@ -6759,17 +6793,18 @@ function fireNotification(title, body, tag = 'general', url = '/') {
           tag,
           icon:    '/icon-192.png',
           badge:   '/icon-192.png',
+          dir:     'rtl',
+          lang:    'he',
           vibrate: [100, 50, 100],
           data:    { url },
           actions: [
-            { action: 'open',    title: '🚀 Open' },
-            { action: 'dismiss', title: 'Later' },
+            { action: 'open',    title: '🚀 פתח' },
+            { action: 'dismiss', title: 'אחר כך' },
           ],
         });
       });
     } else {
-      // Fallback: regular Notification API
-      new Notification(title, { body, tag, icon: '/icon-192.png' });
+      new Notification(title, { body, tag, icon: '/icon-192.png', dir: 'rtl', lang: 'he' });
     }
   } catch(e) {
     console.warn('[Notif] fire failed:', e);

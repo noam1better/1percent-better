@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════
-// 1% Better — Service Worker v1.2.0
+// 1% Better — Service Worker v1.4.0
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME = '1pb-v1.3.0';
+const CACHE_NAME = '1pb-v1.4.0';
 const OFFLINE_URL = '/index.html';
 const ALLOWED_CROSS_ORIGINS = [
   'cdn.jsdelivr.net',
@@ -126,6 +126,8 @@ self.addEventListener('push', event => {
 
   const options = {
     body, icon, badge, tag,
+    dir:  'rtl',
+    lang: 'he',
     data:  { url },
     actions: [
       { action: 'open',    title: '🚀 פתח' },
@@ -144,8 +146,10 @@ self.addEventListener('notificationclick', event => {
   const url = event.notification.data?.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const existing = list.find(c => c.url.includes('1percent-better'));
-      if (existing) return existing.focus();
+      const existing = list.find(c => {
+        try { return new URL(c.url).origin === self.location.origin; } catch { return false; }
+      });
+      if (existing) return existing.navigate ? existing.navigate(url).then(c => c.focus()) : existing.focus();
       return clients.openWindow(url);
     })
   );
