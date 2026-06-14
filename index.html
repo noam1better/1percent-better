@@ -6649,7 +6649,7 @@ function showNotifModal() {
   } else {
     setEl('nm-title',     'Stay on Streak');
     setEl('nm-body',      'A sharp daily nudge to keep your 1% progress moving forward. Only what matters.');
-    setEl('nm-ex1',       '"Finished today’s task — keeping momentum."');
+    setEl('nm-ex1',       '"Finished today\'s task — keeping momentum."');
     setEl('nm-ex2',       '"Streak intact. No breaking now."');
     setEl('nm-ex3',       '"Day 7 in a row. One more step."');
     setEl('nm-allow-btn', 'Allow Notifications');
@@ -6691,25 +6691,25 @@ function dismissNotifModal() {
    Fallback: setTimeout — fires only while the page is open (all browsers).
    ─────────────────────────────────────────────────────────────────── */
 const DAILY_NOTIF_SCHEDULE = [
-  { tag: ‘1pb-morning’,  hour:  8, min: 0,
-    title: ‘⚡ בוקר טוב!’,
-    body:  ‘איך אתה מייצר את ה-1% הטוב ביותר שלך היום?’ },
-  { tag: ‘1pb-midday’,   hour: 12, min: 0,
-    title: ‘🎯 חצי יום עבר!’,
-    body:  ‘זמן לעצור, לקחת נשימה ולחזור לפוקוס.’ },
-  { tag: ‘1pb-learning’, hour: 15, min: 0,
-    title: ‘📚 משקיעים בראש’,
-    body:  ‘כנס למסלול הלמידה שלך והתקדם עוד צעד אחד היום.’ },
-  { tag: ‘1pb-workout’,  hour: 18, min: 0,
-    title: ‘🥊 הזמן לזוז!’,
-    body:  ‘כנס לסיבוב איגרוף או מואי טאי מהיר ותוציא קצת אנרגיה!’ },
-  { tag: ‘1pb-streak’,   hour: 20, min: 0,
-    title: ‘🔥 הרצף בסכנה!’,
-    body:  ‘השעה כבר 20:00 — כנס להשלים את ה-1% שלך ותישאר במשחק.’ },
+  { tag: '1pb-morning',  hour:  8, min: 0,
+    title: '⚡ בוקר טוב!',
+    body:  'איך אתה מייצר את ה-1% הטוב ביותר שלך היום?' },
+  { tag: '1pb-midday',   hour: 12, min: 0,
+    title: '🎯 חצי יום עבר!',
+    body:  'זמן לעצור, לקחת נשימה ולחזור לפוקוס.' },
+  { tag: '1pb-learning', hour: 15, min: 0,
+    title: '📚 משקיעים בראש',
+    body:  'כנס למסלול הלמידה שלך והתקדם עוד צעד אחד היום.' },
+  { tag: '1pb-workout',  hour: 18, min: 0,
+    title: '🥊 הזמן לזוז!',
+    body:  'כנס לסיבוב איגרוף או מואי טאי מהיר ותוציא קצת אנרגיה!' },
+  { tag: '1pb-streak',   hour: 20, min: 0,
+    title: '🔥 הרצף בסכנה!',
+    body:  'השעה כבר 20:00 — כנס להשלים את ה-1% שלך ותישאר במשחק.' },
 ];
 
 async function scheduleLocalNotifications() {
-  if (Notification.permission !== ‘granted’) return;
+  if (Notification.permission !== 'granted') return;
 
   clearScheduledNotifs(); // clear any existing setTimeout timers
 
@@ -6719,14 +6719,14 @@ async function scheduleLocalNotifications() {
 
   const supportsShowTrigger =
     reg &&
-    typeof TimestampTrigger !== ‘undefined’ &&
-    ‘showTrigger’ in Notification.prototype;
+    typeof TimestampTrigger !== 'undefined' &&
+    'showTrigger' in Notification.prototype;
 
   if (supportsShowTrigger) {
     // Cancel any existing 1pb triggered notifications, then re-register
     try {
       const existing = await reg.getNotifications({ includeTriggered: true });
-      existing.forEach(n => { if (n.tag?.startsWith(‘1pb-’)) n.close(); });
+      existing.forEach(n => { if (n.tag?.startsWith('1pb-')) n.close(); });
     } catch (_) {}
 
     let count = 0;
@@ -6738,22 +6738,22 @@ async function scheduleLocalNotifications() {
       try {
         await reg.showNotification(slot.title, {
           body:        slot.body,
-          icon:        ‘/icon-192.png’,
-          badge:       ‘/icon-192.png’,
+          icon:        '/icon-192.png',
+          badge:       '/icon-192.png',
           tag:         slot.tag,
-          dir:         ‘rtl’,
-          lang:        ‘he’,
-          data:        { url: ‘/#hub’ },
+          dir:         'rtl',
+          lang:        'he',
+          data:        { url: '/#hub' },
           vibrate:     [100, 50, 100],
           actions:     [
-            { action: ‘open’,    title: ‘🚀 פתח’ },
-            { action: ‘dismiss’, title: ‘אחר כך’ },
+            { action: 'open',    title: '🚀 פתח' },
+            { action: 'dismiss', title: 'אחר כך' },
           ],
           showTrigger: new TimestampTrigger(target.getTime()),
         });
         count++;
       } catch (e) {
-        console.warn(‘[1PB] showTrigger failed for’, slot.tag, e);
+        console.warn('[1PB] showTrigger failed for', slot.tag, e);
       }
     }
     console.log(`[1PB] ${count}/5 notifications scheduled via Notification Triggers API`);
@@ -6767,7 +6767,7 @@ async function scheduleLocalNotifications() {
       if (target <= now) continue; // already passed today — skip
 
       const tid = setTimeout(() => {
-        fireNotification(slot.title, slot.body, slot.tag, ‘/#hub’);
+        fireNotification(slot.title, slot.body, slot.tag, '/#hub');
       }, target - now);
       _notifTimers.push(tid);
       count++;
@@ -6945,7 +6945,7 @@ function normalizeIronWillText(s) {
     .toLowerCase()
     .normalize('NFKC')
     .replace(/[\s ]+/g, ' ')
-    .replace(/[.,!?;:'"`’]+/g, '')
+    .replace(/[.,!?;:'"`']+/g, '')
     .trim();
 }
 
