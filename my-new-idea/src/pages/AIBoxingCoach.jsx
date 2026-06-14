@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../services/firebase'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../components/Toast'
+import FitnessOnboarding from './FitnessOnboarding'
 import './AIBoxingCoach.css'
 
 // ── Tier config ───────────────────────────────────────────────────
@@ -194,6 +195,11 @@ function ProGateModal({ reason, onClose }) {
 // ── Main Component ────────────────────────────────────────────────
 export default function AIBoxingCoach() {
   const { user } = useAuth()
+
+  // First-run onboarding gate
+  const [onboarded, setOnboarded] = useState(
+    () => !!localStorage.getItem('1pb_fitness_onboarded')
+  )
 
   // Mode
   const [mode, setMode] = useState(null) // null | 'boxing' | 'muay-thai'
@@ -666,6 +672,15 @@ export default function AIBoxingCoach() {
   const handleCloseModal = () => {
     setShowProModal(false)
     window.speechSynthesis?.cancel()
+  }
+
+  // ── Render: first-run onboarding ─────────────────────────────────
+  if (!onboarded) {
+    return (
+      <FitnessOnboarding
+        onComplete={() => setOnboarded(true)}
+      />
+    )
   }
 
   // ── Render: loading ───────────────────────────────────────────────
