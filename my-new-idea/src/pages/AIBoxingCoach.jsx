@@ -285,8 +285,8 @@ export default function AIBoxingCoach() {
     const t = setTimeout(() => speakRef.current?.('Rest! Next round coming up.'), 200)
     const remaining = TIERS.active.maxRounds - round
     toast.success(
-      `⚡ Round ${round} Complete!`,
-      remaining > 0 ? `${remaining} round${remaining === 1 ? '' : 's'} to go. Stay sharp!` : null
+      `⚡ סיבוב ${round} הושלם!`,
+      remaining > 0 ? `עוד ${remaining} ${remaining === 1 ? 'סיבוב' : 'סיבובים'}. תישאר חד!` : null
     )
     return () => clearTimeout(t)
   }, [phase, round])
@@ -579,7 +579,7 @@ export default function AIBoxingCoach() {
       (ps.guardDownStart != null ? performance.now() - ps.guardDownStart : 0)
 
     if (isFreeNow) {
-      toast.streak('⚡ 2 Minutes Done!', 'Go PRO to unlock full 12-round sessions.')
+      toast.streak('⚡ 2 דקות אימון!', 'שדרג ל-PRO לאימונים מלאים של 12 סיבובים.')
       setPhase('idle')
       setCurrentCombo(null)
       modalTimerRef.current = setTimeout(() => {
@@ -590,7 +590,7 @@ export default function AIBoxingCoach() {
       return
     }
 
-    toast.success('🏆 Session Complete!', `${ps.punchCount} strikes tracked. Elite work.`)
+    toast.success('🏆 האימון הסתיים!', `${ps.punchCount} מכות זוהו. עבודת אליטה!`)
 
     setReport({
       rounds:        TIERS.active.maxRounds,
@@ -633,7 +633,7 @@ export default function AIBoxingCoach() {
   if (mode === null) {
     return (
       <div className="bc-mode-select">
-        <button className="bc-ms-exit" onClick={() => window.location.href = '/'}>← Back to Hub</button>
+        <button className="bc-ms-exit" onClick={() => window.location.href = '/'}>חזרה לתפריט</button>
         <div className="bc-ms-content">
           <div className="bc-ms-eyebrow">🥋 AI COACH</div>
           <h1 className="bc-ms-title">Choose Your Style</h1>
@@ -680,19 +680,19 @@ export default function AIBoxingCoach() {
   // ── Render: session report (PRO only) ─────────────────────────────
   if (phase === 'done' && report) {
     return (
-      <div className="bc-report">
+      <div className="bc-report" dir="rtl">
         <div className="bc-report-card">
           <div className="bc-report-trophy">{mode === 'muay-thai' ? '🦵' : '🏆'}</div>
-          <h2 className="bc-report-title">Session Complete</h2>
+          <h2 className="bc-report-title">האימון הסתיים</h2>
           <div className="bc-report-grid">
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.rounds}</span><span className="bc-rs-label">Rounds</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.punches}</span><span className="bc-rs-label">Strikes</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.accuracy}%</span><span className="bc-rs-label">Guard</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.guardDownSecs}s</span><span className="bc-rs-label">Guard Down</span></div>
+            <div className="bc-report-stat"><span className="bc-rs-value">{report.rounds}</span><span className="bc-rs-label">סיבובים</span></div>
+            <div className="bc-report-stat"><span className="bc-rs-value">{report.punches}</span><span className="bc-rs-label">מכות</span></div>
+            <div className="bc-report-stat"><span className="bc-rs-value">{report.accuracy}%</span><span className="bc-rs-label">הגנה</span></div>
+            <div className="bc-report-stat"><span className="bc-rs-value">{report.guardDownSecs}ש׳</span><span className="bc-rs-label">הגנה נפלה</span></div>
           </div>
-          <p className="bc-report-ai-note">🧠 Tracked by on-device MediaPipe Pose — no data leaves your device.</p>
-          <button className="bc-btn-primary" onClick={() => { setPhase('idle'); setRound(1); setTimeLeft(tier.roundDuration) }}>New Session</button>
-          <button className="bc-btn-ghost" onClick={handleBack}>← Change Mode</button>
+          <p className="bc-report-ai-note">🧠 מעקב מקומי באמצעות MediaPipe Pose — אין נתונים שעוזבים את המכשיר.</p>
+          <button className="bc-btn-primary" onClick={() => { setPhase('idle'); setRound(1); setTimeLeft(tier.roundDuration) }}>אימון חדש</button>
+          <button className="bc-btn-ghost" onClick={handleBack}>חזרה לתפריט</button>
         </div>
       </div>
     )
@@ -715,7 +715,7 @@ export default function AIBoxingCoach() {
 
       {/* Free preview banner */}
       {isFree && phase !== 'idle' && (
-        <div className="bc-free-banner">FREE PREVIEW · {fmt(timeLeft)} left</div>
+        <div className="bc-free-banner" dir="rtl">תצוגה חינם · נותר {fmt(timeLeft)}</div>
       )}
 
       {/* Combo display */}

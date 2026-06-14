@@ -537,9 +537,7 @@
 }
 .bc-rs-label {
   font-size: 11px;
-  letter-spacing: .1em;
   color: #64748b;
-  text-transform: uppercase;
 }
 .bc-report-ai-note {
   background: rgba(124,58,237,.12);
@@ -551,6 +549,7 @@
   line-height: 1.5;
   margin: 0;
   width: 100%;
+  text-align: start;
 }
 .bc-btn-primary {
   width: 100%;
