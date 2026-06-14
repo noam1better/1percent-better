@@ -10,8 +10,8 @@ const TIERS = {
   active: { roundDuration: 3 * 60, restDuration: 60, maxRounds: 12 },
 }
 
-// ── Voice combos ──────────────────────────────────────────────────
-const COMBOS = [
+// ── Combo pools ───────────────────────────────────────────────────
+const BOXING_COMBOS = [
   { label: 'Jab — Cross',               speech: 'Jab, Cross!' },
   { label: 'Jab — Cross — Hook',         speech: 'Jab, Cross, Hook!' },
   { label: 'Double Jab — Cross',         speech: 'Double Jab, Cross!' },
@@ -23,6 +23,20 @@ const COMBOS = [
   { label: 'Jab — Uppercut — Cross',     speech: 'Jab, Uppercut, Cross!' },
   { label: 'Double Jab — Hook',          speech: 'Double Jab, Hook!' },
 ]
+
+const MUAY_THAI_COMBOS = [
+  { label: 'Jab — Cross — Right Kick',        speech: 'Jab, Cross, Right Kick!' },
+  { label: 'Left Hook — Right Knee',           speech: 'Left Hook, Right Knee!' },
+  { label: 'Jab — Teep',                       speech: 'Jab, Teep!' },
+  { label: 'Cross — Left Kick — Cross',        speech: 'Cross, Left Kick, Cross!' },
+  { label: 'Jab — Cross — Left Elbow',         speech: 'Jab, Cross, Left Elbow!' },
+  { label: 'Right Kick — Jab — Cross',         speech: 'Right Kick, Jab, Cross!' },
+  { label: 'Jab — Cross — Right Knee',         speech: 'Jab, Cross, Right Knee!' },
+  { label: 'Double Jab — Right Body Kick',     speech: 'Double Jab, Right Body Kick!' },
+  { label: 'Left Knee — Right Kick',           speech: 'Left Knee, Right Kick!' },
+  { label: 'Jab — Cross — Hook — Left Kick',   speech: 'Jab, Cross, Hook, Left Kick!' },
+]
+
 const COMBO_INTERVAL_MS = 12_000
 
 const ORDINALS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
@@ -89,29 +103,47 @@ function lsIsPro() {
 
 // ── ProGateModal ──────────────────────────────────────────────────
 function ProGateModal({ reason, onClose }) {
+  const isMuayThai = reason === 'muay-thai'
   return (
     <div className="pgm-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="pgm-card">
         <div className="pgm-glow-top" />
         <div className="pgm-glow-bottom" />
         <div className="pgm-badge">⚡ PRO MEMBERS ONLY</div>
-        <div className="pgm-icon">🥊</div>
-        <h2 className="pgm-title">Unlock the Full AI Coach</h2>
+        <div className="pgm-icon">{isMuayThai ? '🦵' : '🥊'}</div>
+        <h2 className="pgm-title">
+          {isMuayThai ? 'Muay Thai is PRO' : 'Unlock the Full AI Coach'}
+        </h2>
         <p className="pgm-sub">
           {reason === 'time'
-            ? 'Your 2-minute free preview has ended. Go PRO to keep training without limits.'
-            : 'Advanced combo detection and technique analysis are reserved for PRO members.'}
+            ? "Your 2-minute free preview has ended. Go PRO to keep training without limits."
+            : isMuayThai
+            ? "Kicks, knees, and elbows — the full Muay Thai arsenal is reserved for PRO members."
+            : "Advanced combo detection and technique analysis are reserved for PRO members."}
         </p>
         <ul className="pgm-perks">
-          <li><span className="pgm-perk-icon">⏱</span><span><strong>12 full rounds</strong> — unlimited training time</span></li>
-          <li><span className="pgm-perk-icon">🧠</span><span><strong>Real-time guard</strong> &amp; technique analysis</span></li>
-          <li><span className="pgm-perk-icon">🥋</span><span><strong>Advanced combo</strong> detection &amp; tracking</span></li>
-          <li><span className="pgm-perk-icon">📊</span><span><strong>Full session</strong> performance report</span></li>
+          {isMuayThai ? (
+            <>
+              <li><span className="pgm-perk-icon">🦵</span><span><strong>Full Muay Thai</strong> — kicks, knees &amp; elbows</span></li>
+              <li><span className="pgm-perk-icon">🥊</span><span><strong>Classic Boxing</strong> mode included</span></li>
+              <li><span className="pgm-perk-icon">⏱</span><span><strong>12 full rounds</strong> — unlimited training time</span></li>
+              <li><span className="pgm-perk-icon">📊</span><span><strong>Full session</strong> performance report</span></li>
+            </>
+          ) : (
+            <>
+              <li><span className="pgm-perk-icon">⏱</span><span><strong>12 full rounds</strong> — unlimited training time</span></li>
+              <li><span className="pgm-perk-icon">🧠</span><span><strong>Real-time guard</strong> &amp; technique analysis</span></li>
+              <li><span className="pgm-perk-icon">🥋</span><span><strong>Advanced combo</strong> detection &amp; tracking</span></li>
+              <li><span className="pgm-perk-icon">📊</span><span><strong>Full session</strong> performance report</span></li>
+            </>
+          )}
         </ul>
         <button className="pgm-cta" onClick={() => { window.location.href = '/' }}>
           Upgrade to PRO Now ⚡
         </button>
-        <button className="pgm-secondary" onClick={onClose}>Continue Free Preview</button>
+        <button className="pgm-secondary" onClick={onClose}>
+          {isMuayThai ? 'Use Classic Boxing' : 'Continue Free Preview'}
+        </button>
       </div>
     </div>
   )
@@ -120,6 +152,9 @@ function ProGateModal({ reason, onClose }) {
 // ── Main Component ────────────────────────────────────────────────
 export default function AIBoxingCoach() {
   const { user } = useAuth()
+
+  // Mode
+  const [mode, setMode] = useState(null) // null | 'boxing' | 'muay-thai'
 
   // Tier
   const [proStatus,    setProStatus]    = useState(() => lsIsPro() ? 'active' : 'loading')
@@ -215,13 +250,11 @@ export default function AIBoxingCoach() {
   }
 
   // ── TTS: round announcement ───────────────────────────────────────
-  // Fires when phase is 'round' and round number hasn't been announced yet
   useEffect(() => {
     if (phase !== 'round') return
     if (round === roundAnnouncedRef.current) return
     roundAnnouncedRef.current = round
     const ord = ORDINALS[round] || round.toString()
-    // Delay slightly so the timer UI settles first
     const t = setTimeout(() => speakRef.current?.(`Round ${ord}. Fight!`), 300)
     return () => clearTimeout(t)
   }, [phase, round])
@@ -233,23 +266,24 @@ export default function AIBoxingCoach() {
     return () => clearTimeout(t)
   }, [phase])
 
-  // ── Combo engine: fires every COMBO_INTERVAL_MS during a round ────
+  // ── Combo engine ──────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'round') {
       clearInterval(comboIntervalRef.current)
       return
     }
 
+    const pool = mode === 'muay-thai' ? MUAY_THAI_COMBOS : BOXING_COMBOS
     const fire = () => {
-      const combo = COMBOS[Math.floor(Math.random() * COMBOS.length)]
+      const combo = pool[Math.floor(Math.random() * pool.length)]
       setCurrentCombo(combo)
       speakRef.current?.(combo.speech)
     }
 
-    fire()  // immediate on round start
+    fire()
     comboIntervalRef.current = setInterval(fire, COMBO_INTERVAL_MS)
     return () => clearInterval(comboIntervalRef.current)
-  }, [phase, round]) // re-fire on each new round
+  }, [phase, round, mode])
 
   // ── Pro gate ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -260,9 +294,9 @@ export default function AIBoxingCoach() {
       .catch(() => setProStatus('free'))
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Camera + MediaPipe init ───────────────────────────────────────
+  // ── Camera + MediaPipe init (only after mode is selected) ─────────
   useEffect(() => {
-    if (proStatus === 'loading') return
+    if (proStatus === 'loading' || mode === null) return
     startCamera()
     loadPoseLandmarker()
       .then(lm  => { landmarkerRef.current = lm; setPoseReady(true) })
@@ -274,7 +308,7 @@ export default function AIBoxingCoach() {
       cancelAnimationFrame(rafRef.current)
       window.speechSynthesis?.cancel()
     }
-  }, [proStatus]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [proStatus, mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tier   = TIERS[proStatus] ?? TIERS.free
   const isFree = proStatus === 'free'
@@ -308,6 +342,34 @@ export default function AIBoxingCoach() {
     const next = facingMode === 'user' ? 'environment' : 'user'
     setFacingMode(next)
     startCamera(next)
+  }
+
+  // ── Back to mode selector ─────────────────────────────────────────
+  const handleBack = () => {
+    window.speechSynthesis?.cancel()
+    clearInterval(timerRef.current)
+    clearInterval(comboIntervalRef.current)
+    cancelAnimationFrame(rafRef.current)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    setPhase('idle')
+    setMode(null)
+    setCamReady(false)
+    setCamError(null)
+    setCurrentCombo(null)
+    setReport(null)
+    setPoseReady(false)
+    setPoseError(null)
+  }
+
+  // ── Mode selection ────────────────────────────────────────────────
+  const handleMuayThai = () => {
+    if (proStatus === 'free') {
+      setModalReason('muay-thai')
+      setShowProModal(true)
+    } else {
+      setMode('muay-thai')
+    }
   }
 
   // ── Frame analysis ────────────────────────────────────────────────
@@ -429,7 +491,7 @@ export default function AIBoxingCoach() {
       guardDownStart: null, totalGuardDownMs: 0,
     }
     tenWarnedRef.current      = false
-    roundAnnouncedRef.current = 0  // reset so round-announcement effect fires for round 1
+    roundAnnouncedRef.current = 0
     setRound(1)
     setTimeLeft(tier.roundDuration)
     setPhase('round')
@@ -446,7 +508,6 @@ export default function AIBoxingCoach() {
 
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        // 10-second warning
         if (prev === 11 && phase === 'round' && !tenWarnedRef.current) {
           tenWarnedRef.current = true
           speakRef.current?.('Ten seconds left!')
@@ -468,7 +529,6 @@ export default function AIBoxingCoach() {
             })
             return proStatusRef.current === 'active' ? 'rest' : cur
           }
-          // rest ended → next round
           tenWarnedRef.current = false
           setRound(r => { setTimeLeft(TIERS.active.roundDuration); return r + 1 })
           return 'round'
@@ -496,7 +556,6 @@ export default function AIBoxingCoach() {
     if (isFreeNow) {
       setPhase('idle')
       setCurrentCombo(null)
-      // slight delay so "time's up" finishes before modal
       setTimeout(() => {
         window.speechSynthesis?.cancel()
         setModalReason('time')
@@ -542,22 +601,67 @@ export default function AIBoxingCoach() {
     )
   }
 
+  // ── Render: mode selector ─────────────────────────────────────────
+  if (mode === null) {
+    return (
+      <div className="bc-mode-select">
+        <button className="bc-ms-exit" onClick={() => window.location.href = '/'}>← Back to Hub</button>
+        <div className="bc-ms-content">
+          <div className="bc-ms-eyebrow">🥋 AI COACH</div>
+          <h1 className="bc-ms-title">Choose Your Style</h1>
+          <p className="bc-ms-sub">Select a training mode to begin your session</p>
+          <div className="bc-ms-cards">
+            <button className="bc-ms-card" onClick={() => setMode('boxing')}>
+              <div className="bc-ms-card-glow bc-ms-card-glow--boxing" />
+              <span className="bc-ms-icon">🥊</span>
+              <span className="bc-ms-name">Classic Boxing</span>
+              <span className="bc-ms-desc">Jabs, crosses, hooks &amp; uppercuts</span>
+              <div className="bc-ms-combos">
+                {BOXING_COMBOS.slice(0, 2).map(c => <span key={c.label}>{c.label}</span>)}
+                <span>+ {BOXING_COMBOS.length - 2} more combos</span>
+              </div>
+              <span className="bc-ms-badge bc-ms-badge--free">FREE</span>
+            </button>
+
+            <button
+              className={`bc-ms-card bc-ms-card--pro ${isFree ? 'bc-ms-card--locked' : ''}`}
+              onClick={handleMuayThai}
+            >
+              <div className="bc-ms-card-glow bc-ms-card-glow--muaythai" />
+              <span className="bc-ms-icon">{isFree ? '🔒' : '🦵'}</span>
+              <span className="bc-ms-name">Muay Thai</span>
+              <span className="bc-ms-desc">Punches, kicks, knees &amp; elbows</span>
+              <div className="bc-ms-combos">
+                {MUAY_THAI_COMBOS.slice(0, 2).map(c => <span key={c.label}>{c.label}</span>)}
+                <span>+ {MUAY_THAI_COMBOS.length - 2} more combos</span>
+              </div>
+              <span className="bc-ms-badge bc-ms-badge--pro">
+                {isFree ? '🔒 PRO' : '⚡ PRO'}
+              </span>
+            </button>
+          </div>
+        </div>
+        {showProModal && <ProGateModal reason={modalReason} onClose={handleCloseModal} />}
+      </div>
+    )
+  }
+
   // ── Render: session report (PRO only) ─────────────────────────────
   if (phase === 'done' && report) {
     return (
       <div className="bc-report">
         <div className="bc-report-card">
-          <div className="bc-report-trophy">🏆</div>
+          <div className="bc-report-trophy">{mode === 'muay-thai' ? '🦵' : '🏆'}</div>
           <h2 className="bc-report-title">Session Complete</h2>
           <div className="bc-report-grid">
             <div className="bc-report-stat"><span className="bc-rs-value">{report.rounds}</span><span className="bc-rs-label">Rounds</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.punches}</span><span className="bc-rs-label">Punches</span></div>
+            <div className="bc-report-stat"><span className="bc-rs-value">{report.punches}</span><span className="bc-rs-label">Strikes</span></div>
             <div className="bc-report-stat"><span className="bc-rs-value">{report.accuracy}%</span><span className="bc-rs-label">Guard</span></div>
             <div className="bc-report-stat"><span className="bc-rs-value">{report.guardDownSecs}s</span><span className="bc-rs-label">Guard Down</span></div>
           </div>
           <p className="bc-report-ai-note">🧠 Tracked by on-device MediaPipe Pose — no data leaves your device.</p>
           <button className="bc-btn-primary" onClick={() => { setPhase('idle'); setRound(1); setTimeLeft(tier.roundDuration) }}>New Session</button>
-          <button className="bc-btn-ghost"   onClick={() => window.location.href = '/'}>← Back to Hub</button>
+          <button className="bc-btn-ghost" onClick={handleBack}>← Change Mode</button>
         </div>
       </div>
     )
@@ -565,6 +669,7 @@ export default function AIBoxingCoach() {
 
   // ── Render: camera HUD ────────────────────────────────────────────
   const mirror = facingMode === 'user' ? 'scaleX(-1)' : 'none'
+  const modeName = mode === 'muay-thai' ? 'Muay Thai' : 'Classic Boxing'
 
   return (
     <div className="bc-root">
@@ -621,19 +726,19 @@ export default function AIBoxingCoach() {
           >
             {muted ? '🔇' : '🔊'}
           </button>
-          <button className="bc-btn-exit" onClick={() => { stopSession(); window.location.href = '/' }}>✕</button>
+          <button className="bc-btn-exit" onClick={handleBack} title="Change mode">✕</button>
         </div>
       </div>
 
       {/* AI status badge */}
       {!poseReady && <div className="bc-ai-badge bc-ai-badge--loading"><div className="bc-ai-spinner" /> Loading AI…</div>}
-      {poseReady && !poseError && phase === 'idle' && <div className="bc-ai-badge bc-ai-badge--ready">🧠 AI Ready</div>}
+      {poseReady && !poseError && phase === 'idle' && <div className="bc-ai-badge bc-ai-badge--ready">🧠 AI Ready · {modeName}</div>}
       {poseError && <div className="bc-ai-badge bc-ai-badge--error" title={poseError}>⚠ AI offline</div>}
 
       {/* Reticle (idle only) */}
       {phase === 'idle' && (
         <div className="bc-reticle-wrap">
-          <div className="bc-reticle">
+          <div className={`bc-reticle ${camReady ? 'bc-reticle--active' : ''}`}>
             <div className="bc-reticle-inner" />
             <div className="bc-reticle-cross bc-reticle-cross--h" />
             <div className="bc-reticle-cross bc-reticle-cross--v" />
@@ -651,7 +756,7 @@ export default function AIBoxingCoach() {
         <div className="bc-stats-side">
           <div className="bc-stat-chip">
             <span className="bc-stat-val">{stats.punches}</span>
-            <span className="bc-stat-lbl">PUNCHES</span>
+            <span className="bc-stat-lbl">STRIKES</span>
           </div>
           <div className={`bc-stat-chip ${stats.speed > 60 ? 'bc-stat-chip--hot' : ''}`}>
             <span className="bc-stat-val">{stats.speed}</span>

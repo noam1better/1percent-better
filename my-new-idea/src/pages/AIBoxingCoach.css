@@ -821,6 +821,196 @@
 .pgm-cta:hover  { transform: scale(1.02); box-shadow: 0 6px 32px rgba(255,183,3,.5); }
 .pgm-cta:active { transform: scale(.98); }
 
+/* ── Mode Selector ────────────────────────────────── */
+.bc-mode-select {
+  min-height: 100svh;
+  background: #070711;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  position: relative;
+}
+
+.bc-ms-exit {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top, 0px));
+  left: 20px;
+  background: transparent;
+  border: none;
+  color: #475569;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color .2s;
+  padding: 8px 0;
+}
+.bc-ms-exit:hover { color: #94a3b8; }
+
+.bc-ms-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 560px;
+}
+
+.bc-ms-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.bc-ms-title {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: clamp(38px, 10vw, 60px);
+  letter-spacing: .05em;
+  color: #f1f5f9;
+  margin: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.bc-ms-sub {
+  font-size: 14.5px;
+  color: #475569;
+  margin: -8px 0 4px;
+  text-align: center;
+}
+
+.bc-ms-cards {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+
+.bc-ms-card {
+  flex: 1;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 20px;
+  padding: 28px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, transform .18s;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.bc-ms-card:hover {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(239,68,68,.35);
+  transform: translateY(-3px);
+}
+.bc-ms-card:active { transform: scale(.98) translateY(0); }
+
+.bc-ms-card--pro {
+  border-color: rgba(255,183,3,.2);
+  background: rgba(255,183,3,.03);
+}
+.bc-ms-card--pro:hover {
+  border-color: rgba(255,183,3,.5);
+  background: rgba(255,183,3,.07);
+}
+.bc-ms-card--locked {
+  opacity: .85;
+}
+
+/* Ambient glow top of each card */
+.bc-ms-card-glow {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 130px;
+  pointer-events: none;
+  border-radius: 50%;
+}
+.bc-ms-card-glow--boxing {
+  background: radial-gradient(ellipse, rgba(239,68,68,.18) 0%, transparent 70%);
+}
+.bc-ms-card-glow--muaythai {
+  background: radial-gradient(ellipse, rgba(255,183,3,.2) 0%, transparent 70%);
+}
+
+.bc-ms-icon {
+  font-size: 48px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 14px rgba(255,255,255,.1));
+}
+
+.bc-ms-name {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 26px;
+  letter-spacing: .06em;
+  color: #f1f5f9;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.bc-ms-desc {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+
+.bc-ms-combos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 2px;
+  width: 100%;
+}
+.bc-ms-combos span {
+  font-size: 11px;
+  color: rgba(255,255,255,.28);
+  letter-spacing: .01em;
+}
+.bc-ms-combos span:last-child {
+  color: rgba(255,255,255,.18);
+  font-style: italic;
+}
+
+.bc-ms-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  padding: 4px 12px;
+  border-radius: 99px;
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+}
+.bc-ms-badge--free {
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.28);
+  color: #4ade80;
+}
+.bc-ms-badge--pro {
+  background: rgba(255,183,3,.12);
+  border: 1px solid rgba(255,183,3,.38);
+  color: #ffb703;
+}
+
+@media (max-width: 400px) {
+  .bc-ms-cards { flex-direction: column; }
+}
+
 /* Secondary link */
 .pgm-secondary {
   background: transparent;
