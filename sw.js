@@ -2,7 +2,7 @@
 // 1% Better — Service Worker v1.2.0
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME = '1pb-v1.2.0';
+const CACHE_NAME = '1pb-v1.3.0';
 const OFFLINE_URL = '/index.html';
 const ALLOWED_CROSS_ORIGINS = [
   'cdn.jsdelivr.net',
@@ -15,6 +15,7 @@ const PRE_CACHE = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-1024.png',
 ];
 
 // ── INSTALL ──────────────────────────────────────
