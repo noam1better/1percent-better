@@ -208,6 +208,8 @@ export default function AIBoxingCoach() {
   const rafRef            = useRef(null)
   const timerRef          = useRef(null)
   const comboIntervalRef  = useRef(null)
+  const tipTimerRef       = useRef(null)   // cancellable toast tip timeout
+  const modalTimerRef     = useRef(null)   // cancellable paywall modal timeout
   const lastVidTimeRef    = useRef(-1)
   const phaseRef          = useRef('idle')
   const proStatusRef      = useRef(proStatus)
@@ -373,6 +375,8 @@ export default function AIBoxingCoach() {
     clearInterval(timerRef.current)
     clearInterval(comboIntervalRef.current)
     cancelAnimationFrame(rafRef.current)
+    clearTimeout(tipTimerRef.current)
+    clearTimeout(modalTimerRef.current)
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     setPhase('idle')
@@ -393,7 +397,8 @@ export default function AIBoxingCoach() {
     } else {
       setMode('muay-thai')
       const tip = MUAY_THAI_TIPS[Math.floor(Math.random() * MUAY_THAI_TIPS.length)]
-      setTimeout(() => toast.info('💡 Muay Thai Tip', tip), 2200)
+      clearTimeout(tipTimerRef.current)
+      tipTimerRef.current = setTimeout(() => toast.info('💡 Muay Thai Tip', tip), 2200)
     }
   }
 
@@ -582,7 +587,7 @@ export default function AIBoxingCoach() {
       toast.streak('⚡ 2 Minutes Done!', 'Go PRO to unlock full 12-round sessions.')
       setPhase('idle')
       setCurrentCombo(null)
-      setTimeout(() => {
+      modalTimerRef.current = setTimeout(() => {
         window.speechSynthesis?.cancel()
         setModalReason('time')
         setShowProModal(true)
@@ -642,7 +647,8 @@ export default function AIBoxingCoach() {
             <button className="bc-ms-card" onClick={() => {
               setMode('boxing')
               const tip = BOXING_TIPS[Math.floor(Math.random() * BOXING_TIPS.length)]
-              setTimeout(() => toast.info('💡 Boxing Tip', tip), 2200)
+              clearTimeout(tipTimerRef.current)
+              tipTimerRef.current = setTimeout(() => toast.info('💡 Boxing Tip', tip), 2200)
             }}>
               <div className="bc-ms-card-glow bc-ms-card-glow--boxing" />
               <span className="bc-ms-icon">🥊</span>

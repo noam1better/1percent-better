@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './Toast.css'
 
 // ── Global imperative API ─────────────────────────────────────────
@@ -9,7 +9,7 @@ function _addToast({ type = 'success', title, body = null, duration = 3500 }) {
   if (_dispatch) _dispatch({ type: 'ADD', toast: { id: Date.now() + Math.random(), type, title, body, duration, exiting: false } })
 }
 
-// Primary API
+// Primary API — backward-compatible with toast(msg, type)
 export function toast(titleOrMsg, typeArg = 'success', body = null) {
   _addToast({ type: typeArg, title: titleOrMsg, body })
 }
@@ -63,16 +63,34 @@ function ToastItem({ t, onDismiss }) {
 // ── ToastContainer ────────────────────────────────────────────────
 export function ToastContainer() {
   const [toasts, setToasts] = useState([])
+  // Track in-flight EXIT → REMOVE timers so we can cancel on unmount
+  const pendingTimers = useRef(new Map())
 
-  // Wire up the global dispatcher to this component's state
   useEffect(() => {
     _dispatch = action => setToasts(prev => reducer(prev, action))
-    return () => { _dispatch = null }
+    return () => {
+      _dispatch = null
+      // Cancel all pending REMOVE timers on unmount
+      pendingTimers.current.forEach(clearTimeout)
+      pendingTimers.current.clear()
+    }
   }, [])
 
   const dismiss = useCallback((id) => {
-    setToasts(prev => reducer(prev, { type: 'EXIT', id }))
-    setTimeout(() => setToasts(prev => reducer(prev, { type: 'REMOVE', id })), 350)
+    // Guard: don't re-trigger if already exiting
+    setToasts(prev => {
+      const t = prev.find(x => x.id === id)
+      if (!t || t.exiting) return prev
+      return reducer(prev, { type: 'EXIT', id })
+    })
+
+    // Only schedule REMOVE once per id
+    if (pendingTimers.current.has(id)) return
+    const timer = setTimeout(() => {
+      setToasts(prev => reducer(prev, { type: 'REMOVE', id }))
+      pendingTimers.current.delete(id)
+    }, 350)
+    pendingTimers.current.set(id, timer)
   }, [])
 
   if (!toasts.length) return null
