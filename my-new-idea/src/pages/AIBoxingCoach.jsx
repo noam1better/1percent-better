@@ -119,6 +119,30 @@ function lsIsPro() {
   catch { return false }
 }
 
+// ── Report helpers ────────────────────────────────────────────────
+function computeScore(accuracy, avgSpeed, punches, rounds) {
+  const volumeScore = Math.min(100, Math.round((punches / Math.max(rounds, 1)) * 5))
+  return Math.min(100, Math.round(accuracy * 0.45 + avgSpeed * 0.35 + volumeScore * 0.20))
+}
+
+function getGrade(score) {
+  if (score >= 90) return { letter: 'S', color: '#ffb703' }
+  if (score >= 80) return { letter: 'A', color: '#34d399' }
+  if (score >= 65) return { letter: 'B', color: '#60a5fa' }
+  if (score >= 50) return { letter: 'C', color: '#f97316' }
+  return                  { letter: 'D', color: '#ef4444' }
+}
+
+function getPerformanceTip(accuracy, avgSpeed, punches, rounds, score) {
+  const punchRate = punches / Math.max(rounds, 1)
+  if (accuracy < 60)   return 'הגנה חלשה — שמור את הידיים גבוה בין כל קומבינציה. הסנטר חייב להיות מכוסה בכל רגע.'
+  if (accuracy < 75)   return 'הגנה בינונית — בין קומבינציות תחזור מיד להגנה. אל תשאיר פתח בשבריר שנייה.'
+  if (avgSpeed < 25)   return 'מכות איטיות — עבוד על חדות ופיצוץ. כל מכה צריכה להרגיש כמו ירייה, לא דחיפה.'
+  if (punchRate < 5)   return 'נפח מכות נמוך — שמור על לחץ מתמיד בכל סיבוב. לא מפסיקים לחבוט.'
+  if (score >= 85)     return '🔥 ביצועים מעולים! הגנה חזקה, מהירות טובה, לחץ עקבי — אתה בדרך הנכונה.'
+  return 'עבודה יציבה — שפר את עקביות הלחץ ואת מהירות המכות. כל אימון מחזק אותך.'
+}
+
 // ── ProGateModal ──────────────────────────────────────────────────
 function ProGateModal({ reason, onClose }) {
   const isMuayThai = reason === 'muay-thai'
@@ -210,6 +234,8 @@ export default function AIBoxingCoach() {
   const comboIntervalRef  = useRef(null)
   const tipTimerRef       = useRef(null)   // cancellable toast tip timeout
   const modalTimerRef     = useRef(null)   // cancellable paywall modal timeout
+  const roundRef          = useRef(1)      // mirrors round state for use in closures
+  const sessionStartRef   = useRef(0)      // Date.now() at session start
   const lastVidTimeRef    = useRef(-1)
   const phaseRef          = useRef('idle')
   const proStatusRef      = useRef(proStatus)
@@ -229,6 +255,7 @@ export default function AIBoxingCoach() {
   // Keep hot refs in sync
   useEffect(() => { proStatusRef.current = proStatus }, [proStatus])
   useEffect(() => { mutedRef.current = muted }, [muted])
+  useEffect(() => { roundRef.current = round }, [round])
 
   // ── TTS: voice loading ────────────────────────────────────────────
   useEffect(() => {
@@ -436,6 +463,9 @@ export default function AIBoxingCoach() {
         const lVel = leftWrist.visibility  > 0.4 ? Math.hypot(leftWrist.x  - ps.prevLeft.x,  leftWrist.y  - ps.prevLeft.y)  / dt : 0
         const rVel = rightWrist.visibility > 0.4 ? Math.hypot(rightWrist.x - ps.prevRight.x, rightWrist.y - ps.prevRight.y) / dt : 0
         const maxVel = Math.max(lVel, rVel)
+        if (maxVel > ps.peakVel) ps.peakVel = maxVel
+        ps.totalVel += maxVel
+        ps.velCount++
         ps.velWindow.push(maxVel)
         if (ps.velWindow.length > 12) ps.velWindow.shift()
         if (maxVel > PUNCH_VEL_THRESHOLD && timestamp - ps.lastPunchAt > PUNCH_COOLDOWN_MS) {
@@ -514,8 +544,10 @@ export default function AIBoxingCoach() {
       lastPunchAt: 0, punchCount: 0, velWindow: [],
       guardDownFrames: 0, totalFrames: 0,
       guardDownStart: null, totalGuardDownMs: 0,
+      peakVel: 0, totalVel: 0, velCount: 0,
     }
-    tenWarnedRef.current      = false
+    sessionStartRef.current = Date.now()
+    tenWarnedRef.current    = false
     roundAnnouncedRef.current = 0
     setRound(1)
     setTimeLeft(tier.roundDuration)
@@ -590,15 +622,31 @@ export default function AIBoxingCoach() {
       return
     }
 
+    const accuracy     = ps.totalFrames > 10
+      ? Math.max(0, Math.round((1 - ps.guardDownFrames / ps.totalFrames) * 100))
+      : 100
+    const avgVelRaw    = ps.velCount > 0 ? ps.totalVel / ps.velCount : 0
+    const avgSpeed     = Math.min(Math.round(avgVelRaw * 28), 99)
+    const peakSpeed    = Math.min(Math.round(ps.peakVel * 28), 99)
+    const actualRounds = roundRef.current
+    const activeTimeSecs = sessionStartRef.current > 0
+      ? Math.round((Date.now() - sessionStartRef.current) / 1000)
+      : actualRounds * tier.roundDuration
+    const score = computeScore(accuracy, avgSpeed, ps.punchCount, actualRounds)
+    const tip   = getPerformanceTip(accuracy, avgSpeed, ps.punchCount, actualRounds, score)
+
     toast.success('🏆 האימון הסתיים!', `${ps.punchCount} מכות זוהו. עבודת אליטה!`)
 
     setReport({
-      rounds:        TIERS.active.maxRounds,
+      rounds:        actualRounds,
       punches:       ps.punchCount,
       guardDownSecs: Math.round(guardDownMs / 1000),
-      accuracy:      ps.totalFrames > 10
-        ? Math.max(0, Math.round((1 - ps.guardDownFrames / ps.totalFrames) * 100))
-        : 100,
+      accuracy,
+      avgSpeed,
+      peakSpeed,
+      activeTimeSecs,
+      score,
+      tip,
     })
     setPhase('done')
     setCurrentCombo(null)
@@ -679,18 +727,62 @@ export default function AIBoxingCoach() {
 
   // ── Render: session report (PRO only) ─────────────────────────────
   if (phase === 'done' && report) {
+    const grade = getGrade(report.score)
     return (
       <div className="bc-report" dir="rtl">
         <div className="bc-report-card">
           <div className="bc-report-trophy">{mode === 'muay-thai' ? '🦵' : '🏆'}</div>
           <h2 className="bc-report-title">האימון הסתיים</h2>
-          <div className="bc-report-grid">
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.rounds}</span><span className="bc-rs-label">סיבובים</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.punches}</span><span className="bc-rs-label">מכות</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.accuracy}%</span><span className="bc-rs-label">הגנה</span></div>
-            <div className="bc-report-stat"><span className="bc-rs-value">{report.guardDownSecs}ש׳</span><span className="bc-rs-label">הגנה נפלה</span></div>
+
+          {/* Score + Grade */}
+          <div className="bc-report-score-row">
+            <div className="bc-report-score-block">
+              <span className="bc-report-score-num" style={{ color: grade.color }}>{report.score}</span>
+              <span className="bc-report-score-lbl">ניקוד</span>
+            </div>
+            <div
+              className="bc-report-grade"
+              style={{ color: grade.color, borderColor: grade.color + '55', background: grade.color + '18' }}
+            >
+              {grade.letter}
+            </div>
           </div>
-          <p className="bc-report-ai-note">🧠 מעקב מקומי באמצעות MediaPipe Pose — אין נתונים שעוזבים את המכשיר.</p>
+
+          {/* Stats grid 2 × 3 */}
+          <div className="bc-report-grid">
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{report.punches}</span>
+              <span className="bc-rs-label">מכות</span>
+            </div>
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{report.avgSpeed}</span>
+              <span className="bc-rs-label">מהירות</span>
+            </div>
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{report.accuracy}%</span>
+              <span className="bc-rs-label">הגנה</span>
+            </div>
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{report.peakSpeed}</span>
+              <span className="bc-rs-label">שיא מהירות</span>
+            </div>
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{report.rounds}</span>
+              <span className="bc-rs-label">סיבובים</span>
+            </div>
+            <div className="bc-report-stat">
+              <span className="bc-rs-value">{fmt(report.activeTimeSecs)}</span>
+              <span className="bc-rs-label">זמן פעיל</span>
+            </div>
+          </div>
+
+          {/* AI performance tip */}
+          <div className="bc-report-tip">
+            <span className="bc-report-tip-icon">💡</span>
+            <span className="bc-report-tip-text">{report.tip}</span>
+          </div>
+
+          <p className="bc-report-ai-note">🧠 MediaPipe Pose — מעקב מקומי, ללא שיתוף נתונים.</p>
           <button className="bc-btn-primary" onClick={() => { setPhase('idle'); setRound(1); setTimeLeft(tier.roundDuration) }}>אימון חדש</button>
           <button className="bc-btn-ghost" onClick={handleBack}>חזרה לתפריט</button>
         </div>

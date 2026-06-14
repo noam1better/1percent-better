@@ -517,17 +517,73 @@
   color: #f1f5f9;
   margin: 0;
 }
-.bc-report-grid {
+/* ── Score + Grade row ────────────────────────────── */
+.bc-report-score-row {
   display: flex;
-  gap: 24px;
-  width: 100%;
+  align-items: center;
   justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+.bc-report-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bc-report-score-num {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 76px;
+  line-height: 1;
+}
+.bc-report-score-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+.bc-report-grade {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 54px;
+  line-height: 1;
+  padding: 8px 20px;
+  border-radius: 14px;
+  border: 1.5px solid;
+}
+
+/* ── Stats grid (2 × 3) ───────────────────────────── */
+.bc-report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
 }
 .bc-report-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
+  padding: 14px 8px;
+}
+
+/* ── AI performance tip ────────────────────────────── */
+.bc-report-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255,183,3,.08);
+  border: 1px solid rgba(255,183,3,.2);
+  border-radius: 12px;
+  padding: 14px;
+  width: 100%;
+}
+.bc-report-tip-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.bc-report-tip-text {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 13px;
+  color: #d4a72c;
+  line-height: 1.55;
 }
 .bc-rs-value {
   font-family: 'Bebas Neue', 'Impact', sans-serif;
