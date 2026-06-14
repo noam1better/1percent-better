@@ -391,15 +391,10 @@ export default function AIBoxingCoach() {
 
   // ── Mode selection ────────────────────────────────────────────────
   const handleMuayThai = () => {
-    if (proStatus === 'free') {
-      setModalReason('muay-thai')
-      setShowProModal(true)
-    } else {
-      setMode('muay-thai')
-      const tip = MUAY_THAI_TIPS[Math.floor(Math.random() * MUAY_THAI_TIPS.length)]
-      clearTimeout(tipTimerRef.current)
-      tipTimerRef.current = setTimeout(() => toast.info('💡 Muay Thai Tip', tip), 2200)
-    }
+    setMode('muay-thai')
+    const tip = MUAY_THAI_TIPS[Math.floor(Math.random() * MUAY_THAI_TIPS.length)]
+    clearTimeout(tipTimerRef.current)
+    tipTimerRef.current = setTimeout(() => toast.info('💡 Muay Thai Tip', tip), 2200)
   }
 
   // ── Frame analysis ────────────────────────────────────────────────
@@ -662,20 +657,18 @@ export default function AIBoxingCoach() {
             </button>
 
             <button
-              className={`bc-ms-card bc-ms-card--pro ${isFree ? 'bc-ms-card--locked' : ''}`}
+              className="bc-ms-card bc-ms-card--pro"
               onClick={handleMuayThai}
             >
               <div className="bc-ms-card-glow bc-ms-card-glow--muaythai" />
-              <span className="bc-ms-icon">{isFree ? '🔒' : '🦵'}</span>
+              <span className="bc-ms-icon">🦵</span>
               <span className="bc-ms-name">Muay Thai</span>
               <span className="bc-ms-desc">Punches, kicks, knees &amp; elbows</span>
               <div className="bc-ms-combos">
                 {MUAY_THAI_COMBOS.slice(0, 2).map(c => <span key={c.label}>{c.label}</span>)}
                 <span>+ {MUAY_THAI_COMBOS.length - 2} more combos</span>
               </div>
-              <span className="bc-ms-badge bc-ms-badge--pro">
-                {isFree ? '🔒 PRO' : '⚡ PRO'}
-              </span>
+              <span className="bc-ms-badge bc-ms-badge--pro">⚡ PRO</span>
             </button>
           </div>
         </div>
