@@ -4,7 +4,9 @@
   "description": "AI-powered accounting agent — parses financial CSVs, analyzes via LLM, validates math",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start:web": "next start",
     "analyze": "node index.js",
     "analyze:custom": "node index.js"
   },
@@ -16,13 +18,23 @@
   ],
   "author": "noam922008@gmail.com",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@google/genai": "^2.8.0",
+    "@tailwindcss/postcss": "^4.3.1",
     "csv-parse": "^7.0.0",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
-    "pdf-parse": "^2.4.5",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "next": "^16.2.9",
+    "pdf-parse": "^1.1.1",
+    "postcss": "^8.5.15",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.1",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "pdfkit": "^0.19.1"
   }
 }

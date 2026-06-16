@@ -54,12 +54,23 @@ async function parseExcel(filePath) {
 }
 
 // --- PDF ---
+// Spawned in a child process to isolate pdf-parse from csv-parse's global side-effects
 
 async function parsePDF(filePath) {
-  const pdfParse = require('pdf-parse');
-  const buffer = fs.readFileSync(filePath);
-  const data = await pdfParse(buffer);
-  return data.text;
+  const { spawnSync } = require('child_process');
+  const workerPath = path.join(process.cwd(), 'src/services/pdfWorker.js');
+
+  const result = spawnSync(process.execPath, [workerPath, filePath], {
+    encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || 'PDF worker process failed');
+  }
+
+  const { text } = JSON.parse(result.stdout);
+  return text;
 }
 
 // --- Unified entry point ---

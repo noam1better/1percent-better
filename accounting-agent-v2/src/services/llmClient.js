@@ -7,7 +7,7 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const MODEL = process.env.MODEL || 'llama3:8b';
 
 function loadSystemPrompt(name) {
-  const promptPath = path.join(__dirname, '../prompts', `${name}.txt`);
+  const promptPath = path.join(process.cwd(), 'src/prompts', `${name}.txt`);
   if (!fs.existsSync(promptPath)) {
     throw new Error(`Prompt file not found: ${promptPath}`);
   }
