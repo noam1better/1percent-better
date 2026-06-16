@@ -1,0 +1,13 @@
+date,category,description,amount,type
+2026-01-05,Salaries,Engineering team monthly salaries,45000.00,expense
+2026-01-05,Salaries,Sales team monthly salaries,22000.00,expense
+2026-01-08,Software,AWS infrastructure monthly bill,3200.00,expense
+2026-01-10,Revenue,Enterprise client - Acme Corp,85000.00,revenue
+2026-01-12,Marketing,Google Ads campaign,1800.00,expense
+2026-01-15,Revenue,SMB client - Buildmore Ltd,12000.00,revenue
+2026-01-18,Office,Rent and utilities,4500.00,expense
+2026-01-20,Revenue,Consulting project - NovaTech,18500.00,revenue
+2026-01-22,Software,Figma and design tools,420.00,expense
+2026-01-25,Travel,Sales team conference,2100.00,expense
+2026-01-28,Revenue,License renewal - GlobalTrade,9200.00,revenue
+2026-01-30,Legal,Contract review - external counsel,1500.00,expense

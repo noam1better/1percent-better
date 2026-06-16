@@ -1,0 +1,26 @@
+{
+  "name": "accounting-agent-v2",
+  "version": "1.0.0",
+  "description": "AI-powered accounting agent — parses financial CSVs, analyzes via LLM, validates math",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "analyze": "node index.js",
+    "analyze:custom": "node index.js"
+  },
+  "keywords": [
+    "accounting",
+    "ai",
+    "llm",
+    "finance"
+  ],
+  "author": "noam922008@gmail.com",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/genai": "^2.8.0",
+    "csv-parse": "^7.0.0",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  }
+}
