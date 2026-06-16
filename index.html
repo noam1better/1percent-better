@@ -234,21 +234,22 @@
   }
   .hub-status-card {
     display: grid;
-    gap: 12px;
-    padding: 18px;
-    border-radius: 22px;
-    background: rgba(0,255,135,.06);
-    border: 1px solid rgba(0,255,135,.15);
+    gap: 10px;
+    padding: 14px 4px 4px;
     margin-bottom: 16px;
     text-align: left;
+    border-top: 1px solid rgba(255,255,255,.07);
   }
   .hub-status-copy {
     display: grid;
-    gap: 6px;
+    gap: 4px;
   }
   .hub-status-title {
-    font-size: 15px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted2);
   }
   .hub-status-text {
     color: var(--muted2);
@@ -257,17 +258,22 @@
   }
   .hub-status-btn {
     width: fit-content;
-    padding: 14px 18px;
-    border-radius: 16px;
-    border: none;
-    color: #000;
-    background: linear-gradient(90deg, var(--green), var(--blue));
-    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.18);
+    color: rgba(255,255,255,.7);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform .2s ease, opacity .2s ease, box-shadow .2s ease, background .2s ease;
+    transition: border-color .2s ease, color .2s ease, background .2s ease;
   }
 
-  .hub-status-btn:hover { transform: translateY(-1px); opacity: .95; }
+  .hub-status-btn:hover {
+    border-color: rgba(255,255,255,.35);
+    color: #fff;
+    background: rgba(255,255,255,.05);
+  }
 
   .hub-status-btn.refresh-ready {
     width: 100%;
@@ -2430,12 +2436,26 @@
     transition: transform .18s ease, background .18s ease, border-color .18s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
   }
   .wl-btn:active { transform: scale(.96); }
   .wl-btn:hover  { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); }
   .wl-btn-icon { font-size: 32px; line-height: 1; }
   .wl-btn-label { font-weight: 800; font-size: 14px; letter-spacing: .04em; }
-  .wl-btn-sub   { font-size: 11px; color: var(--muted2); text-align: center; }
+  .wl-pro-badge {
+    position: absolute;
+    top: 7px; right: 7px;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #fff;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    box-shadow: 0 2px 8px rgba(168,85,247,.4);
+    pointer-events: none;
+  }
   .wl-btn.boxing  { border-color: rgba(255,100,0,.35); background: rgba(255,100,0,.07); }
   .wl-btn.boxing:hover { border-color: rgba(255,100,0,.6); background: rgba(255,100,0,.12); }
   .wl-btn.pushup  { border-color: rgba(0,255,135,.25); background: rgba(0,255,135,.05); }
@@ -3178,27 +3198,23 @@
       <button class="wl-btn boxing" onclick="startWorkout('boxing')">
         <div class="wl-btn-icon">🥊</div>
         <div class="wl-btn-label">BOXING</div>
-        <div class="wl-btn-sub">AI punch tracker</div>
       </button>
       <button class="wl-btn boxing" style="border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06);" onclick="window.location.href='/boxing-coach'">
+        <span class="wl-pro-badge">PRO</span>
         <div class="wl-btn-icon">🧠</div>
         <div class="wl-btn-label" style="font-size:11px;">AI COACH</div>
-        <div class="wl-btn-sub" style="color:rgba(168,85,247,.8);">PRO · Full session</div>
       </button>
       <button class="wl-btn pushup" onclick="startWorkout('pushup')">
         <div class="wl-btn-icon">💪</div>
         <div class="wl-btn-label">PUSH-UPS</div>
-        <div class="wl-btn-sub">AI rep counter</div>
       </button>
       <button class="wl-btn pullup" onclick="startWorkout('pullup')">
         <div class="wl-btn-icon">🧗</div>
         <div class="wl-btn-label">PULL-UPS</div>
-        <div class="wl-btn-sub">AI pull-up counter</div>
       </button>
       <button class="wl-btn jumprope" onclick="startWorkout('jumprope')">
         <div class="wl-btn-icon">🪢</div>
         <div class="wl-btn-label">JUMP ROPE</div>
-        <div class="wl-btn-sub">AI jump counter</div>
       </button>
     </div>
 
@@ -3261,15 +3277,6 @@
     </div>
 
     <!-- GUEST UPGRADE CTA -->
-    <div class="guest-upgrade-card" id="guestUpgradeCard" style="display:none">
-      <div class="gu-icon">🔒</div>
-      <div class="gu-body">
-        <div class="gu-title" id="gu-title-text">Don't lose your progress!</div>
-        <div class="gu-sub" id="gu-sub-text">Streaks · habits · workout history at risk</div>
-      </div>
-      <button class="gu-btn" onclick="showGuestLinkModal()">Secure →</button>
-    </div>
-
     <!-- FOLLOW US -->
     <div class="social-follow">
       <div class="social-follow-label" id="social-follow-label">Follow the movement</div>
@@ -11022,9 +11029,7 @@ const SOCIAL_TIKTOK_URL    = 'https://tiktok.com/@1percentbetter.app';
 function updateGuestModeUI() {
   const isGuest     = isGuestSession();
   const bannerWrap  = document.getElementById('guestBannerWrap');
-  const card        = document.getElementById('guestUpgradeCard');
   if (bannerWrap) bannerWrap.style.display = isGuest ? '' : 'none';
-  if (card)       card.style.display       = isGuest ? '' : 'none';
 
   if (isGuest && localStorage.getItem('1pb_onboarded') &&
       !localStorage.getItem('1pb_guest_nudge_shown')) {
