@@ -123,24 +123,24 @@
   }
 
   .hub-hero {
-    margin: 0 20px 18px;
-    padding: 24px;
+    margin: 16px 16px 18px;
+    padding: 20px 20px 16px;
     background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.07);
     border-radius: 22px;
     text-align: center;
   }
   .hub-hero-title {
     font-family: var(--font-head);
-    font-size: 22px;
-    margin-bottom: 10px;
+    font-size: 20px;
+    margin-bottom: 6px;
     letter-spacing: .04em;
   }
   .hub-hero-sub {
-    color: var(--muted2);
-    font-size: 14px;
+    color: var(--muted);
+    font-size: 13px;
     line-height: 1.6;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
   .hub-hero-note {
     font-size: 13px; color: var(--muted2); margin-top: 12px;
@@ -203,18 +203,19 @@
     flex-wrap: wrap;
   }
   .daily-progress-label {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
   }
   .daily-progress-note {
-    color: var(--muted2);
-    font-size: 12px;
+    color: var(--muted);
+    font-size: 11px;
     max-width: 240px;
   }
   .daily-progress-bar-wrap {
     width: 100%;
-    height: 10px;
-    background: rgba(255,255,255,.08);
+    height: 4px;
+    background: rgba(255,255,255,.07);
     border-radius: 999px;
     overflow: hidden;
   }
@@ -223,7 +224,7 @@
     height: 100%;
     border-radius: 999px;
     overflow: hidden;
-    background: rgba(255,255,255,.08);
+    background: rgba(255,255,255,.07);
   }
   .daily-progress-bar-fill {
     height: 100%;
@@ -403,6 +404,13 @@
   .hub-simplified #recapCard {
     display: none !important;
   }
+
+  /* ── CLEAN MODE: declutter hub ─────────────────── */
+  /* RPG block and level card info is surfaced in the stats card above CTA */
+  #screen-hub .rpg-block,
+  #screen-hub .level-card { display: none; }
+  /* Install prompt moved to profile — never shown inline on hub */
+  #screen-hub .install-card { display: none !important; }
 
   /* Ensure Hub content can be scrolled past the fixed install button */
   #screen-hub { padding-bottom: 92px; box-sizing: border-box; }
@@ -2135,22 +2143,39 @@
   .xp-next { font-size: 11px; color: var(--muted); margin-top: 5px; }
   [dir="rtl"] .xp-next { text-align: right; }
 
-  /* ── STATS ROW ────────────────────────────────────── */
+  /* ── STATS ROW — unified glass card ─────────────── */
   .hub-stats {
-    display: flex; gap: 10px; padding: 0 20px 16px;
+    display: flex;
+    gap: 0;
+    margin: 14px 16px 0;
+    padding: 0;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 18px;
+    overflow: hidden;
   }
   .hub-stat {
-    flex: 1; background: var(--bg1); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 12px;
+    flex: 1;
+    padding: 14px 10px;
     display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    position: relative;
+  }
+  .hub-stat + .hub-stat::before {
+    content: '';
+    position: absolute; left: 0; top: 18%; bottom: 18%;
+    width: 1px;
+    background: rgba(255,255,255,.08);
   }
   .hub-stat-val {
-    font-family: var(--font-head); font-size: 30px; line-height: 1;
+    font-family: var(--font-head); font-size: 26px; line-height: 1;
   }
   .hub-stat-val.green { color: var(--green); }
   .hub-stat-val.blue  { color: var(--blue); }
   .hub-stat-val.gold  { color: #fbbf24; }
-  .hub-stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .08em; }
+  .hub-stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .06em; }
   [dir="rtl"] .hub-stat-label { letter-spacing: 0; text-transform: none; }
 
   /* ── WEEKLY RECAP CARD ──────────────────────────────
@@ -2842,10 +2867,10 @@
 
   /* ══ PRIMARY AI CTA ═════════════════════════════ */
   .ai-primary-cta {
-    display: block; width: calc(100% - 32px); margin: 16px 16px 0;
-    padding: 22px 20px;
+    display: block; width: calc(100% - 32px); margin: 18px 16px 0;
+    padding: 26px 24px;
     background: linear-gradient(135deg, #00ff87 0%, #00b4ff 100%);
-    border: none; border-radius: 20px;
+    border: none; border-radius: 22px;
     cursor: pointer; touch-action: manipulation;
     position: relative; overflow: hidden;
   }
@@ -3110,6 +3135,28 @@
       </div>
     </div>
 
+    <!-- STATS CARD — sleek unified horizontal pill -->
+    <div class="hub-stats">
+      <div class="hub-stat">
+        <div class="hub-stat-val green" id="streakNum">
+          <span id="streakNumVal">7</span><span id="streakFreezeIcon" class="freeze-icon" hidden aria-label="Streak freeze used" title="Streak freeze used">❄️</span>
+        </div>
+        <div class="hub-stat-label" id="lbl-days-unit">Day Streak</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="streakDots2">🔥🔥🔥🔥🔥🔥🔥</div>
+      </div>
+      <div class="hub-stat">
+        <div class="hub-stat-val blue" id="dailyDoneCount">0</div>
+        <div class="hub-stat-label" id="lbl-today-done">Today</div>
+        <div style="height:3px;background:rgba(255,255,255,.07);border-radius:99px;margin-top:7px;overflow:hidden;width:80%;">
+          <div id="dailyProgressBar" style="height:100%;background:var(--blue);border-radius:99px;width:0%;transition:width .5s;"></div>
+        </div>
+      </div>
+      <div class="hub-stat">
+        <div class="hub-stat-val gold" id="totalXpDisplay">180</div>
+        <div class="hub-stat-label" id="lbl-xp-label">Points</div>
+      </div>
+    </div>
+
     <!-- PRIMARY AI WORKOUT CTA -->
     <button class="ai-primary-cta" onclick="startWorkout('pushup')" id="aiPrimaryCta">
       <span class="ai-cta-icon">💪</span>
@@ -3185,37 +3232,6 @@
         <div class="xp-bar" id="xpBar" style="width:72%"></div>
       </div>
       <div class="xp-next" id="lbl-xp-next">70 XP to next level</div>
-    </div>
-
-    <!-- STATS ROW -->
-    <div class="hub-stats">
-      <div class="hub-stat">
-        <div class="hub-stat-val green" id="streakNum">
-          <span id="streakNumVal">7</span><span id="streakFreezeIcon" class="freeze-icon" hidden aria-label="Streak freeze used" title="Streak freeze used">❄️</span>
-        </div>
-        <div class="hub-stat-label" id="lbl-days-unit">Day Streak</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="streakDots2">🔥🔥🔥🔥🔥🔥🔥</div>
-      </div>
-      <div class="hub-stat">
-        <div class="hub-stat-val blue" id="dailyDoneCount">0</div>
-        <div class="hub-stat-label" id="lbl-today-done">Today</div>
-        <div style="height:4px;background:var(--bg3);border-radius:99px;margin-top:6px;overflow:hidden;">
-          <div id="dailyProgressBar" style="height:100%;background:var(--blue);border-radius:99px;width:0%;transition:width .5s;"></div>
-        </div>
-      </div>
-      <div class="hub-stat">
-        <div class="hub-stat-val gold" id="totalXpDisplay">180</div>
-        <div class="hub-stat-label" id="lbl-xp-label">Points</div>
-      </div>
-    </div>
-
-    <!-- INSTALL APP CARD (shown only when not in standalone/display-mode) -->
-    <div class="install-card" id="installCard" style="display:none;">
-      <div>
-        <strong style="display:block;font-size:15px;" id="installCardTitle">Install App for Updates</strong>
-        <div style="color:var(--muted2);margin-top:6px;" id="installCardSub">Get notifications and full-screen experience</div>
-      </div>
-      <button class="install-cta" id="openInstallGuidanceCard">Install App</button>
     </div>
 
     <!-- MORNING ROUTINE STATUS (hidden when both pieces done for today) -->
@@ -3504,6 +3520,22 @@
     <div class="profile-badges" id="profileBadgesSection" style="display:none;">
       <div class="profile-badges-title" id="lbl-badges">Badges Earned</div>
       <div class="badges-row" id="profileBadgesList"></div>
+    </div>
+
+    <!-- INSTALL APP (profile section) -->
+    <div id="profileInstallRow" style="margin:16px 20px 8px;display:none;">
+      <button id="openInstallGuidanceCard" onclick="return false;"
+        style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;
+               background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+               border-radius:16px;cursor:pointer;color:var(--text);font-family:var(--font-body);
+               font-size:14px;font-weight:600;text-align:left;transition:background .15s;">
+        <span style="font-size:24px;">📲</span>
+        <div style="flex:1;">
+          <div id="installCardTitle" style="font-size:14px;font-weight:700;">Install App for Updates</div>
+          <div id="installCardSub" style="font-size:12px;color:var(--muted2);margin-top:2px;">Get notifications and full-screen experience</div>
+        </div>
+        <span style="color:var(--muted2);font-size:18px;">›</span>
+      </button>
     </div>
 
   </div>
@@ -10953,6 +10985,9 @@ window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstallPrompt = e;
   showInstallBanner();
+  // Show install row in profile
+  const profileInstallRow = document.getElementById('profileInstallRow');
+  if (profileInstallRow) profileInstallRow.style.display = '';
 });
 
 function showInstallBanner() {
@@ -12018,7 +12053,6 @@ if (!isFirebaseConfigured()) {
   (function(){
     const fixedBtn = document.getElementById('openInstallGuidance');
     const cardOpenBtn = document.getElementById('openInstallGuidanceCard');
-    const installCard = document.getElementById('installCard');
     const backdrop = document.getElementById('installBackdrop');
     const closeBtn = document.getElementById('closeInstallGuidance');
 
