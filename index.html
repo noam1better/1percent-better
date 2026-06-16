@@ -169,6 +169,25 @@
   }
   .hub-help-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.2); }
 
+  .hub-lang-btn {
+    height: 34px;
+    min-width: 42px;
+    padding: 0 10px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 99px;
+    color: var(--muted2);
+    font-size: 11px; font-weight: 800;
+    letter-spacing: .06em;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+    transition: background .15s, color .15s, transform .1s;
+  }
+  .hub-lang-btn:hover  { background: rgba(255,255,255,.13); color: var(--text); }
+  .hub-lang-btn:active { transform: scale(.93); }
+
   .pro-entry-btn {
     height: 34px;
     background: linear-gradient(90deg, rgba(245,158,11,.15), rgba(168,85,247,.15));
@@ -809,6 +828,7 @@
   .lang-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 8px; padding: 12px 16px 14px;
+    direction: ltr; /* always LTR so all chips render consistently in AR mode */
   }
   .lang-chip {
     padding: 11px 12px; border-radius: 10px;
@@ -3128,6 +3148,9 @@
         <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button class="hub-lang-btn" id="hubLangBtn" onclick="cycleLang()" title="Switch language" aria-label="Switch language">
+          <span id="hubLangLabel">EN</span>
+        </button>
         <button class="pro-entry-btn" onclick="logEvent('pro_screen_opened',{source:'hub_btn'});navigate('pro')"
           id="proEntryBtn">⭐ PRO</button>
         <button class="hub-help-btn" id="hub-guide-btn" onclick="showAppGuide()" aria-label="How it works" title="How it works">?</button>
@@ -3687,29 +3710,9 @@
           <div><div class="lang-name">Hebrew</div><div class="lang-native">עברית</div></div>
           <span class="lang-check">✓</span>
         </div>
-        <div class="lang-chip" data-lang="es" onclick="setLang('es',this)">
-          <span class="lang-flag">🇪🇸</span>
-          <div><div class="lang-name">Spanish</div><div class="lang-native">Español</div></div>
-          <span class="lang-check">✓</span>
-        </div>
-        <div class="lang-chip" data-lang="fr" onclick="setLang('fr',this)">
-          <span class="lang-flag">🇫🇷</span>
-          <div><div class="lang-name">French</div><div class="lang-native">Français</div></div>
-          <span class="lang-check">✓</span>
-        </div>
         <div class="lang-chip" data-lang="ar" onclick="setLang('ar',this)">
           <span class="lang-flag">🇸🇦</span>
           <div><div class="lang-name">Arabic</div><div class="lang-native">العربية</div></div>
-          <span class="lang-check">✓</span>
-        </div>
-        <div class="lang-chip" data-lang="ru" onclick="setLang('ru',this)">
-          <span class="lang-flag">🇷🇺</span>
-          <div><div class="lang-name">Russian</div><div class="lang-native">Русский</div></div>
-          <span class="lang-check">✓</span>
-        </div>
-        <div class="lang-chip" data-lang="pt" onclick="setLang('pt',this)">
-          <span class="lang-flag">🇧🇷</span>
-          <div><div class="lang-name">Portuguese</div><div class="lang-native">Português</div></div>
           <span class="lang-check">✓</span>
         </div>
       </div>
@@ -4924,7 +4927,7 @@ function navigate(screen) {
   if (screen === 'pro')         setTimeout(initProScreen, 150);
   if (screen === 'settings') {
     // Sync settings lang label with current language
-    const langNames = { en:'English', he:'עברית', es:'Español', fr:'Français', ar:'العربية', ru:'Русский', pt:'Português' };
+    const langNames = { en:'English', he:'עברית', ar:'العربية' };
     const lbl = document.getElementById('settingsLangLabel');
     if (lbl) lbl.textContent = langNames[currentLang] || currentLang.toUpperCase();
     // Sync inputName with localStorage
@@ -6049,9 +6052,10 @@ function setLang(lang, chip) {
   currentLang = lang;
   localStorage.setItem('1pb_lang', lang);
 
-  // Update chips
+  // Update chips (chip param is optional — falls back to DOM lookup)
   document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('selected'));
-  chip.classList.add('selected');
+  const target = chip || document.querySelector(`.lang-chip[data-lang="${lang}"]`);
+  if (target) target.classList.add('selected');
 
   // Apply direction + lang attr (triggers all RTL CSS)
   const t = TRANSLATIONS[lang];
@@ -6063,9 +6067,12 @@ function setLang(lang, chip) {
   document.body.style.fontFamily = isRTL ? "'Heebo', sans-serif" : "'DM Sans', sans-serif";
 
   // Update label in settings header
-  const labels = { en:'English', he:'עברית', es:'Español', fr:'Français', ar:'العربية', ru:'Русский', pt:'Português' };
+  const labels = { en:'English', he:'עברית', ar:'العربية' };
   const settingsLangEl = document.getElementById('settingsLangLabel');
-  if (settingsLangEl) settingsLangEl.textContent = labels[lang];
+  if (settingsLangEl) settingsLangEl.textContent = labels[lang] || lang.toUpperCase();
+
+  // Update hub header lang switcher
+  updateHubLangBtn();
 
   // Translate all labelled elements by ID
   Object.keys(t).forEach(id => {
@@ -6086,6 +6093,19 @@ function setLang(lang, chip) {
     const feedBody = document.getElementById('feedAiBody');
     if (feedBody) feedBody.innerHTML = getRandomTip('general');
   }, 120);
+}
+
+function updateHubLangBtn() {
+  const el = document.getElementById('hubLangLabel');
+  if (!el) return;
+  const labels = { en: 'EN', he: 'עב', ar: 'عر' };
+  el.textContent = labels[currentLang] || currentLang.toUpperCase();
+}
+
+function cycleLang() {
+  const langs = ['en', 'he', 'ar'];
+  const next = langs[(langs.indexOf(currentLang) + 1) % langs.length];
+  setLang(next);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -6442,6 +6462,13 @@ function applyObCopy(lang) {
 function initOnboarding() {
   const ob = document.getElementById('onboarding');
   if (!ob) return;
+
+  // Auth guard: signed-in users always skip onboarding
+  if (currentUser) {
+    localStorage.setItem('1pb_onboarded', '1');
+    ob.classList.add('hidden');
+    return;
+  }
 
   if (localStorage.getItem('1pb_onboarded')) {
     ob.classList.add('hidden');
@@ -12013,7 +12040,7 @@ function applyAuthTranslations(lang) {
 }
 
 /* ── Final bootstrap ── */
-function applySavedPrefsAndInit() { init(); }
+function applySavedPrefsAndInit() { init(); updateHubLangBtn(); }
 
 if (!isFirebaseConfigured()) {
   // No Firebase — skip auth, run immediately
