@@ -1297,6 +1297,79 @@
   .gl-google-btn:active { opacity: .88; }
   .gl-dismiss { width: 100%; padding: 12px; background: transparent; border: none; color: #444; font-size: 13px; cursor: pointer; }
 
+  /* ══ AI COACH PAYWALL MODAL ════════════════════════ */
+  .acp-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.88);
+    display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .acp-overlay.open { display: flex; }
+  .acp-sheet {
+    background: #0d0d14;
+    border-radius: 28px 28px 0 0;
+    padding: 0 0 max(40px, env(safe-area-inset-bottom, 40px));
+    width: 100%; max-width: 480px;
+    border-top: 1px solid rgba(168,85,247,.25);
+    box-shadow: 0 -20px 60px rgba(168,85,247,.12);
+    animation: slideUp .3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .acp-gradient-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #a855f7, #f59e0b, #a855f7);
+    border-radius: 28px 28px 0 0;
+    background-size: 200% 100%;
+    animation: acp-shimmer 2.5s linear infinite;
+  }
+  @keyframes acp-shimmer { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+  .acp-body { padding: 24px 24px 0; }
+  .acp-handle { width: 36px; height: 4px; border-radius: 4px; background: #2a2a3a; margin: 0 auto 20px; }
+  .acp-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .acp-crown {
+    font-size: 36px;
+    filter: drop-shadow(0 0 14px rgba(245,158,11,.55));
+    animation: acp-float 3s ease-in-out infinite;
+  }
+  @keyframes acp-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .acp-header-text {}
+  .acp-title {
+    font-family: var(--font-head);
+    font-size: 30px; letter-spacing: .04em;
+    background: linear-gradient(90deg, #f59e0b, #a855f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+  .acp-sub { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  .acp-perks { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .acp-perk {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+  }
+  .acp-perk-icon { font-size: 22px; flex-shrink: 0; }
+  .acp-perk-text {}
+  .acp-perk-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .acp-perk-desc  { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.4; }
+  .acp-cta {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 50%, #f59e0b 100%);
+    border: none; border-radius: 16px;
+    font-size: 16px; font-weight: 800; letter-spacing: .04em; color: #fff;
+    cursor: pointer; margin-bottom: 10px;
+    box-shadow: 0 8px 32px rgba(168,85,247,.35);
+    transition: opacity .15s, transform .12s;
+  }
+  .acp-cta:active { opacity: .9; transform: scale(.98); }
+  .acp-dismiss {
+    width: 100%; padding: 11px; background: transparent;
+    border: none; color: #4b5563; font-size: 13px; cursor: pointer;
+    transition: color .2s;
+  }
+  .acp-dismiss:hover { color: #9ca3af; }
+
   /* ══ LEARNING PATHS ═════════════════════════════════ */
   .lp-header { padding: 24px 20px 8px; }
   .lp-title  { font-family: var(--font-head); font-size: 32px; letter-spacing: .04em; }
@@ -3199,7 +3272,7 @@
         <div class="wl-btn-icon">🥊</div>
         <div class="wl-btn-label">BOXING</div>
       </button>
-      <button class="wl-btn boxing" style="border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06);" onclick="window.location.href='/boxing-coach'">
+      <button class="wl-btn boxing" style="border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06);" onclick="handleAICoachClick()">
         <span class="wl-pro-badge">PRO</span>
         <div class="wl-btn-icon">🧠</div>
         <div class="wl-btn-label" style="font-size:11px;">AI COACH</div>
@@ -3837,6 +3910,50 @@
     <button class="notif-modal-later" id="nm-later-btn" onclick="dismissNotifModal()">
       Maybe later
     </button>
+  </div>
+</div>
+
+<!-- ══ AI COACH PAYWALL MODAL ══ -->
+<div class="acp-overlay" id="acpOverlay" onclick="if(event.target===this)closeAICoachPaywall()">
+  <div class="acp-sheet">
+    <div class="acp-gradient-bar"></div>
+    <div class="acp-body">
+      <div class="acp-handle"></div>
+      <div class="acp-header">
+        <div class="acp-crown">👑</div>
+        <div class="acp-header-text">
+          <div class="acp-title">1% Better PRO</div>
+          <div class="acp-sub">Unlock the full AI boxing experience</div>
+        </div>
+      </div>
+      <div class="acp-perks">
+        <div class="acp-perk">
+          <span class="acp-perk-icon">🥊</span>
+          <div class="acp-perk-text">
+            <div class="acp-perk-title">Full 12-Round Sessions</div>
+            <div class="acp-perk-desc">Free users get 1 round. PRO unlocks complete training sessions up to 12 rounds with full timer control.</div>
+          </div>
+        </div>
+        <div class="acp-perk">
+          <span class="acp-perk-icon">🧠</span>
+          <div class="acp-perk-text">
+            <div class="acp-perk-title">Advanced AI Combo Trainer</div>
+            <div class="acp-perk-desc">Real-time combo calls via MediaPipe — jabs, hooks, uppercuts, and Muay Thai combos, timed to your pace.</div>
+          </div>
+        </div>
+        <div class="acp-perk">
+          <span class="acp-perk-icon">⏱</span>
+          <div class="acp-perk-text">
+            <div class="acp-perk-title">Custom Rest Periods & Analytics</div>
+            <div class="acp-perk-desc">60-second rest between rounds, full session report with score, grade, peak speed, and AI coaching tips.</div>
+          </div>
+        </div>
+      </div>
+      <button class="acp-cta" onclick="closeAICoachPaywall();logEvent('paywall_upgrade_tapped',{source:'ai_coach'});navigate('pro')">
+        👑 Upgrade to PRO
+      </button>
+      <button class="acp-dismiss" onclick="closeAICoachPaywall()">Maybe later</button>
+    </div>
   </div>
 </div>
 
@@ -11036,6 +11153,22 @@ function updateGuestModeUI() {
     localStorage.setItem('1pb_guest_nudge_shown', '1');
     setTimeout(showGuestLinkModal, 5000);
   }
+}
+
+function handleAICoachClick() {
+  try {
+    const d = JSON.parse(localStorage.getItem('1pb_is_pro'));
+    if (d?.plan) { window.location.href = '/boxing-coach'; return; }
+  } catch (_) {}
+  showAICoachPaywall();
+}
+function showAICoachPaywall() {
+  document.getElementById('acpOverlay')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAICoachPaywall() {
+  document.getElementById('acpOverlay')?.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 function showGuestLinkModal() {
