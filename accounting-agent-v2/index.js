@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { parseCSV, formatRecordsForPrompt } = require('./src/services/fileParser');
+const { parseFile, formatRecordsForPrompt } = require('./src/services/fileParser');
 const { analyzeFinancialData } = require('./src/services/llmClient');
 const { computeGroundTruth, parseAndValidateLLMResponse } = require('./src/utils/validator');
 
@@ -9,24 +9,38 @@ async function run(inputFile) {
   const target = inputFile || path.join(__dirname, 'data/sample_expenses.csv');
 
   console.log(`[1/5] Parsing file: ${target}`);
-  const records = parseCSV(target);
-  console.log(`      ${records.length} rows loaded`);
+  const parsed = await parseFile(target);
 
-  console.log('[2/5] Computing ground-truth totals from raw data...');
-  const groundTruth = computeGroundTruth(records);
-  console.log(`      revenue=${groundTruth.total_revenue}  expenses=${groundTruth.total_expenses}  net=${groundTruth.net_income}`);
-  if (groundTruth.bad_rows.length > 0) {
-    console.warn('      Unparseable rows in source:');
-    groundTruth.bad_rows.forEach((r) => console.warn(`        - ${r}`));
+  let formatted;
+  let groundTruth = null;
+
+  if (parsed.structured) {
+    const { records } = parsed;
+    console.log(`      ${records.length} rows loaded (structured: CSV/Excel)`);
+
+    console.log('[2/5] Computing ground-truth totals from raw data...');
+    groundTruth = computeGroundTruth(records);
+    console.log(`      revenue=${groundTruth.total_revenue}  expenses=${groundTruth.total_expenses}  net=${groundTruth.net_income}`);
+    if (groundTruth.bad_rows.length > 0) {
+      console.warn('      Unparseable rows in source:');
+      groundTruth.bad_rows.forEach((r) => console.warn(`        - ${r}`));
+    }
+
+    console.log('[3/5] Formatting records for LLM prompt...');
+    formatted = formatRecordsForPrompt(records);
+  } else {
+    console.log('      File parsed as PDF (unstructured text)');
+    console.warn('      [NOTE] Ground-truth validation unavailable for PDF — totals will not be cross-checked');
+
+    console.log('[2/5] Skipped (PDF has no structured rows)');
+    console.log('[3/5] Using extracted PDF text as LLM input...');
+    formatted = parsed.text;
   }
-
-  console.log('[3/5] Formatting data for LLM prompt...');
-  const formatted = formatRecordsForPrompt(records);
 
   console.log('[4/5] Sending to LLM for analysis...');
   const rawResponse = await analyzeFinancialData(formatted);
 
-  console.log('[5/5] Validating response against ground truth...');
+  console.log('[5/5] Validating response...');
   const result = parseAndValidateLLMResponse(rawResponse, groundTruth);
 
   if (!result.success) {
