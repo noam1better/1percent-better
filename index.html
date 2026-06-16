@@ -1416,7 +1416,16 @@
 
   /* Active path screen */
   .lp-active-header { padding: 20px 20px 0; }
-  .lp-back { color: var(--muted2); font-size: 22px; cursor: pointer; }
+  .lp-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 10px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.09);
+    color: #94a3b8; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background .15s, color .15s;
+    margin-bottom: 4px;
+  }
+  .lp-back:hover { background: rgba(255,255,255,.11); color: #f1f5f9; }
   .lp-active-title { font-family: var(--font-head); font-size: 26px; margin: 8px 0 2px; }
   [dir="rtl"] .lp-active-title { font-family: 'Heebo', sans-serif; font-weight: 800; }
 
@@ -3576,7 +3585,7 @@
   <!-- ══════════════ ACTIVE PATH SCREEN ══════════════ -->
   <div class="screen" id="screen-path-active">
     <div class="lp-active-header">
-      <button class="lp-back" onclick="navigate('paths')">←</button>
+      <button class="lp-back" onclick="navigate('paths')">‹ Paths</button>
       <div class="lp-active-title" id="lpaTitle">AI for Beginners</div>
       <div style="font-size:13px;color:var(--muted2);margin-top:2px;" id="lpaSubtitle">Day 1 of 30</div>
     </div>
@@ -10593,6 +10602,71 @@ const LEARNING_PATHS = [
         descHe:'סקור את ההתקדמות שלך. האם אתה פותר את הבעיה הנכונה?',
         actionEn:'Write: 3 things that worked, 3 things to improve, 1 big insight.',
         actionHe:'כתוב: 3 דברים שעבדו, 3 לשיפור, תובנה אחת גדולה.' },
+    ],
+  },
+  {
+    id: 'sales-mastery',
+    icon: '🎯',
+    color: '#10b981',
+    bg: 'linear-gradient(135deg,#021008,#000d06)',
+    nameEn: 'Sales Mastery',
+    nameHe: 'מאסטרי במכירות',
+    descEn: 'Modern sales, cold outreach, and closing deals. One skill per day.',
+    descHe: 'מכירות מודרניות, פנייה קרה וסגירת עסקאות. מיומנות אחת ביום.',
+    badge: '🎯 Deal Closer',
+    badgeColor: '#10b981',
+    xpPerDay: 28,
+    days: [
+      { titleEn:'The Sales Mindset',             titleHe:'מנטליות המכירות',
+        descEn:'Sales is not about convincing — it is about helping the right person solve the right problem.',
+        descHe:'מכירות זה לא לשכנע — זה לעזור לאדם הנכון לפתור את הבעיה הנכונה.',
+        actionEn:'Write down: what is the real problem your product/service solves? In one sentence.',
+        actionHe:'כתוב: מה הבעיה האמיתית שהמוצר/שירות שלך פותר? במשפט אחד.' },
+      { titleEn:'Know Your Ideal Buyer',         titleHe:'הכר את הקונה האידיאלי שלך',
+        descEn:'Selling to everyone means selling to no one. Define your ICP (Ideal Customer Profile).',
+        descHe:'למכור לכולם זה למכור לאף אחד. הגדר את ה-ICP שלך (פרופיל לקוח אידיאלי).',
+        actionEn:'Write: industry, role, company size, pain point, and budget of your ideal buyer.',
+        actionHe:'כתוב: תעשייה, תפקיד, גודל חברה, נקודת כאב ותקציב של הקונה האידיאלי שלך.' },
+      { titleEn:'Craft a Cold Email',            titleHe:'כתוב מייל קר',
+        descEn:'A great cold email is short, personal, and ends with a low-friction ask.',
+        descHe:'מייל קר טוב הוא קצר, אישי, ומסתיים עם בקשה קלה לביצוע.',
+        actionEn:'Write a 5-line cold email: 1 personal line, 1 pain line, 1 value line, 1 proof, 1 CTA.',
+        actionHe:'כתוב מייל קר של 5 שורות: שורה אישית, שורת כאב, שורת ערך, הוכחה, CTA.' },
+      { titleEn:'LinkedIn Cold Outreach',        titleHe:'פנייה קרה בלינקדאין',
+        descEn:'LinkedIn DMs outperform cold email when done right — less competition, higher open rates.',
+        descHe:'הודעות DM בלינקדאין עולות על מייל קר כשעושים נכון — פחות תחרות, אחוז פתיחה גבוה יותר.',
+        actionEn:'Send 5 LinkedIn connection requests with a 1-sentence personalized note. No pitch yet.',
+        actionHe:'שלח 5 בקשות חיבור בלינקדאין עם הערה מותאמת אישית של משפט 1. עדיין בלי הצעה.' },
+      { titleEn:'Discovery Call Framework',      titleHe:'מסגרת שיחת גילוי',
+        descEn:'The discovery call is the most valuable part of your sales process. Ask, don\'t pitch.',
+        descHe:'שיחת הגילוי היא החלק הכי ערכי בתהליך המכירות שלך. שאל, אל תציג.',
+        actionEn:'Memorize SPIN: Situation, Problem, Implication, Need-payoff. Use it in your next call.',
+        actionHe:'שנן SPIN: Situation, Problem, Implication, Need-payoff. השתמש בזה בשיחה הבאה שלך.' },
+      { titleEn:'Handle Objections',             titleHe:'טיפול בהתנגדויות',
+        descEn:'Every "no" has a reason. Objections are requests for more information.',
+        descHe:'לכל "לא" יש סיבה. התנגדויות הן בקשות למידע נוסף.',
+        actionEn:'List the top 3 objections you hear. Write a calm, confident response to each.',
+        actionHe:'רשום 3 ההתנגדויות המובילות שאתה שומע. כתוב תגובה רגועה ובטוחה לכל אחת.' },
+      { titleEn:'The Follow-Up System',          titleHe:'מערכת המעקב',
+        descEn:'80% of sales happen after the 5th follow-up. Most reps quit after the 1st.',
+        descHe:'80% מהמכירות קורות אחרי המעקב ה-5. רוב הנציגים מוותרים אחרי הראשון.',
+        actionEn:'Build a 5-touch follow-up sequence: Day 1, 3, 7, 14, 30. Write the message for each.',
+        actionHe:'בנה רצף מעקב של 5 נגיעות: יום 1, 3, 7, 14, 30. כתוב את ההודעה לכל אחד.' },
+      { titleEn:'Social Proof & Case Studies',   titleHe:'הוכחה חברתית ומקרי בוחן',
+        descEn:'People buy when they see people like them already winning.',
+        descHe:'אנשים קונים כשהם רואים אנשים כמוהם כבר מנצחים.',
+        actionEn:'Write a 3-sentence case study: customer problem, your solution, measurable result.',
+        actionHe:'כתוב מקרה בוחן של 3 משפטים: בעיית הלקוח, הפתרון שלך, תוצאה מדידה.' },
+      { titleEn:'Closing Techniques',            titleHe:'טכניקות סגירה',
+        descEn:'Closing is not a trick. It is the natural conclusion of a well-run sales process.',
+        descHe:'סגירה היא לא טריק. זוהי המסקנה הטבעית של תהליך מכירות שמנוהל טוב.',
+        actionEn:'Practice the Assumptive Close: "So when should we start — this week or next?" Say it out loud.',
+        actionHe:'תרגל את סגירת ההנחה: "אז מתי מתחילים — השבוע או הבא?" אמור את זה בקול.' },
+      { titleEn:'Week 1 Sales Review',           titleHe:'סיכום שבוע 1 במכירות',
+        descEn:'Measure what you did this week. Sales is a numbers game only if you track the numbers.',
+        descHe:'מדוד מה עשית השבוע. מכירות היא משחק מספרים רק אם אתה עוקב אחרי המספרים.',
+        actionEn:'Write: outreach sent, replies received, calls booked, deals discussed. Set targets for week 2.',
+        actionHe:'כתוב: פניות שנשלחו, תשובות שהתקבלו, שיחות שנקבעו, עסקאות שנדונו. קבע יעדים לשבוע 2.' },
     ],
   },
 ];
