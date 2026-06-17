@@ -20,6 +20,8 @@
     "better-sqlite3": "^12.11.1",
     "chokidar": "^5.0.0",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
     "pdf-parse": "^1.1.4",
     "pdf2json": "^4.0.3",
     "pdfjs-dist": "^3.11.174",
@@ -28,6 +30,8 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.9.3",
     "@types/pdf-parse": "^1.1.5",
     "ts-node": "^10.9.2",

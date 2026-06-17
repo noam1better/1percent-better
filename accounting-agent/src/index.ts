@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import path from 'path';
 import { FileWatcher } from './agents/fileWatcher';
+import { startServer } from './server';
 import { logger } from './utils/logger';
 
 const INBOX_DIR = process.env.INBOX_DIR ?? './inbox';
@@ -33,6 +34,7 @@ async function main() {
   if (isWatch || args.length === 0) {
     const watcher = new FileWatcher(INBOX_DIR, OUTPUT_DIR);
     watcher.start();
+    startServer(INBOX_DIR);
     return;
   }
 
