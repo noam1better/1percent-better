@@ -5612,6 +5612,31 @@ function showToast(msg, ms = 2800) {
   toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+function showUpdateToast(worker) {
+  const existing = document.getElementById('swUpdateBanner');
+  if (existing) return; // already showing
+
+  const banner = document.createElement('div');
+  banner.id = 'swUpdateBanner';
+  banner.style.cssText = [
+    'position:fixed', 'bottom:96px', 'left:12px', 'right:12px', 'z-index:9998',
+    'background:#1e293b', 'border:1px solid rgba(0,255,135,.35)',
+    'border-radius:16px', 'padding:14px 16px',
+    'display:flex', 'align-items:center', 'justify-content:space-between', 'gap:12px',
+    'box-shadow:0 4px 24px rgba(0,0,0,.5)',
+    'animation:toastIn .3s ease both',
+  ].join(';');
+  banner.innerHTML = `
+    <span style="font-size:13px;color:#e2e8f0;line-height:1.4;">⚡ New version available</span>
+    <button style="flex-shrink:0;padding:8px 16px;background:#00ff87;border:none;border-radius:10px;
+      color:#000;font-weight:800;font-size:13px;cursor:pointer;touch-action:manipulation;"
+      onclick="document.getElementById('swUpdateBanner').remove();
+               navigator.serviceWorker.getRegistration().then(r=>r?.waiting?.postMessage({type:'SKIP_WAITING'}));">
+      Update
+    </button>`;
+  document.body.appendChild(banner);
+}
+
 /* ═══════════════════════════════════════════════════════
    10. INIT
 ═══════════════════════════════════════════════════════ */
@@ -11994,9 +12019,19 @@ function renderHubActivePath() {
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showToast('עדכון זמין — רענן כדי לקבל את הגרסה החדשה');
+              showUpdateToast(newWorker);
             }
           });
+        });
+
+        // Also catch the case where a waiting SW already exists on page load
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          showUpdateToast(reg.waiting);
+        }
+
+        // When the new SW takes control, reload to apply update
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
         });
       })
       .catch(err => console.warn('[PWA] SW registration failed:', err));

@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════
-// 1% Better — Service Worker v1.4.0
+// 1% Better — Service Worker v1.5.0
 // ═══════════════════════════════════════════════
 
-const CACHE_NAME = '1pb-v1.4.0';
+const CACHE_NAME = '1pb-v1.5.0';
 const OFFLINE_URL = '/index.html';
 const ALLOWED_CROSS_ORIGINS = [
   'cdn.jsdelivr.net',
@@ -21,6 +21,8 @@ const PRE_CACHE = [
 // ── INSTALL ──────────────────────────────────────
 // Use per-asset add() so a single missing file (e.g. an icon not yet
 // uploaded) doesn't fail the entire SW install via addAll's atomic semantics.
+// NOTE: skipWaiting() is NOT called here — the update banner in the app
+// sends SKIP_WAITING explicitly so the user controls when to reload.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
@@ -33,7 +35,7 @@ self.addEventListener('install', event => {
       )
     )
   );
-  self.skipWaiting();
+  // Do NOT call skipWaiting() here — let the update banner handle it.
 });
 
 // ── ACTIVATE ─────────────────────────────────────
@@ -124,14 +126,19 @@ self.addEventListener('push', event => {
   const tag   = raw.tag   || 'daily-reminder';
   const url   = raw.url   || raw.data?.url           || '/#hub';
 
+  const lang = raw.lang || raw.notification?.lang || 'he';
+  const dir  = (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr';
+  const openLabel    = lang === 'he' ? '🚀 פתח' : lang === 'ar' ? '🚀 فتح' : '🚀 Open';
+  const dismissLabel = lang === 'he' ? 'אחר כך' : lang === 'ar' ? 'لاحقاً' : 'Later';
+
   const options = {
     body, icon, badge, tag,
-    dir:  'rtl',
-    lang: 'he',
+    dir,
+    lang,
     data:  { url },
     actions: [
-      { action: 'open',    title: '🚀 פתח' },
-      { action: 'dismiss', title: 'אחר כך' },
+      { action: 'open',    title: openLabel },
+      { action: 'dismiss', title: dismissLabel },
     ],
     requireInteraction: false,
     vibrate: [100, 50, 100],
