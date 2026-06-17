@@ -169,6 +169,93 @@
   }
   .hub-help-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.2); }
 
+  /* ── Community reward modal ──────────────────── */
+  .community-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,.82);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 0 0 env(safe-area-inset-bottom, 0);
+    animation: commFadeIn .3s ease;
+  }
+  @keyframes commFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .community-sheet {
+    width: 100%; max-width: 480px;
+    background: #0e0e1a;
+    border: 1px solid rgba(255,255,255,.1);
+    border-bottom: none;
+    border-radius: 28px 28px 0 0;
+    padding: 28px 24px 36px;
+    text-align: center;
+    animation: commSlideUp .35s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes commSlideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .community-sheet-handle {
+    width: 40px; height: 4px; border-radius: 99px;
+    background: rgba(255,255,255,.15);
+    margin: 0 auto 20px;
+  }
+  .community-badge {
+    font-size: 52px; line-height: 1; margin-bottom: 12px;
+    filter: drop-shadow(0 0 18px rgba(0,220,100,.5));
+  }
+  .community-title {
+    font-family: var(--font-head); font-size: 26px; letter-spacing: .04em;
+    color: #f1f5f9; margin-bottom: 8px;
+  }
+  .community-sub {
+    font-size: 14px; color: #64748b; line-height: 1.6;
+    margin-bottom: 24px; max-width: 300px; margin-left: auto; margin-right: auto;
+  }
+  .community-streak-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(0,255,135,.08); border: 1px solid rgba(0,255,135,.25);
+    border-radius: 99px; padding: 6px 16px;
+    font-size: 13px; font-weight: 700; color: var(--green);
+    margin-bottom: 24px;
+  }
+  .community-join-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 16px;
+    background: #25D366;
+    border: none; border-radius: 16px;
+    color: #fff; font-family: var(--font-body); font-size: 16px; font-weight: 800;
+    cursor: pointer; text-decoration: none;
+    transition: opacity .15s, transform .12s;
+    margin-bottom: 12px;
+  }
+  .community-join-btn:hover  { opacity: .9; }
+  .community-join-btn:active { transform: scale(.98); }
+  .community-dismiss-btn {
+    background: transparent; border: none;
+    color: #475569; font-size: 14px; font-family: var(--font-body);
+    cursor: pointer; padding: 4px; width: 100%;
+    transition: color .15s;
+  }
+  .community-dismiss-btn:hover { color: #94a3b8; }
+
+  /* Persistent "Join Community" row in settings/profile */
+  .community-settings-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: rgba(37,211,102,.07);
+    border: 1px solid rgba(37,211,102,.2);
+    border-radius: 14px;
+    cursor: pointer; text-decoration: none;
+    transition: background .15s;
+    margin: 0 20px 16px;
+  }
+  .community-settings-row:hover { background: rgba(37,211,102,.12); }
+  .community-settings-row-icon { font-size: 24px; flex-shrink: 0; }
+  .community-settings-row-body { flex: 1; }
+  .community-settings-row-title {
+    font-size: 14px; font-weight: 700; color: #f1f5f9;
+  }
+  .community-settings-row-sub {
+    font-size: 12px; color: #64748b; margin-top: 2px;
+  }
+  .community-settings-row-arrow { color: #25D366; font-size: 18px; }
+
   .hub-lang-btn {
     height: 34px;
     min-width: 42px;
@@ -3544,6 +3631,16 @@
       <div class="profile-badges-title" id="lbl-badges">Badges Earned</div>
       <div class="badges-row" id="profileBadgesList"></div>
     </div>
+
+    <!-- COMMUNITY (shown once unlocked) -->
+    <a id="profileCommunityRow" class="community-settings-row" href="#" target="_blank" rel="noopener" style="display:none;">
+      <span class="community-settings-row-icon">💬</span>
+      <div class="community-settings-row-body">
+        <div class="community-settings-row-title">1% Better Community</div>
+        <div class="community-settings-row-sub">WhatsApp · Members only</div>
+      </div>
+      <span class="community-settings-row-arrow">›</span>
+    </a>
 
     <!-- INSTALL APP (profile section) -->
     <div id="profileInstallRow" style="margin:16px 20px 8px;display:none;">
@@ -7856,6 +7953,7 @@ function finishWorkout() {
   // Show flex/share sheet after a short delay (after review modal opens or hub loads)
   if (reps > 0) {
     setTimeout(() => showFlexBadgePreview(exercise, reps), 600);
+    checkCommunityReward();
   }
 }
 
@@ -11279,54 +11377,55 @@ function setGuestSession(enabled) {
 const SOCIAL_INSTAGRAM_URL = 'https://instagram.com/1percentbetter.app';
 const SOCIAL_TIKTOK_URL    = 'https://tiktok.com/@1percentbetter.app';
 
-/* ── Telegram bot config ──────────────────────────
-   ⚠ Token is visible in page source — personal use only.
-   Rotate at t.me/BotFather if ever exposed.              */
-const TG_BOT_TOKEN = 'YOUR_BOT_TOKEN';   // e.g. '7123456789:AAF...'
-const TG_CHAT_ID   = 'YOUR_CHAT_ID';     // your personal chat ID (number)
+/* ── WhatsApp community config ───────────────── */
+const WHATSAPP_GROUP_URL = 'YOUR_WHATSAPP_GROUP_URL'; // paste invite link here
 
-const MORNING_MESSAGES = [
-  '🥊 Day starts NOW. No excuses.',
-  '💪 You showed up. That\'s already 1% better.',
-  '🔥 Champions train while others sleep.',
-  '⚡ New day, new streak opportunity. Make it count.',
-  '🧠 Focus. Discipline. Progress. Repeat.',
-  '🏆 Every morning you open this app, you win.',
-  '💥 Pain is temporary. Gains are permanent.',
-];
+/* ── Community reward modal ───────────────────
+   Shown once per calendar day after a completed workout.
+   Permanent unlock stored in 1pb_community_unlocked.     */
+function showCommunityReward() {
+  const today = new Date().toISOString().slice(0, 10);
+  const shownKey = '1pb_community_shown';
+  if (localStorage.getItem(shownKey) === today) return;  // already shown today
+  if (!WHATSAPP_GROUP_URL || WHATSAPP_GROUP_URL === 'YOUR_WHATSAPP_GROUP_URL') return;
 
-async function telegram_send(text) {
-  if (!TG_BOT_TOKEN || TG_BOT_TOKEN === 'YOUR_BOT_TOKEN') return;
-  try {
-    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'HTML' })
-    });
-  } catch (e) {
-    console.warn('[Telegram] send failed:', e.message);
-  }
-}
-
-function morningVictory() {
-  const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
-  const key   = '1pb_morning_victory_sent';
-  if (localStorage.getItem(key) === today) return;     // already sent today
-  localStorage.setItem(key, today);
+  localStorage.setItem(shownKey, today);
+  localStorage.setItem('1pb_community_unlocked', '1');
+  updateCommunityRow();
 
   const streak = (() => {
     try { return JSON.parse(localStorage.getItem('1pb_streak') || '{}').current || 0; } catch { return 0; }
   })();
-  const name    = localStorage.getItem('1pb_name') || 'Champion';
-  const weekday = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
-  const quote   = MORNING_MESSAGES[new Date().getDay() % MORNING_MESSAGES.length];
+  const lbl = document.getElementById('communityStreakLabel');
+  if (lbl) lbl.textContent = `${streak} day streak`;
 
-  telegram_send(
-    `🌅 <b>Morning Victory</b> — ${weekday}\n\n` +
-    `${quote}\n\n` +
-    `🔥 Current streak: <b>${streak} days</b>\n` +
-    `👊 Let's go, ${name}.`
-  );
+  const joinBtn = document.getElementById('communityJoinBtn');
+  if (joinBtn) joinBtn.href = WHATSAPP_GROUP_URL;
+
+  const overlay = document.getElementById('communityOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeCommunityReward() {
+  const overlay = document.getElementById('communityOverlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity .25s';
+    setTimeout(() => { overlay.style.display = 'none'; overlay.style.opacity = ''; overlay.style.transition = ''; }, 260);
+  }
+}
+
+function checkCommunityReward() {
+  // Trigger after any completed workout (called from finishWorkout)
+  setTimeout(showCommunityReward, 1200);
+}
+
+function updateCommunityRow() {
+  const row = document.getElementById('profileCommunityRow');
+  if (!row) return;
+  const unlocked = !!localStorage.getItem('1pb_community_unlocked');
+  row.style.display = unlocked ? 'flex' : 'none';
+  if (unlocked) row.href = WHATSAPP_GROUP_URL;
 }
 
 function updateGuestModeUI() {
@@ -12045,7 +12144,6 @@ function initApp() {
   if (isFirebaseConfigured()) addSignOutToSettings();
   setTimeout(renderRPGProgress, 300);
   checkStickerReward();
-  setTimeout(morningVictory, 1500); // fire after streak data is loaded
   // Parse challenge URL params — show modal after a short delay so app is visible
   const ch = parseChallengeFromURL();
   if (ch) {
@@ -12091,7 +12189,7 @@ function applyAuthTranslations(lang) {
 }
 
 /* ── Final bootstrap ── */
-function applySavedPrefsAndInit() { init(); updateHubLangBtn(); }
+function applySavedPrefsAndInit() { init(); updateHubLangBtn(); updateCommunityRow(); }
 
 if (!isFirebaseConfigured()) {
   // No Firebase — skip auth, run immediately
@@ -12119,6 +12217,24 @@ if (!isFirebaseConfigured()) {
          autocapitalize="off" spellcheck="false"
          oninput="ironWillCheck()" />
   <div class="iw-hint" id="iwHint"></div>
+</div>
+
+<!-- COMMUNITY REWARD MODAL -->
+<div id="communityOverlay" class="community-overlay" style="display:none;" onclick="if(event.target===this)closeCommunityReward()">
+  <div class="community-sheet">
+    <div class="community-sheet-handle"></div>
+    <div class="community-badge">🏆</div>
+    <div class="community-title">You Earned Community Access</div>
+    <div class="community-sub">You completed a workout and proved your consistency. Welcome to the 1% Better inner circle.</div>
+    <div class="community-streak-pill">
+      🔥 <span id="communityStreakLabel">7 day streak</span>
+    </div>
+    <a id="communityJoinBtn" class="community-join-btn" href="#" target="_blank" rel="noopener">
+      <span style="font-size:20px;">💬</span>
+      Join the WhatsApp Community
+    </a>
+    <button class="community-dismiss-btn" onclick="closeCommunityReward()">Maybe later</button>
+  </div>
 </div>
 
 <!-- Fixed Install App button (Hub) -->
