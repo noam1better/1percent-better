@@ -1,9 +1,10 @@
 'use strict';
 
-const { onSchedule }   = require('firebase-functions/v2/scheduler');
-const { initializeApp } = require('firebase-admin/app');
-const { getFirestore }  = require('firebase-admin/firestore');
-const { getMessaging }  = require('firebase-admin/messaging');
+const { onSchedule }        = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { initializeApp }     = require('firebase-admin/app');
+const { getFirestore }      = require('firebase-admin/firestore');
+const { getMessaging }      = require('firebase-admin/messaging');
 
 initializeApp();
 
@@ -313,5 +314,125 @@ exports.accountabilityReminder = onSchedule(
 
     await purgeStaleTokens(db, staleTokens, tokenToUid);
     console.log(`[accountabilityReminder] sent=${sent} failed=${failed} stale_cleaned=${staleTokens.size} total_eligible=${messages.length}`);
+  }
+);
+
+// ── broadcastUpdate ───────────────────────────────────────────────────────────
+// Triggered when config/app is written.
+// Set pendingBroadcast: true (+ version + message) via broadcast-update.cjs or
+// the Firebase console — this function fires, pushes to every user with an FCM
+// token, then resets pendingBroadcast to false and logs stats.
+//
+// Firestore config/app schema:
+//   version:          string   — current app version, e.g. "2.0.0"
+//   forceUpdate:      boolean  — if true, client blocks until user refreshes
+//   pendingBroadcast: boolean  — set true to trigger this function
+//   broadcastTitle:   string?  — optional override push title
+//   broadcastBody:    string?  — optional override push body
+
+const DEFAULT_BROADCAST_TITLE = '🚀 1% Better just got better!';
+const DEFAULT_BROADCAST_BODY  = "🚀 Upgrade Alert: The new version of 1% Better is live! Open the app to experience the latest features.";
+const APP_URL                  = 'https://better-de9aa.web.app/';
+
+exports.broadcastUpdate = onDocumentWritten(
+  {
+    document:       'config/app',
+    region:         'europe-west1',
+    memory:         '256MiB',
+    timeoutSeconds: 300,
+  },
+  async (event) => {
+    const after  = event.data?.after?.data();
+    const before = event.data?.before?.data();
+
+    // Only proceed if pendingBroadcast just became true
+    if (!after?.pendingBroadcast) return;
+    if (before?.pendingBroadcast === true) return; // already processed
+
+    const db        = getFirestore();
+    const messaging = getMessaging();
+    const version   = after.version || 'latest';
+    const title     = after.broadcastTitle || DEFAULT_BROADCAST_TITLE;
+    const body      = after.broadcastBody  || DEFAULT_BROADCAST_BODY;
+
+    console.log(`[broadcastUpdate] version=${version} — collecting tokens`);
+
+    // Reset flag immediately so a retry doesn't double-send
+    await db.collection('config').doc('app').update({
+      pendingBroadcast:  false,
+      lastBroadcastAt:   new Date().toISOString(),
+      lastBroadcastVersion: version,
+    });
+
+    const usersSnap = await db.collection('users').get();
+    if (usersSnap.empty) {
+      console.log('[broadcastUpdate] no users');
+      return;
+    }
+
+    const messages   = [];
+    const tokenToUid = new Map();
+
+    for (const doc of usersSnap.docs) {
+      const d = doc.data();
+      const tokenSet = new Set(Array.isArray(d.fcmTokens) ? d.fcmTokens : []);
+      if (d.fcmToken) tokenSet.add(d.fcmToken);
+      if (!tokenSet.size) continue;
+
+      for (const token of tokenSet) {
+        tokenToUid.set(token, doc.id);
+        messages.push({
+          token,
+          webpush: {
+            headers: { Urgency: 'high' },
+            data: {
+              title,
+              body,
+              url:   APP_URL,
+              icon:  '/icon-192.png',
+              badge: '/icon-192.png',
+              tag:   'app-update',
+            },
+          },
+        });
+      }
+    }
+
+    if (!messages.length) {
+      console.log('[broadcastUpdate] no tokens found — no notifications sent');
+      return;
+    }
+
+    let sent = 0, failed = 0;
+    const staleTokens = new Set();
+
+    for (let i = 0; i < messages.length; i += 500) {
+      const chunk  = messages.slice(i, i + 500);
+      const result = await messaging.sendEach(chunk);
+      result.responses.forEach((r, idx) => {
+        if (r.success) {
+          sent++;
+        } else {
+          failed++;
+          const code = r.error?.code || '';
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
+            staleTokens.add(chunk[idx].token);
+          }
+          console.warn(`[broadcastUpdate] token error uid=${tokenToUid.get(chunk[idx].token)} code=${code}`);
+        }
+      });
+    }
+
+    await purgeStaleTokens(db, staleTokens, tokenToUid);
+
+    // Write final stats back to config doc
+    await db.collection('config').doc('app').update({
+      lastBroadcastStats: { sent, failed, stale: staleTokens.size, total: messages.length },
+    });
+
+    console.log(`[broadcastUpdate] version=${version} sent=${sent} failed=${failed} stale=${staleTokens.size} total=${messages.length}`);
   }
 );
