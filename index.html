@@ -3045,6 +3045,120 @@
     color: var(--muted2);
   }
 
+  /* ── DISCOVERY CARDS (Free Tier workout grid) ────── */
+  .discovery-grid {
+    margin: 0 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .disc-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 14px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.04);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .disc-card:active { transform: scale(.98); }
+  .disc-card.boxing-coach { border-color: rgba(255,100,0,.35); background: rgba(255,100,0,.06); }
+  .disc-card.boxing-coach:hover { border-color: rgba(255,100,0,.6); background: rgba(255,100,0,.09); }
+  .disc-card.strength { border-color: rgba(0,255,135,.25); background: rgba(0,255,135,.05); }
+  .disc-card.strength:hover { border-color: rgba(0,255,135,.5); background: rgba(0,255,135,.08); }
+  .disc-card.core { border-color: rgba(56,189,248,.25); background: rgba(56,189,248,.05); }
+  .disc-card.core:hover { border-color: rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
+  .disc-icon { font-size: 34px; line-height: 1; flex-shrink: 0; }
+  .disc-body { flex: 1; min-width: 0; }
+  .disc-title { font-weight: 800; font-size: 15px; letter-spacing: .02em; margin-bottom: 5px; }
+  .disc-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .disc-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.08);
+    color: var(--muted2);
+  }
+  .disc-arrow { font-size: 20px; color: var(--muted2); flex-shrink: 0; opacity: .6; }
+  .disc-free-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #000;
+    background: var(--green);
+    pointer-events: none;
+  }
+
+  /* ── TIER CHALLENGE BANNER ────────────────────────── */
+  .tier-challenge-banner {
+    margin: 0 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, rgba(0,255,135,.1), rgba(0,180,255,.06));
+    border: 1px solid rgba(0,255,135,.28);
+    cursor: pointer;
+    transition: opacity .18s, transform .18s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tier-challenge-banner:active { opacity: .8; transform: scale(.99); }
+  .tcb-icon { font-size: 26px; flex-shrink: 0; }
+  .tcb-body { flex: 1; }
+  .tcb-title { font-weight: 800; font-size: 13px; color: var(--green); letter-spacing: .04em; text-transform: uppercase; }
+  .tcb-sub { font-size: 12px; color: var(--muted2); margin-top: 2px; }
+  .tcb-arrow { font-size: 18px; color: var(--green); flex-shrink: 0; }
+
+  /* ── STRENGTH DRILL SHEET ─────────────────────────── */
+  .strength-sheet-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,.65);
+    display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  .strength-sheet-overlay.open { opacity: 1; pointer-events: all; }
+  .strength-sheet {
+    width: 100%; background: var(--bg1);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 24px 20px 40px;
+    transform: translateY(100%);
+    transition: transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  .strength-sheet-overlay.open .strength-sheet { transform: translateY(0); }
+  .strength-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.15); margin: 0 auto 20px; }
+  .strength-sheet-title { font-weight: 800; font-size: 18px; margin-bottom: 4px; }
+  .strength-sheet-sub { font-size: 13px; color: var(--muted2); margin-bottom: 20px; }
+  .strength-drills { display: flex; flex-direction: column; gap: 10px; }
+  .strength-drill-btn {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px; border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.04);
+    cursor: pointer; color: var(--text);
+    transition: background .18s, border-color .18s;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .strength-drill-btn:active { opacity: .8; }
+  .strength-drill-btn:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+  .sdb-icon { font-size: 30px; flex-shrink: 0; }
+  .sdb-body { flex: 1; text-align: left; }
+  .sdb-title { font-weight: 800; font-size: 14px; }
+  .sdb-desc { font-size: 12px; color: var(--muted2); margin-top: 2px; }
+
   /* ── DAILY CHALLENGE ──────────────────────────────── */
   .daily-challenge {
     margin: 0 20px 16px;
@@ -3769,30 +3883,62 @@
       </div>
     </div>
 
-    <!-- WORKOUT LAUNCHER -->
-    <div class="wl-section-label" id="wl-workouts-label">אימונים</div>
-    <div class="workout-launcher">
-      <button class="wl-btn boxing" onclick="startWorkout('boxing')">
-        <div class="wl-btn-icon">🥊</div>
-        <div class="wl-btn-label">BOXING</div>
-      </button>
-      <button class="wl-btn boxing" style="border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06);" onclick="handleAICoachClick()">
-        <span class="wl-pro-badge">PRO</span>
-        <div class="wl-btn-icon">🧠</div>
-        <div class="wl-btn-label" style="font-size:11px;">AI COACH</div>
-      </button>
-      <button class="wl-btn pushup" onclick="startWorkout('pushup')">
-        <div class="wl-btn-icon">💪</div>
-        <div class="wl-btn-label">PUSH-UPS</div>
-      </button>
-      <button class="wl-btn pullup" onclick="startWorkout('pullup')">
-        <div class="wl-btn-icon">🧗</div>
-        <div class="wl-btn-label">PULL-UPS</div>
-      </button>
-      <button class="wl-btn jumprope" onclick="startWorkout('jumprope')">
-        <div class="wl-btn-icon">🪢</div>
-        <div class="wl-btn-label">JUMP ROPE</div>
-      </button>
+    <!-- DISCOVERY CARDS — Free Tier -->
+    <div class="wl-section-label" id="wl-workouts-label">Workouts</div>
+    <div class="discovery-grid">
+
+      <!-- Card 1: AI Coach + Boxing -->
+      <div class="disc-card boxing-coach" onclick="handleBoxingCoachCard()">
+        <span class="disc-free-badge" id="disc-badge-boxing">FREE</span>
+        <div class="disc-icon">🥊</div>
+        <div class="disc-body">
+          <div class="disc-title" id="disc-title-boxing">AI Coach + Boxing</div>
+          <div class="disc-tags">
+            <span class="disc-tag" id="disc-tag-boxing1">Boxing Drills</span>
+            <span class="disc-tag" id="disc-tag-boxing2">AI Feedback</span>
+          </div>
+        </div>
+        <div class="disc-arrow">›</div>
+      </div>
+
+      <!-- Card 2: Build Strength -->
+      <div class="disc-card strength" onclick="handleStrengthCard()">
+        <span class="disc-free-badge" id="disc-badge-strength">FREE</span>
+        <div class="disc-icon">💪</div>
+        <div class="disc-body">
+          <div class="disc-title" id="disc-title-strength">Build Strength</div>
+          <div class="disc-tags">
+            <span class="disc-tag" id="disc-tag-strength1">Dips</span>
+            <span class="disc-tag" id="disc-tag-strength2">Squats</span>
+          </div>
+        </div>
+        <div class="disc-arrow">›</div>
+      </div>
+
+      <!-- Card 3: Core Flow -->
+      <div class="disc-card core" onclick="handleCoreCard()">
+        <span class="disc-free-badge" id="disc-badge-core">FREE</span>
+        <div class="disc-icon">🔥</div>
+        <div class="disc-body">
+          <div class="disc-title" id="disc-title-core">Core Flow</div>
+          <div class="disc-tags">
+            <span class="disc-tag" id="disc-tag-core1">Push-Ups</span>
+            <span class="disc-tag" id="disc-tag-core2">Core</span>
+          </div>
+        </div>
+        <div class="disc-arrow">›</div>
+      </div>
+
+    </div>
+
+    <!-- 1% DAILY CHALLENGE BANNER -->
+    <div class="tier-challenge-banner" onclick="startDailyChallenge()">
+      <div class="tcb-icon">⚡</div>
+      <div class="tcb-body">
+        <div class="tcb-title" id="tcb-title">1% Daily Challenge</div>
+        <div class="tcb-sub" id="tcb-sub">Finish Free Tier 1!</div>
+      </div>
+      <div class="tcb-arrow">→</div>
     </div>
 
     <!-- DAILY CHALLENGE -->
@@ -4503,6 +4649,33 @@
         👑 Upgrade to PRO
       </button>
       <button class="acp-dismiss" onclick="closeAICoachPaywall()">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STRENGTH DRILL SHEET ══ -->
+<div class="strength-sheet-overlay" id="strengthSheetOverlay" onclick="if(event.target===this)closeStrengthSheet()">
+  <div class="strength-sheet">
+    <div class="strength-sheet-handle"></div>
+    <div class="strength-sheet-title" id="sds-title">Build Strength 💪</div>
+    <div class="strength-sheet-sub" id="sds-sub">Choose your exercise — camera tracks your reps</div>
+    <div class="strength-drills">
+      <button class="strength-drill-btn" onclick="closeStrengthSheet();startWorkout('pushup')">
+        <div class="sdb-icon">🏋️</div>
+        <div class="sdb-body">
+          <div class="sdb-title" id="sdb-title-dips">Dips</div>
+          <div class="sdb-desc" id="sdb-desc-dips">Triceps &amp; chest · camera counts your reps</div>
+        </div>
+        <div style="font-size:18px;color:var(--muted2);">›</div>
+      </button>
+      <button class="strength-drill-btn" onclick="closeStrengthSheet();startWorkout('pushup')">
+        <div class="sdb-icon">🦵</div>
+        <div class="sdb-body">
+          <div class="sdb-title" id="sdb-title-squats">Squats</div>
+          <div class="sdb-desc" id="sdb-desc-squats">Legs &amp; glutes · camera counts your reps</div>
+        </div>
+        <div style="font-size:18px;color:var(--muted2);">›</div>
+      </button>
     </div>
   </div>
 </div>
@@ -12556,6 +12729,38 @@ function updateGuestModeUI() {
     localStorage.setItem('1pb_guest_nudge_shown', '1');
     setTimeout(showGuestLinkModal, 5000);
   }
+}
+
+// ── Workout category mapping (Free Tier discovery) ──────────────────────────
+const WORKOUT_CATEGORIES = {
+  boxing_coach:   { label: 'AI Coach + Boxing', exercises: ['boxing', 'ai_coach'] },
+  strength_build: { label: 'Build Strength',    exercises: ['dips', 'squats']     },
+  core_flow:      { label: 'Core Flow',         exercises: ['pushup', 'core']     },
+};
+
+/** Boxing Coach card — free users get basic boxing; pro users get full AI coach at /boxing-coach */
+function handleBoxingCoachCard() {
+  try {
+    const d = JSON.parse(localStorage.getItem('1pb_is_pro'));
+    if (d?.plan) { window.location.href = '/boxing-coach'; return; }
+  } catch (_) {}
+  startWorkout('boxing');
+}
+
+/** Strength card — opens drill picker sheet (Dips / Squats) */
+function handleStrengthCard() {
+  const overlay = document.getElementById('strengthSheetOverlay');
+  if (overlay) { overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+function closeStrengthSheet() {
+  const overlay = document.getElementById('strengthSheetOverlay');
+  if (overlay) { overlay.classList.remove('open'); document.body.style.overflow = ''; }
+}
+
+/** Core Flow card — launches push-up workout as the core exercise */
+function handleCoreCard() {
+  startWorkout('pushup');
 }
 
 function handleAICoachClick() {
