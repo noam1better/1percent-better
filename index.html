@@ -11279,6 +11279,56 @@ function setGuestSession(enabled) {
 const SOCIAL_INSTAGRAM_URL = 'https://instagram.com/1percentbetter.app';
 const SOCIAL_TIKTOK_URL    = 'https://tiktok.com/@1percentbetter.app';
 
+/* ── Telegram bot config ──────────────────────────
+   ⚠ Token is visible in page source — personal use only.
+   Rotate at t.me/BotFather if ever exposed.              */
+const TG_BOT_TOKEN = 'YOUR_BOT_TOKEN';   // e.g. '7123456789:AAF...'
+const TG_CHAT_ID   = 'YOUR_CHAT_ID';     // your personal chat ID (number)
+
+const MORNING_MESSAGES = [
+  '🥊 Day starts NOW. No excuses.',
+  '💪 You showed up. That\'s already 1% better.',
+  '🔥 Champions train while others sleep.',
+  '⚡ New day, new streak opportunity. Make it count.',
+  '🧠 Focus. Discipline. Progress. Repeat.',
+  '🏆 Every morning you open this app, you win.',
+  '💥 Pain is temporary. Gains are permanent.',
+];
+
+async function telegram_send(text) {
+  if (!TG_BOT_TOKEN || TG_BOT_TOKEN === 'YOUR_BOT_TOKEN') return;
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'HTML' })
+    });
+  } catch (e) {
+    console.warn('[Telegram] send failed:', e.message);
+  }
+}
+
+function morningVictory() {
+  const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+  const key   = '1pb_morning_victory_sent';
+  if (localStorage.getItem(key) === today) return;     // already sent today
+  localStorage.setItem(key, today);
+
+  const streak = (() => {
+    try { return JSON.parse(localStorage.getItem('1pb_streak') || '{}').current || 0; } catch { return 0; }
+  })();
+  const name    = localStorage.getItem('1pb_name') || 'Champion';
+  const weekday = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
+  const quote   = MORNING_MESSAGES[new Date().getDay() % MORNING_MESSAGES.length];
+
+  telegram_send(
+    `🌅 <b>Morning Victory</b> — ${weekday}\n\n` +
+    `${quote}\n\n` +
+    `🔥 Current streak: <b>${streak} days</b>\n` +
+    `👊 Let's go, ${name}.`
+  );
+}
+
 function updateGuestModeUI() {
   const isGuest     = isGuestSession();
   const bannerWrap  = document.getElementById('guestBannerWrap');
@@ -11995,6 +12045,7 @@ function initApp() {
   if (isFirebaseConfigured()) addSignOutToSettings();
   setTimeout(renderRPGProgress, 300);
   checkStickerReward();
+  setTimeout(morningVictory, 1500); // fire after streak data is loaded
   // Parse challenge URL params — show modal after a short delay so app is visible
   const ch = parseChallengeFromURL();
   if (ch) {
