@@ -7349,10 +7349,10 @@ function requestNotifPermission() {
     const isHe = currentLang === 'he';
     showToast(isHe
       ? '⚙️ אפשר בהגדרות הדפדפן ← Site Settings ← Notifications'
-      : '⚙️ Allow in: Browser Settings → Site Settings → Notifications');
+      : '⚙️ Allow in: Browser Settings → Site Settings → Notifications', 5000);
     return;
   }
-  showNotifModal();
+  showNotifModal('default');
 }
 
 /* ── Smart modal: shown automatically after 1st task completion ── */
@@ -7362,37 +7362,65 @@ function maybeShowNotifModal() {
   if (Notification.permission !== 'default') return;
   if (localStorage.getItem('1pb_notif_asked')) return;
   _notifModalShown = true;
-  setTimeout(showNotifModal, 1200);
+  setTimeout(() => showNotifModal('default'), 1200);
 }
 
-function showNotifModal() {
+// context: 'accountability' | 'default'
+function showNotifModal(context) {
   const isHe = currentLang === 'he';
   const setEl = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  const setHtml = (id, v) => { const e = document.getElementById(id); if(e) e.innerHTML = v; };
 
-  if (isHe) {
-    setEl('nm-title',     'שמור על הרצף');
-    document.getElementById('nm-body').innerHTML =
-      'תזכורת יומית חדה שתשמור על ה-1% שלך. רק מה שצריך — בלי רעש.';
-    setEl('nm-ex1',       '"השלמתי את משימה היומית — ממשיך."');
-    setEl('nm-ex2',       '"אין לי כוונה לשבור את הרצף היום."');
-    setEl('nm-ex3',       '"יום 7 ברצף. עוד צעד אחד."');
-    setEl('nm-allow-btn', 'אפשר התראות');
-    setEl('nm-later-btn', 'אולי מאוחר יותר');
+  // Store context so grantNotifPermission() can use it
+  document.getElementById('notifModalOverlay').dataset.context = context || 'default';
+
+  if (context === 'accountability') {
+    const apps = getAccountabilityApps();
+    const appName = apps[0] || (isHe ? 'האפליקציה' : 'your app');
+    if (isHe) {
+      setEl('nm-title',     '🔐 Accountability Lock');
+      setHtml('nm-body',    `כדי לשלוח לך תזכורת ב-18:00 <strong>לפני שתפתח את ${appName}</strong>, אנחנו צריכים רשות לשלוח התראות. <br>רק הודעה אחת ביום — ללא ספאם.`);
+      setEl('nm-ex1',       `"לפני שתפתח את ${appName}… עשית את ה-15 שכיבות סמיכה?"`);
+      setEl('nm-ex2',       '"הרוויח את ה-XP שלך ופתח את הגלילה."');
+      setEl('nm-ex3',       '"פוקוס. ביצועים. הצלחה."');
+      setEl('nm-allow-btn', 'שלח לי תזכורות 🔔');
+      setEl('nm-later-btn', 'לא עכשיו');
+    } else {
+      setEl('nm-title',     '🔐 Accountability Lock');
+      setHtml('nm-body',    `To send your <strong>18:00 reminder before you open ${appName}</strong>, we need notification permission. <br>One push a day. No spam.`);
+      setEl('nm-ex1',       `"Before you open ${appName}… did you do your 15 push-ups?"`);
+      setEl('nm-ex2',       '"Earn your XP and unlock your scroll time."');
+      setEl('nm-ex3',       '"Focus. Perform. Win."');
+      setEl('nm-allow-btn', 'Send me reminders 🔔');
+      setEl('nm-later-btn', 'Not now');
+    }
   } else {
-    setEl('nm-title',     'Stay on Streak');
-    setEl('nm-body',      'A sharp daily nudge to keep your 1% progress moving forward. Only what matters.');
-    setEl('nm-ex1',       '"Finished today\'s task — keeping momentum."');
-    setEl('nm-ex2',       '"Streak intact. No breaking now."');
-    setEl('nm-ex3',       '"Day 7 in a row. One more step."');
-    setEl('nm-allow-btn', 'Allow Notifications');
-    setEl('nm-later-btn', 'Maybe later');
+    if (isHe) {
+      setEl('nm-title',     'שמור על הרצף');
+      setHtml('nm-body',    'תזכורת יומית חדה שתשמור על ה-1% שלך. רק מה שצריך — בלי רעש.');
+      setEl('nm-ex1',       '"השלמתי את משימה היומית — ממשיך."');
+      setEl('nm-ex2',       '"אין לי כוונה לשבור את הרצף היום."');
+      setEl('nm-ex3',       '"יום 7 ברצף. עוד צעד אחד."');
+      setEl('nm-allow-btn', 'אפשר התראות');
+      setEl('nm-later-btn', 'אולי מאוחר יותר');
+    } else {
+      setEl('nm-title',     'Stay on Streak');
+      setHtml('nm-body',    'A sharp daily nudge to keep your 1% progress moving forward. Only what matters.');
+      setEl('nm-ex1',       '"Finished today\'s task — keeping momentum."');
+      setEl('nm-ex2',       '"Streak intact. No breaking now."');
+      setEl('nm-ex3',       '"Day 7 in a row. One more step."');
+      setEl('nm-allow-btn', 'Allow Notifications');
+      setEl('nm-later-btn', 'Maybe later');
+    }
   }
 
   document.getElementById('notifModalOverlay').classList.add('open');
 }
 
 async function grantNotifPermission() {
-  document.getElementById('notifModalOverlay').classList.remove('open');
+  const overlay = document.getElementById('notifModalOverlay');
+  const context = overlay.dataset.context || 'default';
+  overlay.classList.remove('open');
   localStorage.setItem('1pb_notif_asked', '1');
 
   try {
@@ -7402,10 +7430,10 @@ async function grantNotifPermission() {
     if (result === 'granted') {
       showToast(isHe ? '🔔 התראות הופעלו!' : '🔔 Notifications enabled!');
       scheduleLocalNotifications();
-      // Get FCM token now that we have permission — saves to Firestore for campaigns
       initFCM().catch(() => {});
     } else {
-      showToast(isHe ? '🔕 לא הופעלו' : '🔕 Notifications not enabled');
+      // Denial: show contextual inline note instead of vague toast
+      showNotifDenialNote(context);
     }
   } catch (e) {
     console.warn('[Notif] Permission request failed:', e);
@@ -7415,6 +7443,49 @@ async function grantNotifPermission() {
 function dismissNotifModal() {
   document.getElementById('notifModalOverlay').classList.remove('open');
   localStorage.setItem('1pb_notif_asked', '1');
+}
+
+function showNotifDenialNote(context) {
+  const isHe = currentLang === 'he';
+  const existing = document.getElementById('notifDenialNote');
+  if (existing) existing.remove();
+
+  const note = document.createElement('div');
+  note.id = 'notifDenialNote';
+  note.style.cssText = [
+    'position:fixed', 'bottom:96px', 'left:12px', 'right:12px', 'z-index:9997',
+    'background:#1e1a2e', 'border:1px solid rgba(168,85,247,.3)',
+    'border-radius:16px', 'padding:16px 18px',
+    'animation:toastIn .3s ease both',
+  ].join(';');
+
+  const isAccountability = context === 'accountability';
+  const icon = isAccountability ? '🔐' : '🔕';
+  const mainMsg = isHe
+    ? (isAccountability
+        ? 'לא בעיה, אבל לא תקבל תזכורת ב-18:00 לפני שתפתח את האפליקציות שלך.'
+        : 'לא בעיה, אבל תפספס את התזכורות היומיות שלך.')
+    : (isAccountability
+        ? "No worries, but you'll miss your 18:00 accountability reminder before opening your apps."
+        : "No worries, but you'll miss your daily reminders.");
+  const settingsMsg = isHe
+    ? 'ניתן להפעיל בכל עת מ: <strong>הגדרות → התראות</strong>.'
+    : 'You can enable them anytime from: <strong>Settings → Notifications</strong>.';
+
+  note.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <span style="font-size:22px;flex-shrink:0;margin-top:1px;">${icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:13.5px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">${mainMsg}</div>
+        <div style="font-size:12px;color:#6b7280;line-height:1.5;">${settingsMsg}</div>
+      </div>
+      <button onclick="document.getElementById('notifDenialNote').remove()"
+        style="flex-shrink:0;background:none;border:none;color:#475569;font-size:18px;cursor:pointer;padding:0;line-height:1;touch-action:manipulation;">✕</button>
+    </div>`;
+
+  document.body.appendChild(note);
+  // Auto-dismiss after 8s
+  setTimeout(() => { note.style.opacity='0'; note.style.transition='opacity .4s'; setTimeout(()=>note.remove(),400); }, 8000);
 }
 
 /* ── 5-slot daily notification schedule ──────────────────────────────
@@ -9641,6 +9712,14 @@ function renderFocusGate() {
   _fgCount = 0;
   const apps = getAccountabilityApps();
   const isHe = currentLang === 'he';
+
+  // Contextual notification permission request — only if never asked before
+  if (typeof Notification !== 'undefined' &&
+      Notification.permission === 'default' &&
+      !localStorage.getItem('1pb_notif_asked')) {
+    // Delay slightly so the screen transition completes first
+    setTimeout(() => showNotifModal('accountability'), 600);
+  }
 
   if (apps.length === 0) {
     renderFocusGateSetup(body, isHe);
