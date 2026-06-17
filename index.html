@@ -556,8 +556,53 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 8px;
   }
-  .logo { font-family: var(--font-head); font-size: 28px; letter-spacing: .04em; }
-  .logo span { color: var(--green); }
+  /* ── Logo — circular neon badge ───────────────── */
+  .logo-container {
+    display: flex; align-items: center;
+    flex-shrink: 0;
+  }
+  .logo-button {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #252525, #0e0e0e);
+    border: 3px solid #2a2a2a;
+    box-shadow:
+      inset 0 2px 6px rgba(0,0,0,.9),
+      inset 0 -1px 3px rgba(255,255,255,.04),
+      0 0 12px rgba(0,255,135,.18),
+      0 0 28px rgba(0,255,135,.08);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: box-shadow .3s;
+  }
+  .logo-button:hover {
+    box-shadow:
+      inset 0 2px 6px rgba(0,0,0,.9),
+      inset 0 -1px 3px rgba(255,255,255,.04),
+      0 0 20px rgba(0,255,135,.35),
+      0 0 44px rgba(0,255,135,.15);
+  }
+  .logo-lightning {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -54%);
+    width: 14px; height: 28px;
+    background: #00ff87;
+    clip-path: polygon(58% 0%, 100% 38%, 64% 48%, 88% 100%, 0% 62%, 36% 52%, 0% 12%);
+    filter: blur(.4px);
+    box-shadow: 0 0 8px #00ff87, 0 0 18px rgba(0,255,135,.6);
+    opacity: .9;
+  }
+  .logo-percentage {
+    position: relative; z-index: 2;
+    font-family: var(--font-head);
+    font-size: 15px; letter-spacing: .02em;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(0,255,135,.5);
+  }
   .avatar {
     width: 38px; height: 38px; border-radius: 50%;
     background: linear-gradient(135deg, var(--green), var(--blue));
@@ -3229,7 +3274,12 @@
 
     <!-- HEADER -->
     <div class="top-header">
-      <div class="logo">1%<span>BETTER</span></div>
+      <div class="logo-container">
+        <div class="logo-button">
+          <div class="logo-lightning"></div>
+          <span class="logo-percentage">1%</span>
+        </div>
+      </div>
       <div class="guest-banner" id="guestBannerWrap" style="display:none" onclick="showGuestLinkModal()">
         <span id="guestBanner">⚠ Guest mode — progress not saved</span>
         <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
@@ -3776,7 +3826,12 @@
   <!-- ══════════════ SETTINGS SCREEN ══════════════ -->
   <div class="screen" id="screen-settings">
     <div class="top-header">
-      <div class="logo">1%<span>Better</span></div>
+      <div class="logo-container">
+        <div class="logo-button">
+          <div class="logo-lightning"></div>
+          <span class="logo-percentage">1%</span>
+        </div>
+      </div>
       <div style="font-family:var(--font-head);font-size:13px;letter-spacing:.1em;color:var(--muted2);align-self:center;" id="settingsLangLabel">EN</div>
     </div>
 
