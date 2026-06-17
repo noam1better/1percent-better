@@ -613,6 +613,7 @@
   #screen-hub .level-card { display: none; }
   /* Install prompt moved to profile — never shown inline on hub */
   #screen-hub .install-card { display: none !important; }
+  #screen-hub .hub-status-card { display: none !important; }
 
   /* Ensure Hub content can be scrolled past the fixed install button */
   #screen-hub { padding-bottom: 92px; box-sizing: border-box; }
@@ -1471,18 +1472,17 @@
   }
 
   .guest-banner {
-    width: 100%; padding: 10px 14px; border-radius: 14px;
-    background: rgba(251, 191, 36, 0.12);
-    border: 1px solid rgba(251, 191, 36, 0.35);
-    color: #fbbf24; font-size: 13px; font-weight: 600;
-    margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
-    cursor: pointer; gap: 8px;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(251,191,36,.09);
+    border: 1px solid rgba(251,191,36,.22);
+    color: #fbbf24; font-size: 10px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    max-width: 120px; flex-shrink: 1;
   }
-  .guest-banner-arrow {
-    background: rgba(251,191,36,.2); border: none; border-radius: 99px;
-    padding: 4px 10px; font-size: 11px; font-weight: 800; color: #fbbf24; cursor: pointer;
-    white-space: nowrap;
-  }
+  .guest-banner-arrow { display: none; }
 
   /* Guest upgrade card (hub) */
   .guest-upgrade-card {
@@ -3376,9 +3376,9 @@
           <span class="logo-percentage">1%</span>
         </div>
       </div>
-      <div class="guest-banner" id="guestBannerWrap" style="display:none" onclick="showGuestLinkModal()">
-        <span id="guestBanner">⚠ Guest mode — progress not saved</span>
-        <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()">Secure →</button>
+      <div class="guest-banner" id="guestBannerWrap" style="display:none" onclick="showGuestLinkModal()" title="Guest mode — progress not saved">
+        <span id="guestBanner">⚠ Guest</span>
+        <button class="guest-banner-arrow" id="guest-banner-secure" onclick="event.stopPropagation();showGuestLinkModal()" style="display:none;"></button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <button class="hub-lang-btn" id="hubLangBtn" onclick="cycleLang()" title="Switch language" aria-label="Switch language">
@@ -3497,8 +3497,8 @@
     </div>
 
     <div class="hub-hero" id="hubHero">
-      <div class="hub-hero-title" id="hub-hero-title">המשימה היומית שלך</div>
-      <div class="hub-hero-sub" id="hub-hero-sub">הגיע הזמן לבחור. אימון קצר, ברור, ממוקד. התחל עכשיו.</div>
+      <div class="hub-hero-title" id="hub-hero-title" style="display:none"></div>
+      <div class="hub-hero-sub" id="hub-hero-sub" style="display:none"></div>
       <div class="daily-progress-summary">
         <div class="daily-progress-header">
           <div class="daily-progress-label" id="dailyQuestProgressLabel">Today's Progress: 0/3 Missions Completed</div>
@@ -3518,8 +3518,8 @@
         <button class="hub-status-btn" id="hubStatusButton" onclick="handleHubStatusAction()">Start Mission</button>
       </div>
       <div class="daily-quests" id="dailyQuests">
-        <div class="daily-quests-title" id="daily-quests-title">Today's Quests 🎯</div>
-        <div class="daily-quests-sub" id="daily-quests-sub">Pick one clear task. It auto-completes when your workout ends.</div>
+        <div class="daily-quests-title" id="daily-quests-title">Daily Goals 🎯</div>
+        <div class="daily-quests-sub" id="daily-quests-sub" style="display:none"></div>
         <div class="dq-list" id="dqList">
           <button type="button" class="dq-task" data-task="pushup">
             <div class="dq-task-info">
@@ -4312,7 +4312,7 @@
 </div>
 
 <!-- ══ FAB ══ -->
-<button class="fab" id="fabBtn" onclick="openQA()" title="Quick Action">
+<button class="fab" id="fabBtn" onclick="quickStartWorkout()" title="Quick Start">
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8">
     <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
   </svg>
@@ -4436,7 +4436,7 @@
   </button>
   <button class="nav-btn" id="nav-leaderboard" onclick="navigate('leaderboard')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 21V9M3 9l3-6h12l3 6H3z"/><path d="M5 9v4a7 7 0 0014 0V9"/></svg>
-    <span>Ranks</span>
+    <span>Leaders</span>
   </button>
   <button class="nav-btn" id="nav-profile" onclick="navigate('profile')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -5828,8 +5828,8 @@ const TRANSLATIONS = {
     'lbl-ai-tip-label': '1% Tip · Running',
     'aiTipText': 'Loading...',
     // Daily quests
-    'daily-quests-title': 'Today\'s Quests 🎯',
-    'daily-quests-sub': 'Pick one clear task. It auto-completes when your workout ends.',
+    'daily-quests-title': 'Daily Goals 🎯',
+    'daily-quests-sub': '',
     'dq-pushup-title': '🔥 Daily Challenge: 15 Push-Ups (AI Recognition)',
     'dq-pushup-desc': 'Tap to start counting. AI verifies every rep.',
     'dq-monkmode-title': '🧠 Mindset: Read Monk Mode Rules (1 min)',
@@ -6079,8 +6079,8 @@ const TRANSLATIONS = {
     // Hub hero + daily quests
     'hub-hero-title':       'המשימה היומית שלך',
     'hub-hero-sub':         'הגיע הזמן לבחור. אימון קצר, ברור, ממוקד. התחל עכשיו.',
-    'daily-quests-title':   'המשימות היומיות שלך 🎯',
-    'daily-quests-sub':     'בחר משימה ברורה ליום אחד. תסומן כ"בוצעה" כשהאימון יסתיים.',
+    'daily-quests-title':   'יעדים יומיים 🎯',
+    'daily-quests-sub':     '',
     'dq-pushup-title':      '🔥 אתגר יומי: 15 שכיבות סמיכה (זיהוי AI)',
     'dq-pushup-desc':       'לחץ כדי לפתוח את הספירה והזיהוי.',
     'dq-monkmode-title':    '🧠 מנטליות: לקרוא את חוקי ה-Monk Mode (דקה אחת)',
@@ -6437,6 +6437,13 @@ function confirmReset() {
 /* ═══════════════════════════════════════════════════════
    16. QUICK-ACTION SHEET
 ═══════════════════════════════════════════════════════ */
+
+function quickStartWorkout() {
+  // Launch the last used workout type, or fall back to pushup
+  const workouts = (() => { try { return JSON.parse(localStorage.getItem('1pb_workouts') || '[]'); } catch { return []; } })();
+  const last = workouts[0]?.exercise || 'pushup';
+  startWorkout(last);
+}
 
 function openQA() {
   document.getElementById('qaOverlay').classList.add('open');
@@ -12548,6 +12555,17 @@ if (!isFirebaseConfigured()) {
         const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         if (isStandalone) fixedBtn.style.display = 'none';
       } catch(e){}
+
+      // Hide install pill when user scrolls past the CTA hero area
+      const cta = document.getElementById('aiPrimaryCta');
+      if (cta && typeof IntersectionObserver !== 'undefined') {
+        new IntersectionObserver(([entry]) => {
+          if (fixedBtn.style.display === 'none') return;
+          fixedBtn.style.opacity = entry.isIntersecting ? '1' : '0';
+          fixedBtn.style.pointerEvents = entry.isIntersecting ? '' : 'none';
+          fixedBtn.style.transition = 'opacity .3s';
+        }, { threshold: 0 }).observe(cta);
+      }
     }
 
     if (cardOpenBtn) {
