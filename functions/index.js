@@ -7,6 +7,46 @@ const { getMessaging }  = require('firebase-admin/messaging');
 
 initializeApp();
 
+// ── Accountability copy ────────────────────────────────────────────────────────
+
+const ACCOUNTABILITY_COPY = {
+  he: (appName) => ({
+    title: `🔐 לפני שתפתח את ${appName}…`,
+    body:  'עשית 15 שכיבות סמיכה? בוא להרוויח את ה-XP שלך ולפתוח את הגלילה.',
+    lang:  'he',
+  }),
+  en: (appName) => ({
+    title: `🔐 Before you open ${appName}…`,
+    body:  'Did you do your 15 push-ups? Come earn your XP and unlock your scroll time.',
+    lang:  'en',
+  }),
+  ar: (appName) => ({
+    title: `🔐 قبل أن تفتح ${appName}…`,
+    body:  'هل أنهيت 15 ضغطة أرضية؟ تعال واكسب XP الخاص بك.',
+    lang:  'ar',
+  }),
+};
+
+// ── Helper: stale token cleanup (shared) ─────────────────────────────────────
+
+async function purgeStaleTokens(db, staleTokens, tokenToUid) {
+  if (!staleTokens.size) return;
+  const affectedUids = new Set(
+    [...staleTokens].map(t => tokenToUid.get(t)).filter(Boolean)
+  );
+  for (const uid of affectedUids) {
+    const ref  = db.collection('users').doc(uid);
+    const snap = await ref.get();
+    if (!snap.exists) continue;
+    const { fcmTokens = [], fcmToken } = snap.data();
+    const clean  = fcmTokens.filter(t => !staleTokens.has(t));
+    const update = { fcmTokens: clean };
+    if (fcmToken && staleTokens.has(fcmToken)) update.fcmToken = clean.at(-1) ?? '';
+    await ref.update(update);
+  }
+  console.log(`[purgeStaleTokens] purged ${staleTokens.size} tokens from ${affectedUids.size} users`);
+}
+
 // ── Copy variants ─────────────────────────────────────────────────────────────
 // Three punchy lines per language, rotated randomly per user so the nudge
 // feels fresh and doesn't read as automated spam.
@@ -174,26 +214,104 @@ exports.dailyHabitNudge = onSchedule(
       });
     }
 
-    // Purge stale tokens so next run doesn't retry dead registrations
-    if (staleTokens.size) {
-      const affectedUids = new Set(
-        [...staleTokens].map(t => tokenToUid.get(t)).filter(Boolean)
-      );
-      for (const uid of affectedUids) {
-        const ref  = db.collection('users').doc(uid);
-        const snap = await ref.get();
-        if (!snap.exists) continue;
-        const { fcmTokens = [], fcmToken } = snap.data();
-        const clean = fcmTokens.filter(t => !staleTokens.has(t));
-        const update = { fcmTokens: clean };
-        if (fcmToken && staleTokens.has(fcmToken)) {
-          update.fcmToken = clean.at(-1) ?? '';
-        }
-        await ref.update(update);
-      }
-      console.log(`[dailyHabitNudge] purged ${staleTokens.size} stale tokens from ${affectedUids.size} users`);
+    await purgeStaleTokens(db, staleTokens, tokenToUid);
+    console.log(`[dailyHabitNudge] ${today}: sent=${sent} failed=${failed} stale_cleaned=${staleTokens.size} total_eligible=${messages.length}`);
+  }
+);
+
+// ── accountabilityReminder ────────────────────────────────────────────────────
+// Fires daily at 18:00 Israel time.
+// Sends personalized "Before you open TikTok…" FCM push to PRO users
+// who have configured at least one accountability app.
+
+exports.accountabilityReminder = onSchedule(
+  {
+    schedule:       '0 18 * * *',
+    timeZone:       'Asia/Jerusalem',
+    region:         'europe-west1',
+    memory:         '256MiB',
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const db        = getFirestore();
+    const messaging = getMessaging();
+
+    console.log('[accountabilityReminder] running');
+
+    // Query PRO users — filter accountabilityApps in-process to avoid composite index
+    const usersSnap = await db.collection('users').where('isPro', '==', true).get();
+    if (usersSnap.empty) {
+      console.log('[accountabilityReminder] no PRO users');
+      return;
     }
 
-    console.log(`[dailyHabitNudge] ${today}: sent=${sent} failed=${failed} stale_cleaned=${staleTokens.size} total_eligible=${messages.length}`);
+    const messages   = [];
+    const tokenToUid = new Map();
+
+    for (const doc of usersSnap.docs) {
+      const d = doc.data();
+
+      const apps = Array.isArray(d.accountabilityApps) ? d.accountabilityApps : [];
+      if (apps.length === 0) continue;
+
+      // Collect tokens
+      const tokenSet = new Set(Array.isArray(d.fcmTokens) ? d.fcmTokens : []);
+      if (d.fcmToken) tokenSet.add(d.fcmToken);
+      if (!tokenSet.size) continue;
+
+      const lang    = d.lang || 'en';
+      const appName = apps[0]; // most important app (first in list)
+      const copy    = (ACCOUNTABILITY_COPY[lang] || ACCOUNTABILITY_COPY.en)(appName);
+
+      for (const token of tokenSet) {
+        tokenToUid.set(token, doc.id);
+        messages.push({
+          token,
+          webpush: {
+            headers: { Urgency: 'high' },
+            data: {
+              title: copy.title,
+              body:  copy.body,
+              lang:  copy.lang,
+              url:   'https://better-de9aa.web.app/#focus-gate',
+              icon:  '/icon-192.png',
+              badge: '/icon-192.png',
+              tag:   'accountability-lock',
+            },
+          },
+        });
+      }
+    }
+
+    if (!messages.length) {
+      console.log('[accountabilityReminder] no eligible users with apps configured');
+      return;
+    }
+
+    let sent = 0, failed = 0;
+    const staleTokens = new Set();
+
+    for (let i = 0; i < messages.length; i += 500) {
+      const chunk  = messages.slice(i, i + 500);
+      const result = await messaging.sendEach(chunk);
+      result.responses.forEach((r, idx) => {
+        if (r.success) {
+          sent++;
+        } else {
+          failed++;
+          const code = r.error?.code || '';
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
+            staleTokens.add(chunk[idx].token);
+          }
+          console.warn(`[accountabilityReminder] token error uid=${tokenToUid.get(chunk[idx].token)} code=${code}`);
+        }
+      });
+    }
+
+    await purgeStaleTokens(db, staleTokens, tokenToUid);
+    console.log(`[accountabilityReminder] sent=${sent} failed=${failed} stale_cleaned=${staleTokens.size} total_eligible=${messages.length}`);
   }
 );

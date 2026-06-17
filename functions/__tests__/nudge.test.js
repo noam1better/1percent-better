@@ -126,3 +126,126 @@ describe('pickCopy', () => {
     expect(seen.size).toBe(3);
   });
 });
+
+// ── accountabilityReminder helpers ────────────────────────────────────────────
+
+const ACCOUNTABILITY_COPY = {
+  he: (appName) => ({
+    title: `🔐 לפני שתפתח את ${appName}…`,
+    body:  'עשית 15 שכיבות סמיכה? בוא להרוויח את ה-XP שלך ולפתוח את הגלילה.',
+    lang:  'he',
+  }),
+  en: (appName) => ({
+    title: `🔐 Before you open ${appName}…`,
+    body:  'Did you do your 15 push-ups? Come earn your XP and unlock your scroll time.',
+    lang:  'en',
+  }),
+  ar: (appName) => ({
+    title: `🔐 قبل أن تفتح ${appName}…`,
+    body:  'هل أنهيت 15 ضغطة أرضية؟ تعال واكسب XP الخاص بك.',
+    lang:  'ar',
+  }),
+};
+
+function buildAccountabilityMessages(users) {
+  const messages   = [];
+  const tokenToUid = new Map();
+
+  for (const { uid, data: d } of users) {
+    const apps = Array.isArray(d.accountabilityApps) ? d.accountabilityApps : [];
+    if (!d.isPro || apps.length === 0) continue;
+
+    const tokenSet = new Set(Array.isArray(d.fcmTokens) ? d.fcmTokens : []);
+    if (d.fcmToken) tokenSet.add(d.fcmToken);
+    if (!tokenSet.size) continue;
+
+    const lang    = d.lang || 'en';
+    const appName = apps[0];
+    const copy    = (ACCOUNTABILITY_COPY[lang] || ACCOUNTABILITY_COPY.en)(appName);
+
+    for (const token of tokenSet) {
+      tokenToUid.set(token, uid);
+      messages.push({ token, copy });
+    }
+  }
+  return { messages, tokenToUid };
+}
+
+describe('accountabilityReminder message builder', () => {
+  it('skips non-PRO users', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u1', data: { isPro: false, accountabilityApps: ['TikTok'], fcmTokens: ['tok1'] } },
+    ]);
+    expect(messages).toHaveLength(0);
+  });
+
+  it('skips PRO users with no accountability apps', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u2', data: { isPro: true, accountabilityApps: [], fcmTokens: ['tok2'] } },
+    ]);
+    expect(messages).toHaveLength(0);
+  });
+
+  it('skips PRO users with no FCM tokens', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u3', data: { isPro: true, accountabilityApps: ['Instagram'], fcmTokens: [] } },
+    ]);
+    expect(messages).toHaveLength(0);
+  });
+
+  it('builds message for PRO user with app + token', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u4', data: { isPro: true, accountabilityApps: ['TikTok'], fcmTokens: ['tok4'], lang: 'en' } },
+    ]);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].copy.title).toContain('TikTok');
+    expect(messages[0].copy.lang).toBe('en');
+  });
+
+  it('uses first app in list for the notification', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u5', data: { isPro: true, accountabilityApps: ['TikTok', 'Instagram'], fcmTokens: ['tok5'], lang: 'he' } },
+    ]);
+    expect(messages[0].copy.title).toContain('TikTok');
+    expect(messages[0].copy.title).not.toContain('Instagram');
+  });
+
+  it('sends Hebrew copy for lang=he', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u6', data: { isPro: true, accountabilityApps: ['YouTube'], fcmTokens: ['tok6'], lang: 'he' } },
+    ]);
+    expect(messages[0].copy.lang).toBe('he');
+    expect(messages[0].copy.title).toContain('YouTube');
+  });
+
+  it('falls back to English for unknown lang', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u7', data: { isPro: true, accountabilityApps: ['Reddit'], fcmTokens: ['tok7'], lang: 'jp' } },
+    ]);
+    expect(messages[0].copy.lang).toBe('en');
+  });
+
+  it('deduplicates tokens from fcmToken scalar + fcmTokens array', () => {
+    const { messages } = buildAccountabilityMessages([
+      { uid: 'u8', data: {
+        isPro: true, accountabilityApps: ['X'],
+        fcmToken: 'same-tok', fcmTokens: ['same-tok', 'other-tok'], lang: 'en',
+      }},
+    ]);
+    expect(messages).toHaveLength(2); // 'same-tok' deduped, 'other-tok' added
+    const tokens = messages.map(m => m.token);
+    expect(new Set(tokens).size).toBe(2);
+  });
+
+  it('handles multiple users correctly', () => {
+    const users = [
+      { uid: 'a', data: { isPro: true,  accountabilityApps: ['TikTok'],    fcmTokens: ['t1'], lang: 'en' } },
+      { uid: 'b', data: { isPro: false, accountabilityApps: ['Instagram'], fcmTokens: ['t2'], lang: 'he' } },
+      { uid: 'c', data: { isPro: true,  accountabilityApps: [],            fcmTokens: ['t3'], lang: 'ar' } },
+      { uid: 'd', data: { isPro: true,  accountabilityApps: ['YouTube'],   fcmTokens: ['t4'], lang: 'ar' } },
+    ];
+    const { messages } = buildAccountabilityMessages(users);
+    expect(messages).toHaveLength(2); // only a and d qualify
+    expect(messages.map(m => m.token)).toEqual(['t1', 't4']);
+  });
+});

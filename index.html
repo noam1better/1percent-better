@@ -9693,6 +9693,11 @@ function renderFocusGateSetup(body, isHe) {
   window.fgSaveApps = () => {
     if (tempApps.length === 0) return;
     saveAccountabilityApps(tempApps);
+    // Sync to Firestore so Cloud Function can send 18:00 FCM push
+    if (typeof syncUserToFirestore === 'function' && typeof isFirebaseConfigured === 'function' &&
+        isFirebaseConfigured() && currentUser) {
+      syncUserToFirestore({ accountabilityApps: tempApps }).catch(() => {});
+    }
     renderFocusGateChallenge(body, isHe, tempApps);
     renderAccountabilityCard();
     if (Notification.permission === 'granted') scheduleLocalNotifications();
