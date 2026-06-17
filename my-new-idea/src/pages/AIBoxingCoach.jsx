@@ -44,21 +44,21 @@ const COMBO_INTERVAL_MS = 12_000
 const ORDINALS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
                   'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve']
 
-// ── Form tips per mode ────────────────────────────────────────────
+// ── Mid-session tips (shown during active round) ─────────────────
 const BOXING_TIPS = [
-  'Keep your guard tight between every combo.',
-  'Exhale sharply on each punch — it adds power.',
-  'Stay light on your feet. Weight on the balls.',
-  'Snap punches back fast — don\'t push them.',
-  'Rotate your shoulder fully on the cross.',
+  'Guard tight between every combo. No gaps.',
+  'Exhale sharp on impact — drives the power.',
+  'Stay light on the balls of your feet.',
+  'Snap punches back fast. Don\'t push — pop.',
+  'Full shoulder rotation on the cross. Hip first.',
 ]
 
 const MUAY_THAI_TIPS = [
-  'Chamber your knee high before throwing a kick.',
-  'Rotate your hip fully on every roundhouse.',
-  'Keep your guard up when throwing kicks.',
-  'Use the shin, not the foot, on roundhouse kicks.',
-  'Tighten your core when blocking leg kicks.',
+  'Chamber the knee high before every kick.',
+  'Full hip rotation on the roundhouse. Commit.',
+  'Guard stays up when throwing kicks. Always.',
+  'Shin connects — not the foot. Angle the ankle.',
+  'Core tight when absorbing leg kicks.',
 ]
 
 // ── Vision constants ──────────────────────────────────────────────
@@ -134,14 +134,51 @@ function getGrade(score) {
   return                  { letter: 'D', color: '#ef4444' }
 }
 
-function getPerformanceTip(accuracy, avgSpeed, punches, rounds, score) {
+// ── Structured coach feedback (end-of-session report) ───────────
+// Returns { positive, improvement, tip } — all in EN coaching voice.
+function getCoachFeedback(accuracy, avgSpeed, punches, rounds, score) {
   const punchRate = punches / Math.max(rounds, 1)
-  if (accuracy < 60)   return 'הגנה חלשה — שמור את הידיים גבוה בין כל קומבינציה. הסנטר חייב להיות מכוסה בכל רגע.'
-  if (accuracy < 75)   return 'הגנה בינונית — בין קומבינציות תחזור מיד להגנה. אל תשאיר פתח בשבריר שנייה.'
-  if (avgSpeed < 25)   return 'מכות איטיות — עבוד על חדות ופיצוץ. כל מכה צריכה להרגיש כמו ירייה, לא דחיפה.'
-  if (punchRate < 5)   return 'נפח מכות נמוך — שמור על לחץ מתמיד בכל סיבוב. לא מפסיקים לחבוט.'
-  if (score >= 85)     return '🔥 ביצועים מעולים! הגנה חזקה, מהירות טובה, לחץ עקבי — אתה בדרך הנכונה.'
-  return 'עבודה יציבה — שפר את עקביות הלחץ ואת מהירות המכות. כל אימון מחזק אותך.'
+
+  // ── POSITIVE ──────────────────────────────────────────────────
+  let positive
+  if (accuracy >= 82)
+    positive = 'Guard discipline is elite. Hands stayed high between every combo.'
+  else if (avgSpeed >= 65)
+    positive = 'Snap speed is sharp. Punches popping, not pushing — that\'s power generation.'
+  else if (punchRate >= 10)
+    positive = 'High output maintained across rounds. Cardio engine is working.'
+  else if (score >= 80)
+    positive = 'Well-rounded session. Solid guard coverage and consistent pressure throughout.'
+  else
+    positive = 'Commitment to the round was strong. You stayed in the pocket and kept moving.'
+
+  // ── IMPROVEMENT ───────────────────────────────────────────────
+  let improvement
+  if (accuracy < 60)
+    improvement = 'Defensive gap. Guard drops after every combo — chin is exposed. Critical fix.'
+  else if (accuracy < 75)
+    improvement = 'Guard breaks between exchanges. Elbows need to reset faster post-combo.'
+  else if (avgSpeed < 30)
+    improvement = 'Punches are telegraphed. Shorten the windup. Speed comes from the hip, not the arm.'
+  else if (punchRate < 5)
+    improvement = 'Output too low. Continuous pressure is the goal — don\'t rest between combos.'
+  else if (accuracy < 88)
+    improvement = 'Minor defensive gaps detected. Tighten the guard between exchanges.'
+  else
+    improvement = 'Weight distribution on power shots — drive from the rear foot, not the shoulder.'
+
+  // ── COACHING TIP ──────────────────────────────────────────────
+  let tip
+  if (accuracy < 70)
+    tip = 'After every combo: hands back to face. Non-negotiable. Make it muscle memory.'
+  else if (avgSpeed < 35)
+    tip = 'Exhale sharp on impact. Hip rotation drives the cross — not the arm. Snap it.'
+  else if (punchRate < 6)
+    tip = 'Set a 10-punch minimum per round. Keep hands busy even on defense. No downtime.'
+  else
+    tip = '1% better every session. One fix per round. Consistency beats intensity long-term.'
+
+  return { positive, improvement, tip }
 }
 
 // ── ProGateModal ──────────────────────────────────────────────────
@@ -652,8 +689,8 @@ export default function AIBoxingCoach() {
     const activeTimeSecs = sessionStartRef.current > 0
       ? Math.round((Date.now() - sessionStartRef.current) / 1000)
       : actualRounds * tier.roundDuration
-    const score = computeScore(accuracy, avgSpeed, ps.punchCount, actualRounds)
-    const tip   = getPerformanceTip(accuracy, avgSpeed, ps.punchCount, actualRounds, score)
+    const score    = computeScore(accuracy, avgSpeed, ps.punchCount, actualRounds)
+    const coaching = getCoachFeedback(accuracy, avgSpeed, ps.punchCount, actualRounds, score)
 
     toast.success('🏆 האימון הסתיים!', `${ps.punchCount} מכות זוהו. עבודת אליטה!`)
 
@@ -666,7 +703,7 @@ export default function AIBoxingCoach() {
       peakSpeed,
       activeTimeSecs,
       score,
-      tip,
+      coaching,
     })
     setPhase('done')
     setCurrentCombo(null)
@@ -833,10 +870,24 @@ export default function AIBoxingCoach() {
             </div>
           </div>
 
-          {/* AI performance tip */}
-          <div className="bc-report-tip">
-            <span className="bc-report-tip-icon">💡</span>
-            <span className="bc-report-tip-text">{report.tip}</span>
+          {/* Structured coach feedback */}
+          <div className="bc-coach-feedback">
+            <div className="bc-cf-header">
+              <span className="bc-cf-header-icon">🥊</span>
+              <span className="bc-cf-header-label">COACH ANALYSIS</span>
+            </div>
+            <div className="bc-cf-row bc-cf-positive">
+              <span className="bc-cf-tag">✓ Clean Technique</span>
+              <p className="bc-cf-text">{report.coaching.positive}</p>
+            </div>
+            <div className="bc-cf-row bc-cf-improvement">
+              <span className="bc-cf-tag">⚠ Fix This</span>
+              <p className="bc-cf-text">{report.coaching.improvement}</p>
+            </div>
+            <div className="bc-cf-row bc-cf-tip">
+              <span className="bc-cf-tag">💡 Next Rep</span>
+              <p className="bc-cf-text">{report.coaching.tip}</p>
+            </div>
           </div>
 
           <p className="bc-report-ai-note">🧠 MediaPipe Pose — מעקב מקומי, ללא שיתוף נתונים.</p>
