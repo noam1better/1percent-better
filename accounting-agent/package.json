@@ -1,0 +1,32 @@
+{
+  "name": "accounting-agent",
+  "version": "1.0.0",
+  "description": "Autonomous accounting agent — processes PDF invoices and bank statements via Gemini 2.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "watch": "ts-node src/index.ts --watch",
+    "process": "ts-node src/index.ts --file",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^2.8.0",
+    "better-sqlite3": "^12.11.1",
+    "chokidar": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "pdf-parse": "^2.4.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.9.3",
+    "@types/pdf-parse": "^1.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

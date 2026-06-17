@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+inbox/*.pdf
+output/*.json
+logs/*.log
+data/
