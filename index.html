@@ -1669,6 +1669,17 @@
   .lp-card-btn.start  { background: var(--green); color: #000; }
   .lp-card-btn.resume { background: rgba(0,255,135,.1); color: var(--green); border: 1px solid rgba(0,255,135,.3); }
   .lp-card-btn.done   { background: var(--bg3); color: var(--muted2); cursor: default; }
+  .lp-card-btn.locked { background: rgba(168,85,247,.12); color: #a78bfa; border: 1px solid rgba(168,85,247,.35); }
+  .lp-card-btn.locked:hover { background: rgba(168,85,247,.2); opacity: 1; }
+  .lp-card-pro-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(168,85,247,.85); color: #fff;
+    font-size: 10px; font-weight: 900; letter-spacing: .08em;
+    padding: 3px 9px; border-radius: 99px;
+    backdrop-filter: blur(4px);
+  }
+  .lp-card--locked { opacity: .88; }
+  .lp-card--locked:hover { border-color: rgba(168,85,247,.45); }
 
   /* Active path screen */
   .lp-active-header { padding: 20px 20px 0; }
@@ -10818,6 +10829,7 @@ const LEARNING_PATHS = [
   },
   {
     id: 'biz-fundamentals',
+    pro: true,
     icon: '💼',
     color: '#fbbf24',
     bg: 'linear-gradient(135deg,#0f0a00,#100d00)',
@@ -10883,6 +10895,7 @@ const LEARNING_PATHS = [
   },
   {
     id: 'build-product',
+    pro: true,
     icon: '🚀',
     color: '#fb923c',
     bg: 'linear-gradient(135deg,#100600,#0a0400)',
@@ -10948,6 +10961,7 @@ const LEARNING_PATHS = [
   },
   {
     id: 'sales-mastery',
+    pro: true,
     icon: '🎯',
     color: '#10b981',
     bg: 'linear-gradient(135deg,#021008,#000d06)',
@@ -11041,7 +11055,11 @@ function renderLearningPaths() {
   const isHe = currentLang === 'he';
   list.innerHTML = '';
 
+  let userIsPro = false;
+  try { const d = JSON.parse(localStorage.getItem('1pb_is_pro')); userIsPro = !!(d?.plan); } catch (_) {}
+
   LEARNING_PATHS.forEach(path => {
+    const isLocked = !!(path.pro && !userIsPro);
     const prog = loadPathProgress(path.id);
     const dayIdx = getCurrentPathDay(prog);
     const doneDays = prog.completedDays.length;
@@ -11050,11 +11068,12 @@ function renderLearningPaths() {
     const finished = doneDays >= 30;
 
     const card = document.createElement('div');
-    card.className = 'lp-card';
+    card.className = 'lp-card' + (isLocked ? ' lp-card--locked' : '');
     card.innerHTML = `
       <div class="lp-card-banner" style="background:${path.bg};">
         <span style="font-size:44px;">${path.icon}</span>
         <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.4),transparent);"></div>
+        ${isLocked ? '<div class="lp-card-pro-badge">👑 PRO</div>' : ''}
       </div>
       <div class="lp-card-body">
         <div class="lp-card-top">
@@ -11065,20 +11084,27 @@ function renderLearningPaths() {
         <div class="lp-card-meta">
           <div class="lp-card-meta-item">📅 30 ${isHe?'ימים':'days'}</div>
           <div class="lp-card-meta-item">⚡ ${path.xpPerDay} XP/${isHe?'יום':'day'}</div>
-          ${started ? `<div class="lp-card-meta-item" style="color:${path.color};">✓ ${doneDays}/30 ${isHe?'הושלמו':'done'}</div>` : ''}
+          ${started && !isLocked ? `<div class="lp-card-meta-item" style="color:${path.color};">✓ ${doneDays}/30 ${isHe?'הושלמו':'done'}</div>` : ''}
         </div>
-        ${started ? `<div class="lp-progress-wrap"><div class="lp-progress-bar" style="width:${pct}%;background:${path.color};"></div></div>` : ''}
-        <button class="lp-card-btn ${finished?'done':started?'resume':'start'}"
-          style="${started&&!finished?`background:${path.color}18;color:${path.color};border:1px solid ${path.color}40;`:''}">
-          ${finished
-            ? (isHe?'✓ הושלם':'✓ Completed')
-            : started
-              ? (isHe?`המשך — יום ${dayIdx+1}`:`Resume — Day ${dayIdx+1}`)
-              : (isHe?'התחל מסלול →':'Start Path →')}
+        ${started && !isLocked ? `<div class="lp-progress-wrap"><div class="lp-progress-bar" style="width:${pct}%;background:${path.color};"></div></div>` : ''}
+        <button class="lp-card-btn ${isLocked ? 'locked' : finished?'done':started?'resume':'start'}"
+          style="${!isLocked && started && !finished ? `background:${path.color}18;color:${path.color};border:1px solid ${path.color}40;` : ''}">
+          ${isLocked
+            ? (isHe ? '🔒 PRO — שדרג עכשיו' : '🔒 PRO — Upgrade to Unlock')
+            : finished
+              ? (isHe?'✓ הושלם':'✓ Completed')
+              : started
+                ? (isHe?`המשך — יום ${dayIdx+1}`:`Resume — Day ${dayIdx+1}`)
+                : (isHe?'התחל מסלול →':'Start Path →')}
         </button>
       </div>`;
 
     card.querySelector('.lp-card-btn').onclick = () => {
+      if (isLocked) {
+        logEvent('pro_gate_paths', { path: path.id });
+        navigate('pro');
+        return;
+      }
       if (finished) return;
       if (!started) {
         const prog2 = { started:true, startDate: todayKey(), completedDays:[], earnedXP:0, badge:false };
