@@ -615,6 +615,35 @@
   #screen-hub .install-card { display: none !important; }
   #screen-hub .hub-status-card { display: none !important; }
 
+  /* ── My Focus card (PRO) ── */
+  .my-focus-card {
+    margin: 16px 16px 0;
+    background: rgba(168,85,247,.07);
+    border: 1px solid rgba(168,85,247,.22);
+    border-radius: 18px;
+    padding: 16px 18px;
+  }
+  .my-focus-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .my-focus-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #a78bfa;
+  }
+  .my-focus-week {
+    font-size: 10px; color: #6b7280;
+  }
+  .my-focus-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255,255,255,.05);
+  }
+  .my-focus-item:first-of-type { border-top: none; padding-top: 0; }
+  .my-focus-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .my-focus-label { font-size: 13.5px; font-weight: 700; color: #f1f5f9; }
+  .my-focus-drill { font-size: 12px; color: #6b7280; line-height: 1.45; margin-top: 2px; }
+
   /* Ensure Hub content can be scrolled past the fixed install button */
   #screen-hub { padding-bottom: 92px; box-sizing: border-box; }
 
@@ -3507,6 +3536,9 @@
       <span id="routinePillText">Morning routine: incomplete</span>
     </div>
 
+    <!-- MY FOCUS CARD (PRO only, injected by renderMyFocus()) -->
+    <div id="myFocusCard" style="display:none;"></div>
+
     <div class="hub-hero" id="hubHero">
       <div class="hub-hero-title" id="hub-hero-title" style="display:none"></div>
       <div class="hub-hero-sub" id="hub-hero-sub" style="display:none"></div>
@@ -5205,7 +5237,7 @@ function navigate(screen) {
   if (nav) nav.style.display = (screen === 'workout') ? 'none' : '';
 
   // Refresh tip on each navigation
-  if (screen === 'hub') { refreshTip('hub'); setTimeout(renderRPGProgress, 0); }
+  if (screen === 'hub') { refreshTip('hub'); setTimeout(renderRPGProgress, 0); setTimeout(renderMyFocus, 50); }
   if (screen === 'upload') refreshTip('upload');
   if (screen === 'paths')        { renderLearningPaths(); }
   if (screen === 'history')      renderHistory();
@@ -7211,13 +7243,56 @@ const MONK_NOTIF_SCHEDULE = [
     body:  'השעה 20:00. אם לא תשלים את ה-1% שלך עכשיו, הרצף נשבר ומתחילים מאפס.' },
 ];
 
+function buildProWorkoutNotif() {
+  const setup = safeParse(localStorage.getItem('1pb_pro_setup'), null);
+  const workouts = safeParse(localStorage.getItem('1pb_workouts'), []);
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recent = workouts.filter(w => w.at > cutoff);
+
+  // Weak guard from recent boxing
+  const boxingW = recent.filter(w => w.exercise === 'boxing' && w.guardPct != null);
+  if (boxingW.length > 0) {
+    const avgGuard = boxingW.reduce((s, w) => s + w.guardPct, 0) / boxingW.length;
+    if (avgGuard < 70) {
+      return {
+        title: '🛡️ Coach tip: guard drill',
+        body: `Your guard dropped in recent sessions. Today: shadow-box with elbows locked to ribs — 3×2 min rounds.`
+      };
+    }
+    const avgRetract = boxingW.reduce((s, w) => s + (w.avgRetractMs || 0), 0) / boxingW.length;
+    if (avgRetract > 350) {
+      return {
+        title: '⚡ Coach tip: speed drill',
+        body: `Retraction was slow (${Math.round(avgRetract)}ms). Today: rapid jab-jab-cross — 4×30 sec with 15 sec rest.`
+      };
+    }
+  }
+
+  // Goal-based tip from setup
+  if (setup?.goal === 'strength') return { title: '💪 PRO Strength day', body: 'Push-up pyramid: 5-10-15-10-5. 60 sec rest between sets. Track form with AI.' };
+  if (setup?.goal === 'speed')    return { title: '⚡ PRO Speed day',    body: 'Speed bursts: 10 rapid jabs in 5 sec, ×5 sets. Rest 20 sec. Focus on retraction.' };
+  if (setup?.goal === 'endurance') return { title: '🏃 PRO Endurance day', body: 'Jump rope 3×3 min. 60 sec rest. Keep rhythm, not speed.' };
+
+  return null; // fall through to generic slot
+}
+
 async function scheduleLocalNotifications() {
   if (Notification.permission !== 'granted') return;
 
   clearScheduledNotifs(); // clear any existing setTimeout timers
 
   const isMonkMode = !!localStorage.getItem('1pb_monk_mode');
-  const schedule = isMonkMode ? MONK_NOTIF_SCHEDULE : DAILY_NOTIF_SCHEDULE;
+  let schedule = isMonkMode ? MONK_NOTIF_SCHEDULE : DAILY_NOTIF_SCHEDULE;
+
+  // PRO: override the 18:00 workout slot with a personalized drill tip
+  let isPro = false;
+  try { const d = JSON.parse(localStorage.getItem('1pb_is_pro')); isPro = !!(d?.plan); } catch (_) {}
+  if (isPro && !isMonkMode) {
+    const proTip = buildProWorkoutNotif();
+    if (proTip) {
+      schedule = schedule.map(s => s.tag === '1pb-workout' ? { ...s, ...proTip } : s);
+    }
+  }
 
   const now = new Date();
   let reg = null;
@@ -9174,30 +9249,245 @@ function showProSuccessModal(plan) {
   const isHe = currentLang === 'he';
   const overlay = document.createElement('div');
   overlay.id = 'proSuccessOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+
+  const name = localStorage.getItem('1pb_name') || (currentUser && currentUser.displayName) || '';
+  const greeting = name ? (isHe ? `ברוך הבא, ${name}! 👑` : `Welcome, ${name}! 👑`) : (isHe ? 'ברוך הבא ל-PRO! 👑' : 'Welcome to PRO! 👑');
+
   overlay.innerHTML = `
-    <div style="background:#0f0f1a;border:2px solid rgba(245,158,11,.6);border-radius:28px;padding:40px 28px;max-width:360px;width:100%;text-align:center;">
-      <div style="font-size:64px;margin-bottom:16px;animation:proSuccessCrown .5s ease-out;">👑</div>
-      <div style="font-family:var(--font-head);font-size:28px;font-weight:900;color:#f59e0b;margin-bottom:8px;letter-spacing:.04em;">
-        ${isHe ? 'ברוך הבא ל-PRO!' : 'Welcome to PRO!'}
+    <div style="background:#0f0f1a;border:2px solid rgba(245,158,11,.6);border-radius:28px;padding:32px 24px;max-width:380px;width:100%;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:56px;margin-bottom:12px;">👑</div>
+        <div style="font-family:var(--font-head);font-size:26px;font-weight:900;color:#f59e0b;letter-spacing:.04em;">${greeting}</div>
+        <div style="font-size:13px;color:#9ca3af;margin-top:6px;line-height:1.5;">
+          ${isHe ? `${plan === 'annual' ? 'מנוי שנתי' : 'מנוי חודשי'} פעיל. בוא נגדיר את האימון שלך.` : `${plan === 'annual' ? 'Annual' : 'Monthly'} plan active. Let's set up your training.`}
+        </div>
       </div>
-      <div style="font-size:14px;color:#d1d5db;line-height:1.6;margin-bottom:24px;">
-        ${isHe
-          ? `התשלום התקבל. ${plan === 'annual' ? 'מנוי שנתי' : 'מנוי חודשי'} פעיל עכשיו. 🎉`
-          : `Payment confirmed. ${plan === 'annual' ? 'Annual' : 'Monthly'} plan is now active. 🎉`}
+
+      <!-- Step 1: Goal -->
+      <div class="pss-step" id="pss-step-1">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:12px;">
+          ${isHe ? '🎯 מה המטרה הראשית שלך?' : '🎯 What\'s your primary goal?'}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          ${[
+            {v:'strength', en:'💪 Strength', he:'💪 כוח'},
+            {v:'speed',    en:'⚡ Speed',    he:'⚡ מהירות'},
+            {v:'endurance',en:'🏃 Endurance',he:'🏃 סיבולת'},
+            {v:'weight',   en:'🔥 Weight Loss',he:'🔥 ירידה במשקל'}
+          ].map(g => `<button onclick="pssSelect('goal','${g.v}',this)"
+            style="padding:12px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:#d1d5db;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+            data-val="${g.v}">${isHe ? g.he : g.en}</button>`).join('')}
+        </div>
       </div>
-      <button onclick="document.getElementById('proSuccessOverlay').remove();navigate('hub');"
-        style="width:100%;padding:16px;background:linear-gradient(90deg,#f59e0b,#a855f7);border:none;border-radius:16px;color:#000;font-weight:900;font-size:16px;cursor:pointer;letter-spacing:.04em;touch-action:manipulation;">
-        ${isHe ? '🚀 התחל את ה-PRO שלך!' : '🚀 Start your PRO journey!'}
+
+      <!-- Step 2: Injuries -->
+      <div class="pss-step" id="pss-step-2" style="margin-top:16px;">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:12px;">
+          ${isHe ? '🩺 יש לך מגבלות פציעה?' : '🩺 Any injury constraints?'}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          ${[
+            {v:'none',       en:'✅ None',        he:'✅ אין'},
+            {v:'back',       en:'🔴 Lower Back',  he:'🔴 גב תחתון'},
+            {v:'knees',      en:'🔴 Knees',       he:'🔴 ברכיים'},
+            {v:'shoulders',  en:'🔴 Shoulders',   he:'🔴 כתפיים'}
+          ].map(g => `<button onclick="pssSelect('injury','${g.v}',this)"
+            style="padding:12px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:#d1d5db;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+            data-val="${g.v}">${isHe ? g.he : g.en}</button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Step 3: Time -->
+      <div class="pss-step" id="pss-step-3" style="margin-top:16px;">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:12px;">
+          ${isHe ? '⏱ כמה זמן יש לך לאימון?' : '⏱ How long per workout session?'}
+        </div>
+        <div style="display:flex;gap:8px;">
+          ${[
+            {v:'15', en:'15 min', he:'15 דקות'},
+            {v:'30', en:'30 min', he:'30 דקות'},
+            {v:'45', en:'45+ min',he:'45+ דקות'}
+          ].map(g => `<button onclick="pssSelect('time','${g.v}',this)"
+            style="flex:1;padding:12px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:#d1d5db;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+            data-val="${g.v}">${isHe ? g.he : g.en}</button>`).join('')}
+        </div>
+      </div>
+
+      <button id="pssFinishBtn" onclick="finishProSetup()"
+        style="margin-top:24px;width:100%;padding:16px;background:linear-gradient(90deg,#f59e0b,#a855f7);border:none;border-radius:16px;color:#000;font-weight:900;font-size:16px;cursor:pointer;opacity:.4;pointer-events:none;letter-spacing:.04em;touch-action:manipulation;">
+        ${isHe ? '🚀 התחל את ה-PRO שלך!' : '🚀 Start my PRO journey!'}
       </button>
     </div>`;
 
   document.body.appendChild(overlay);
+  window._proSetup = {};
+}
+
+function pssSelect(field, value, btn) {
+  if (!window._proSetup) window._proSetup = {};
+  window._proSetup[field] = value;
+
+  // Highlight selected button in this group
+  const step = btn.closest('.pss-step');
+  if (step) step.querySelectorAll('button').forEach(b => {
+    const sel = b.dataset.val === value;
+    b.style.borderColor = sel ? '#a78bfa' : 'rgba(255,255,255,.12)';
+    b.style.background  = sel ? 'rgba(168,85,247,.18)' : 'rgba(255,255,255,.04)';
+    b.style.color       = sel ? '#e9d5ff' : '#d1d5db';
+  });
+
+  // Enable finish button once all 3 fields selected
+  const s = window._proSetup;
+  const ready = s.goal && s.injury && s.time;
+  const finishBtn = document.getElementById('pssFinishBtn');
+  if (finishBtn) {
+    finishBtn.style.opacity = ready ? '1' : '.4';
+    finishBtn.style.pointerEvents = ready ? '' : 'none';
+  }
+}
+
+function finishProSetup() {
+  const s = window._proSetup || {};
+  localStorage.setItem('1pb_pro_setup', JSON.stringify({ ...s, at: Date.now() }));
+  // Invalidate My Focus cache so it rebuilds with setup data
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith('1pb_my_focus_')).forEach(k => localStorage.removeItem(k));
+  } catch (_) {}
+  const overlay = document.getElementById('proSuccessOverlay');
+  if (overlay) overlay.remove();
+  applyProBadge();
+  // Reschedule notifications with new PRO profile
+  if (Notification.permission === 'granted') scheduleLocalNotifications();
+  navigate('hub');
 }
 
 // Legacy alias — kept in case old code references it
 function clickProWaitlist(plan) {
   initProScreen();
+}
+
+/* ── My Focus: weekly weak-point engine ─────────────────────────────
+   Reads last 14 days of workouts, identifies 1-2 weaknesses,
+   caches result for the week (key = YYYY-Www).                      */
+function renderMyFocus() {
+  const card = document.getElementById('myFocusCard');
+  if (!card) return;
+
+  let isPro = false;
+  try { const d = JSON.parse(localStorage.getItem('1pb_is_pro')); isPro = !!(d?.plan); } catch (_) {}
+  if (!isPro) { card.style.display = 'none'; return; }
+
+  const isHe = currentLang === 'he';
+  const cacheKey = '1pb_my_focus_' + getWeekKey();
+  const cached = safeParse(localStorage.getItem(cacheKey), null);
+
+  const items = cached || computeFocusItems();
+  if (!cached) { try { localStorage.setItem(cacheKey, JSON.stringify(items)); } catch (_) {} }
+
+  if (!items || items.length === 0) { card.style.display = 'none'; return; }
+
+  const weekLabel = isHe ? 'השבוע' : 'This week';
+  card.innerHTML = `
+    <div class="my-focus-card">
+      <div class="my-focus-header">
+        <div class="my-focus-title">${isHe ? '🎯 הפוקוס שלי' : '🎯 My Focus'}</div>
+        <div class="my-focus-week">${weekLabel}</div>
+      </div>
+      ${items.map(it => `
+        <div class="my-focus-item">
+          <div class="my-focus-icon">${it.icon}</div>
+          <div>
+            <div class="my-focus-label">${isHe ? it.labelHe : it.labelEn}</div>
+            <div class="my-focus-drill">${isHe ? it.drillHe : it.drillEn}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  card.style.display = '';
+}
+
+function getWeekKey() {
+  const d = new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  return d.getFullYear() + '-W' + String(week).padStart(2, '00');
+}
+
+function computeFocusItems() {
+  const workouts = safeParse(localStorage.getItem('1pb_workouts'), []);
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const recent = workouts.filter(w => w.at > cutoff);
+  const items = [];
+
+  if (recent.length === 0) {
+    items.push({
+      icon: '📅', labelEn: 'Build Your Baseline',
+      labelHe: 'בנה בסיס',
+      drillEn: 'Complete 3 workouts this week to unlock personalized focus areas.',
+      drillHe: 'השלם 3 אימונים השבוע כדי לפתח אזורי פוקוס מותאמים אישית.'
+    });
+    return items;
+  }
+
+  // Guard weakness: average guardPct < 70 across boxing sessions
+  const boxingW = recent.filter(w => w.exercise === 'boxing' && w.guardPct != null);
+  if (boxingW.length > 0) {
+    const avgGuard = boxingW.reduce((s, w) => s + w.guardPct, 0) / boxingW.length;
+    if (avgGuard < 70) {
+      items.push({
+        icon: '🛡️', labelEn: 'Guard Discipline',
+        labelHe: 'משמעת הגנה',
+        drillEn: `Your guard dropped ${Math.round(100 - avgGuard)}% of the time. Drill: shadow-box with elbows glued to ribs for 2 min.`,
+        drillHe: `ההגנה שלך נפלה ${Math.round(100 - avgGuard)}% מהזמן. תרגיל: shadow-box כשהמרפקים צמודים לצלעות 2 דקות.`
+      });
+    }
+    // Slow retraction
+    const avgRetract = boxingW.reduce((s, w) => s + (w.avgRetractMs || 0), 0) / boxingW.length;
+    if (avgRetract > 350 && items.length < 2) {
+      items.push({
+        icon: '⚡', labelEn: 'Hand Speed',
+        labelHe: 'מהירות ידיים',
+        drillEn: `Avg retraction ${Math.round(avgRetract)}ms — above target. Drill: 30-sec rapid jab-jab-cross on the heavy bag or mirror.`,
+        drillHe: `משיכה ממוצעת ${Math.round(avgRetract)}ms — מעל היעד. תרגיל: 30 שניות jab-jab-cross מהיר.`
+      });
+    }
+  }
+
+  // Volume weakness: low reps average
+  const repW = recent.filter(w => w.reps > 0);
+  if (repW.length > 0 && items.length < 2) {
+    const avgReps = repW.reduce((s, w) => s + w.reps, 0) / repW.length;
+    if (avgReps < 15) {
+      items.push({
+        icon: '💪', labelEn: 'Output Volume',
+        labelHe: 'נפח פעולות',
+        drillEn: `Avg ${Math.round(avgReps)} reps/session. Target 20+. Add 1 extra set to every workout this week.`,
+        drillHe: `ממוצע ${Math.round(avgReps)} חזרות לאימון. יעד: 20+. הוסף סט נוסף לכל אימון השבוע.`
+      });
+    }
+  }
+
+  // Consistency: no workout in last 3 days
+  const latest = recent[0]?.at || 0;
+  if (Date.now() - latest > 3 * 24 * 60 * 60 * 1000 && items.length < 2) {
+    items.push({
+      icon: '🔥', labelEn: 'Consistency Gap',
+      labelHe: 'פער עקביות',
+      drillEn: "3+ days without a workout. Today's goal: even 5 minutes counts. Open the app, start the timer.",
+      drillHe: 'יותר מ-3 ימים ללא אימון. המטרה היום: אפילו 5 דקות. פתח את האפליקציה, התחל את הטיימר.'
+    });
+  }
+
+  if (items.length === 0) {
+    items.push({
+      icon: '🏆', labelEn: 'Strong Week',
+      labelHe: 'שבוע חזק',
+      drillEn: 'Great numbers across the board. Push to beat your personal best this week.',
+      drillHe: 'מספרים מצוינים בכל הפרמטרים. נסה לשבור את השיא האישי שלך השבוע.'
+    });
+  }
+
+  return items.slice(0, 2);
 }
 
 function renderRPGProgress() {

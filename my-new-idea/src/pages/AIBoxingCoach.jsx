@@ -281,6 +281,9 @@ export default function AIBoxingCoach() {
   const [currentCombo, setCurrentCombo] = useState(null)
   const [muted,        setMuted]        = useState(false)
 
+  // Personalized greeting (PRO)
+  const [greeting, setGreeting] = useState('')
+
   // ── Refs ──────────────────────────────────────────────────────────
   const videoRef          = useRef(null)
   const overlayRef        = useRef(null)
@@ -312,6 +315,23 @@ export default function AIBoxingCoach() {
   // Keep hot refs in sync
   useEffect(() => { proStatusRef.current = proStatus }, [proStatus])
   useEffect(() => { mutedRef.current = muted }, [muted])
+  // Build personalized greeting from localStorage history
+  useEffect(() => {
+    const name = localStorage.getItem('1pb_name') || ''
+    const workouts = (() => { try { return JSON.parse(localStorage.getItem('1pb_workouts') || '[]') } catch { return [] } })()
+    const lastBoxing = workouts.find(w => w.exercise === 'boxing')
+    const parts = []
+    if (name) parts.push(`Good to see you, ${name}.`)
+    if (lastBoxing?.guardPct != null) {
+      if (lastBoxing.guardPct < 65) parts.push("Last session your guard dropped — let's tighten that up today.")
+      else if (lastBoxing.avgRetractMs > 350) parts.push("Last session retraction was slow — focus on snapping back today.")
+      else parts.push("Strong last session. Let's keep building.")
+    } else {
+      parts.push("First round on the AI coach — let's see what you've got.")
+    }
+    setGreeting(parts.join(' '))
+  }, [])
+
   useEffect(() => { roundRef.current = round }, [round])
 
   // ── TTS: voice loading ────────────────────────────────────────────
@@ -968,18 +988,23 @@ export default function AIBoxingCoach() {
 
       {/* Reticle (idle only) */}
       {phase === 'idle' && (
-        <div className="bc-reticle-wrap">
-          <div className={`bc-reticle ${camReady ? 'bc-reticle--active' : ''}`}>
-            <div className="bc-reticle-inner" />
-            <div className="bc-reticle-cross bc-reticle-cross--h" />
-            <div className="bc-reticle-cross bc-reticle-cross--v" />
-            <div className="bc-reticle-corner bc-corner-tl" />
-            <div className="bc-reticle-corner bc-corner-tr" />
-            <div className="bc-reticle-corner bc-corner-bl" />
-            <div className="bc-reticle-corner bc-corner-br" />
+        <>
+          <div className="bc-reticle-wrap">
+            <div className={`bc-reticle ${camReady ? 'bc-reticle--active' : ''}`}>
+              <div className="bc-reticle-inner" />
+              <div className="bc-reticle-cross bc-reticle-cross--h" />
+              <div className="bc-reticle-cross bc-reticle-cross--v" />
+              <div className="bc-reticle-corner bc-corner-tl" />
+              <div className="bc-reticle-corner bc-corner-tr" />
+              <div className="bc-reticle-corner bc-corner-bl" />
+              <div className="bc-reticle-corner bc-corner-br" />
+            </div>
+            <p className="bc-reticle-hint">Position your guard within the frame</p>
           </div>
-          <p className="bc-reticle-hint">Position your guard within the frame</p>
-        </div>
+          {greeting && proStatus === 'active' && (
+            <div className="bc-coach-greeting">{greeting}</div>
+          )}
+        </>
       )}
 
       {/* Side stats */}
