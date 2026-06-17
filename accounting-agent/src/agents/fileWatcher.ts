@@ -4,7 +4,10 @@ import { logger } from '../utils/logger';
 import { parsePDF, detectDocumentType } from '../utils/pdfParser';
 import { writeOutput, markProcessed, markDuplicate } from '../utils/outputWriter';
 import { findDuplicate, insertInvoice, closeDb } from '../utils/database';
+import { CsvExporter, WebhookExporter, type Exporter, type ExportMeta } from '../outputs';
 import { DocumentProcessor } from './documentProcessor';
+
+const exporters: Exporter[] = [new CsvExporter(), new WebhookExporter()];
 
 export class FileWatcher {
   private inboxDir: string;
@@ -136,6 +139,22 @@ export class FileWatcher {
       const bs = result.data;
       logger.info(`Statement: ${bs.bankName ?? 'Unknown bank'} | ${bs.transactions.length} transactions`);
     }
+
+    // ── Run all exporters (non-blocking — errors don't fail the pipeline) ──────
+    const exportMeta: ExportMeta = {
+      fileName: parsed.fileName,
+      processedAt,
+      pages: parsed.pages,
+      jsonOutputPath: outPath,
+    };
+
+    await Promise.allSettled(
+      exporters.map((exp) =>
+        exp.export(result as typeof result & { success: true }, exportMeta).catch((err) => {
+          logger.error(`Exporter '${exp.name}' failed`, { error: String(err) });
+        }),
+      ),
+    );
 
     try {
       markProcessed(filePath);
