@@ -13,4 +13,7 @@ export interface Exporter {
 }
 
 export { CsvExporter } from './csvExporter';
+export { JsonExporter } from './jsonExporter';
+export { XmlExporter } from './xmlExporter';
 export { WebhookExporter } from './webhookExporter';
+export { createExporters } from './exporterFactory';

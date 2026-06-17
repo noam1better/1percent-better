@@ -4,10 +4,10 @@ import { logger } from '../utils/logger';
 import { parsePDF, detectDocumentType } from '../utils/pdfParser';
 import { writeOutput, markProcessed, markDuplicate } from '../utils/outputWriter';
 import { findDuplicate, insertInvoice, closeDb } from '../utils/database';
-import { CsvExporter, WebhookExporter, type Exporter, type ExportMeta } from '../outputs';
+import { createExporters, type Exporter, type ExportMeta } from '../outputs';
 import { DocumentProcessor } from './documentProcessor';
 
-const exporters: Exporter[] = [new CsvExporter(), new WebhookExporter()];
+const exporters: Exporter[] = createExporters();
 
 export class FileWatcher {
   private inboxDir: string;
