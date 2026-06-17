@@ -1,0 +1,14 @@
+node_modules/
+.next/
+dist/
+.env
+data/
+inbox/
+output/
+logs/
+tests/output/
+tests/logs/
+tests/.tmp/
+.git/
+.gitignore
+*.log
