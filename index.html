@@ -615,6 +615,183 @@
   #screen-hub .install-card { display: none !important; }
   #screen-hub .hub-status-card { display: none !important; }
 
+  /* ══ ACCOUNTABILITY LOCK ═══════════════════════════════ */
+  .al-card {
+    margin: 16px 16px 0;
+    background: rgba(239,68,68,.07);
+    border: 1px solid rgba(239,68,68,.22);
+    border-radius: 18px;
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: border-color .18s;
+  }
+  .al-card:hover { border-color: rgba(239,68,68,.45); }
+  .al-card-icon { font-size: 28px; flex-shrink: 0; }
+  .al-card-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .al-card-sub   { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .al-card-arrow { margin-left: auto; color: #475569; font-size: 18px; flex-shrink: 0; }
+
+  /* Focus Gate screen */
+  #screen-focus-gate { padding: 0 0 92px; }
+  .fg-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 20px 0;
+  }
+  .fg-back {
+    background: rgba(255,255,255,.06); border: none;
+    border-radius: 10px; padding: 8px 12px;
+    color: #94a3b8; font-size: 16px; cursor: pointer;
+    touch-action: manipulation;
+  }
+  .fg-header-title {
+    font-family: var(--font-head); font-size: 22px;
+    letter-spacing: .04em; color: #f1f5f9;
+  }
+  .fg-setup {
+    padding: 24px 20px 0;
+  }
+  .fg-setup-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #ef4444; margin-bottom: 12px;
+  }
+  .fg-setup-desc {
+    font-size: 13px; color: #64748b; line-height: 1.55; margin-bottom: 16px;
+  }
+  .fg-input-row {
+    display: flex; gap: 8px; margin-bottom: 8px;
+  }
+  .fg-input {
+    flex: 1; background: rgba(255,255,255,.05);
+    border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 12px 14px;
+    font-family: var(--font-body); font-size: 15px;
+    color: #f1f5f9; outline: none;
+    transition: border-color .2s;
+  }
+  .fg-input:focus { border-color: rgba(239,68,68,.5); }
+  .fg-input::placeholder { color: #374151; }
+  .fg-add-btn {
+    padding: 12px 16px; background: rgba(239,68,68,.15);
+    border: 1.5px solid rgba(239,68,68,.4); border-radius: 12px;
+    color: #ef4444; font-size: 14px; font-weight: 700;
+    cursor: pointer; touch-action: manipulation;
+    transition: background .15s;
+  }
+  .fg-add-btn:hover { background: rgba(239,68,68,.25); }
+  .fg-app-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25);
+    border-radius: 99px; padding: 5px 12px;
+    font-size: 13px; color: #fca5a5; margin: 4px;
+    cursor: pointer; transition: background .15s;
+  }
+  .fg-app-chip:hover { background: rgba(239,68,68,.2); }
+  .fg-chips { flex-wrap: wrap; display: flex; margin-bottom: 16px; }
+  .fg-save-btn {
+    width: 100%; padding: 14px; margin-top: 8px;
+    background: #ef4444; border: none; border-radius: 14px;
+    color: #fff; font-family: var(--font-body);
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    touch-action: manipulation; transition: background .2s;
+  }
+  .fg-save-btn:hover { background: #dc2626; }
+
+  /* Challenge area */
+  .fg-challenge {
+    padding: 20px 20px 0;
+  }
+  .fg-apps-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #ef4444; margin-bottom: 10px;
+  }
+  .fg-apps-list {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;
+  }
+  .fg-app-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25);
+    border-radius: 99px; padding: 5px 12px;
+    font-size: 13px; color: #fca5a5;
+  }
+  .fg-challenge-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px; padding: 24px 20px;
+    text-align: center;
+  }
+  .fg-challenge-title {
+    font-family: var(--font-head); font-size: 26px;
+    letter-spacing: .04em; color: #f1f5f9; margin-bottom: 4px;
+  }
+  .fg-challenge-sub {
+    font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5;
+  }
+  .fg-counter-wrap {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin-bottom: 16px;
+  }
+  .fg-count {
+    font-family: var(--font-head); font-size: 72px;
+    line-height: 1; color: #f1f5f9; min-width: 80px; text-align: center;
+  }
+  .fg-count-slash {
+    font-size: 28px; color: #475569; align-self: flex-end; padding-bottom: 10px;
+  }
+  .fg-count-target {
+    font-size: 28px; color: #475569; align-self: flex-end; padding-bottom: 10px;
+  }
+  .fg-progress-bar-bg {
+    height: 8px; background: rgba(255,255,255,.07);
+    border-radius: 99px; overflow: hidden; margin-bottom: 20px;
+  }
+  .fg-progress-bar-fill {
+    height: 100%; background: #ef4444;
+    border-radius: 99px; transition: width .25s;
+  }
+  .fg-tap-btn {
+    width: 140px; height: 140px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #dc2626, #7f1d1d);
+    border: 3px solid rgba(239,68,68,.5);
+    box-shadow: 0 0 32px rgba(239,68,68,.35);
+    color: #fff; font-family: var(--font-head);
+    font-size: 22px; letter-spacing: .04em;
+    cursor: pointer; touch-action: manipulation;
+    transition: transform .08s, box-shadow .08s;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+  }
+  .fg-tap-btn:active { transform: scale(.93); box-shadow: 0 0 48px rgba(239,68,68,.6); }
+  .fg-tap-hint { font-size: 12px; color: #475569; margin-bottom: 16px; }
+  .fg-edit-link {
+    background: none; border: none; color: #475569;
+    font-size: 12px; cursor: pointer; text-decoration: underline;
+    font-family: var(--font-body); margin-top: 12px; display: block;
+    touch-action: manipulation;
+  }
+
+  /* Success state */
+  .fg-success {
+    padding: 32px 20px; text-align: center;
+  }
+  .fg-success-icon { font-size: 64px; margin-bottom: 16px; display: block; }
+  .fg-success-title {
+    font-family: var(--font-head); font-size: 30px;
+    letter-spacing: .04em; color: #00ff87; margin-bottom: 8px;
+  }
+  .fg-success-sub { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+  .fg-success-xp {
+    display: inline-block; padding: 8px 20px;
+    background: rgba(0,255,135,.12); border: 1px solid rgba(0,255,135,.3);
+    border-radius: 99px; color: #00ff87; font-weight: 700; font-size: 16px;
+    margin-bottom: 24px;
+  }
+  .fg-success-btn {
+    width: 100%; padding: 14px; background: var(--green);
+    border: none; border-radius: 14px; color: #000;
+    font-family: var(--font-body); font-size: 15px; font-weight: 700;
+    cursor: pointer; touch-action: manipulation;
+  }
+
   /* ── My Focus card (PRO) ── */
   .my-focus-card {
     margin: 16px 16px 0;
@@ -3539,6 +3716,9 @@
     <!-- MY FOCUS CARD (PRO only, injected by renderMyFocus()) -->
     <div id="myFocusCard" style="display:none;"></div>
 
+    <!-- ACCOUNTABILITY LOCK CARD (PRO only, injected by renderAccountabilityCard()) -->
+    <div id="accountabilityCard" style="display:none;"></div>
+
     <div class="hub-hero" id="hubHero">
       <div class="hub-hero-title" id="hub-hero-title" style="display:none"></div>
       <div class="hub-hero-sub" id="hub-hero-sub" style="display:none"></div>
@@ -4239,6 +4419,15 @@
 
     <div class="pro-social-proof" id="pro-social-proof">🔒 Secure payment via PayPal · Cancel anytime · No commitment</div>
     <button class="pro-back-btn" onclick="navigate('hub')" id="pro-back-btn">← Back to Dashboard</button>
+  </div>
+
+  <!-- ══ FOCUS GATE SCREEN ══ -->
+  <div class="screen" id="screen-focus-gate">
+    <div class="fg-header">
+      <button class="fg-back" onclick="navigate('hub')">←</button>
+      <div class="fg-header-title">🔐 Focus Gate</div>
+    </div>
+    <div id="fgBody"><!-- rendered by renderFocusGate() --></div>
   </div>
 
 </div><!-- /app -->
@@ -5237,7 +5426,8 @@ function navigate(screen) {
   if (nav) nav.style.display = (screen === 'workout') ? 'none' : '';
 
   // Refresh tip on each navigation
-  if (screen === 'hub') { refreshTip('hub'); setTimeout(renderRPGProgress, 0); setTimeout(renderMyFocus, 50); }
+  if (screen === 'hub') { refreshTip('hub'); setTimeout(renderRPGProgress, 0); setTimeout(renderMyFocus, 50); setTimeout(renderAccountabilityCard, 80); }
+  if (screen === 'focus-gate') setTimeout(renderFocusGate, 0);
   if (screen === 'upload') refreshTip('upload');
   if (screen === 'paths')        { renderLearningPaths(); }
   if (screen === 'history')      renderHistory();
@@ -7288,9 +7478,20 @@ async function scheduleLocalNotifications() {
   let isPro = false;
   try { const d = JSON.parse(localStorage.getItem('1pb_is_pro')); isPro = !!(d?.plan); } catch (_) {}
   if (isPro && !isMonkMode) {
-    const proTip = buildProWorkoutNotif();
-    if (proTip) {
-      schedule = schedule.map(s => s.tag === '1pb-workout' ? { ...s, ...proTip } : s);
+    // Accountability Lock: override 18:00 slot if user has distracting apps configured
+    const alApps = getAccountabilityApps();
+    if (alApps.length > 0) {
+      const appName = alApps[0];
+      schedule = schedule.map(s => s.tag === '1pb-workout' ? {
+        ...s,
+        title: '🔐 Before you open ' + appName + '…',
+        body:  'Did you do your 15 push-ups? Come earn your XP and unlock your scroll time.'
+      } : s);
+    } else {
+      const proTip = buildProWorkoutNotif();
+      if (proTip) {
+        schedule = schedule.map(s => s.tag === '1pb-workout' ? { ...s, ...proTip } : s);
+      }
     }
   }
 
@@ -9365,6 +9566,204 @@ function finishProSetup() {
 // Legacy alias — kept in case old code references it
 function clickProWaitlist(plan) {
   initProScreen();
+}
+
+/* ══ ACCOUNTABILITY LOCK ════════════════════════════════════════════ */
+
+const AL_XP = 25;
+const AL_TARGET = 15;
+
+function getAccountabilityApps() {
+  try { return JSON.parse(localStorage.getItem('1pb_accountability_apps') || '[]'); } catch { return []; }
+}
+function saveAccountabilityApps(arr) {
+  try { localStorage.setItem('1pb_accountability_apps', JSON.stringify(arr)); } catch {}
+}
+
+function renderAccountabilityCard() {
+  const card = document.getElementById('accountabilityCard');
+  if (!card) return;
+
+  let isPro = false;
+  try { const d = JSON.parse(localStorage.getItem('1pb_is_pro')); isPro = !!(d?.plan); } catch {}
+  if (!isPro) { card.style.display = 'none'; return; }
+
+  const isHe = currentLang === 'he';
+  const apps = getAccountabilityApps();
+  const appList = apps.length ? apps.slice(0, 3).join(', ') + (apps.length > 3 ? '…' : '') : (isHe ? 'הגדר אפליקציות' : 'Set up apps');
+  const sub = apps.length
+    ? (isHe ? `נעול: ${appList}` : `Locked: ${appList}`)
+    : (isHe ? 'הגדר אפליקציות מסיחות' : 'Configure distracting apps');
+
+  card.innerHTML = `
+    <div class="al-card" onclick="navigate('focus-gate')">
+      <div class="al-card-icon">🔐</div>
+      <div>
+        <div class="al-card-title">${isHe ? 'Accountability Lock' : 'Accountability Lock'}</div>
+        <div class="al-card-sub">${sub}</div>
+      </div>
+      <div class="al-card-arrow">›</div>
+    </div>`;
+  card.style.display = '';
+}
+
+/* ── Focus Gate screen renderer ─────────────────────────────────── */
+let _fgCount = 0;
+
+function renderFocusGate() {
+  const body = document.getElementById('fgBody');
+  if (!body) return;
+  _fgCount = 0;
+  const apps = getAccountabilityApps();
+  const isHe = currentLang === 'he';
+
+  if (apps.length === 0) {
+    renderFocusGateSetup(body, isHe);
+  } else {
+    renderFocusGateChallenge(body, isHe, apps);
+  }
+}
+
+function renderFocusGateSetup(body, isHe) {
+  let tempApps = getAccountabilityApps().slice();
+  body.innerHTML = `
+    <div class="fg-setup">
+      <div class="fg-setup-label">${isHe ? '🔐 הגדרת נעילה' : '🔐 Accountability Setup'}</div>
+      <div class="fg-setup-desc">${isHe
+        ? 'רשום את האפליקציות שמסיחות אותך. לפני שתפתח אותן, תצטרך להשלים 15 שכיבות סמיכה.'
+        : 'List apps that distract you. Before opening them, you\'ll complete a 15 push-up challenge first.'}</div>
+      <div class="fg-input-row">
+        <input class="fg-input" id="fgAppInput" type="text"
+          placeholder="${isHe ? 'TikTok, Instagram…' : 'TikTok, Instagram…'}"
+          onkeydown="if(event.key==='Enter')fgAddApp()">
+        <button class="fg-add-btn" onclick="fgAddApp()">+</button>
+      </div>
+      <div class="fg-chips" id="fgChips"></div>
+      <button class="fg-save-btn" onclick="fgSaveApps()">${isHe ? 'שמור והתחל →' : 'Save & Continue →'}</button>
+    </div>`;
+
+  // Render existing chips
+  const renderChips = () => {
+    const chips = document.getElementById('fgChips');
+    if (!chips) return;
+    chips.innerHTML = tempApps.map((a, i) =>
+      `<span class="fg-app-chip" onclick="fgRemoveApp(${i})">🔒 ${escapeHtml(a)} ✕</span>`
+    ).join('');
+  };
+  renderChips();
+
+  window.fgAddApp = () => {
+    const inp = document.getElementById('fgAppInput');
+    if (!inp) return;
+    const val = inp.value.trim();
+    if (!val || tempApps.includes(val)) { inp.value = ''; return; }
+    tempApps.push(val);
+    inp.value = '';
+    renderChips();
+  };
+  window.fgRemoveApp = (i) => {
+    tempApps.splice(i, 1);
+    renderChips();
+  };
+  window.fgSaveApps = () => {
+    if (tempApps.length === 0) return;
+    saveAccountabilityApps(tempApps);
+    renderFocusGateChallenge(body, isHe, tempApps);
+    renderAccountabilityCard();
+    if (Notification.permission === 'granted') scheduleLocalNotifications();
+  };
+}
+
+function renderFocusGateChallenge(body, isHe, apps) {
+  _fgCount = 0;
+  const appBadges = apps.map(a => `<span class="fg-app-badge">🔒 ${escapeHtml(a)}</span>`).join('');
+  body.innerHTML = `
+    <div class="fg-challenge">
+      <div class="fg-apps-label">${isHe ? 'אפליקציות נעולות' : 'Locked Apps'}</div>
+      <div class="fg-apps-list">${appBadges}</div>
+      <div class="fg-challenge-card">
+        <div class="fg-challenge-title">${isHe ? 'רוצה לגלול?' : 'Want to scroll?'}</div>
+        <div class="fg-challenge-sub">${isHe
+          ? 'השלם 15 שכיבות סמיכה — אז הרווחת את הזמן שלך.'
+          : 'Complete 15 push-ups — then you\'ve earned your scroll time.'}</div>
+        <div class="fg-counter-wrap">
+          <div class="fg-count" id="fgCount">0</div>
+          <div class="fg-count-slash">/</div>
+          <div class="fg-count-target">${AL_TARGET}</div>
+        </div>
+        <div class="fg-progress-bar-bg">
+          <div class="fg-progress-bar-fill" id="fgBar" style="width:0%"></div>
+        </div>
+        <button class="fg-tap-btn" id="fgTapBtn" onclick="fgTap()">
+          ${isHe ? '💪 TAP' : '💪 TAP'}
+        </button>
+        <div class="fg-tap-hint">${isHe ? 'הורד לרצפה, עלה → לחץ' : 'Down → Up → Tap'}</div>
+        <button class="fg-edit-link" onclick="renderFocusGateSetup(document.getElementById(\'fgBody\'), ${isHe})">
+          ${isHe ? '⚙ ערוך אפליקציות' : '⚙ Edit apps'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function fgTap() {
+  _fgCount++;
+  const countEl = document.getElementById('fgCount');
+  const barEl   = document.getElementById('fgBar');
+  const tapBtn  = document.getElementById('fgTapBtn');
+  if (countEl) countEl.textContent = _fgCount;
+  if (barEl)   barEl.style.width = Math.min(100, Math.round((_fgCount / AL_TARGET) * 100)) + '%';
+
+  // Pulse animation
+  if (tapBtn) {
+    tapBtn.style.transform = 'scale(.91)';
+    setTimeout(() => { tapBtn.style.transform = ''; }, 120);
+  }
+
+  if (_fgCount >= AL_TARGET) {
+    setTimeout(() => completeFocusGate(), 300);
+  }
+}
+
+function completeFocusGate() {
+  const isHe = currentLang === 'he';
+  const body  = document.getElementById('fgBody');
+  if (!body) return;
+
+  // Award XP
+  if (typeof gainXP === 'function') gainXP(AL_XP);
+
+  // Log to workout history
+  const entry = { exercise: 'focus-gate', reps: AL_TARGET, durSec: 90, at: Date.now(), date: todayKey() };
+  const log = (() => { try { return JSON.parse(localStorage.getItem('1pb_workouts') || '[]'); } catch { return []; } })();
+  log.unshift(entry);
+  try { localStorage.setItem('1pb_workouts', JSON.stringify(log.slice(0, 100))); } catch {}
+
+  // Log focus unlock
+  const unlockLog = (() => { try { return JSON.parse(localStorage.getItem('1pb_focus_log') || '[]'); } catch { return []; } })();
+  unlockLog.unshift({ at: Date.now(), reps: AL_TARGET, xp: AL_XP });
+  try { localStorage.setItem('1pb_focus_log', JSON.stringify(unlockLog.slice(0, 50))); } catch {}
+
+  // Sync to Firestore if logged in
+  if (typeof syncUserToFirestore === 'function' && typeof isFirebaseConfigured === 'function' &&
+      isFirebaseConfigured() && currentUser) {
+    syncUserToFirestore({ workouts: log.slice(0, 100) }).catch(() => {});
+  }
+
+  logEvent('focus_gate_complete', { xp: AL_XP });
+
+  body.innerHTML = `
+    <div class="fg-success">
+      <span class="fg-success-icon">✅</span>
+      <div class="fg-success-title">${isHe ? 'הרווחת אותו!' : 'You earned it!'}</div>
+      <div class="fg-success-xp">+${AL_XP} XP</div>
+      <div class="fg-success-sub">${isHe
+        ? '15 שכיבות סמיכה הושלמו. הזמן שלך הוא שלך — השתמש בו בחכמה.'
+        : '15 push-ups done. Your scroll time is earned — use it wisely.'}</div>
+      <button class="fg-success-btn" onclick="navigate('hub')">${isHe ? '← חזור לדשבורד' : '← Back to Dashboard'}</button>
+    </div>`;
+
+  // Update hub card
+  renderAccountabilityCard();
 }
 
 /* ── My Focus: weekly weak-point engine ─────────────────────────────
