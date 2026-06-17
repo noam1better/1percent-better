@@ -4,12 +4,13 @@
   "description": "Autonomous accounting agent — processes PDF invoices and bank statements via Gemini 2.0",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node src/index.ts",
-    "watch": "ts-node src/index.ts --watch",
-    "process": "ts-node src/index.ts --file",
-    "report": "ts-node src/generate-report.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "agent": "ts-node --project tsconfig.server.json src/index.ts",
+    "watch": "ts-node --project tsconfig.server.json src/index.ts --watch",
+    "process": "ts-node --project tsconfig.server.json src/index.ts --file",
+    "report": "ts-node --project tsconfig.server.json src/generate-report.ts",
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
@@ -22,10 +23,13 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "multer": "^2.2.0",
+    "next": "^16.2.9",
     "pdf-parse": "^1.1.4",
     "pdf2json": "^4.0.3",
     "pdfjs-dist": "^3.11.174",
     "pdfkit": "^0.19.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -34,6 +38,11 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.3",
     "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }
