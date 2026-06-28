@@ -1,3 +1,0 @@
-processed_at,file_name,invoice_number,description,quantity,unit_price,total_amount,tax_rate,tax_amount
-2026-06-17T13:47:47.120Z,test_invoice.pdf,INV-CSV-TEST-001,Dev Services,1,5000,5000,17,850
-2026-06-17T13:47:47.120Z,test_invoice.pdf,INV-CSV-TEST-001,Cloud Hosting,2,400,800,17,136

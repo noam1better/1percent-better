@@ -56,6 +56,11 @@ service cloud.firestore {
                    && resource.data.uid == request.auth.uid;
     }
 
+    // ── FOCUS TRIGGER PROFILES ─────────────────────────
+    match /focusTriggers/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
     // ── DENY EVERYTHING ELSE ───────────────────────────
     match /{document=**} {
       allow read, write: if false;

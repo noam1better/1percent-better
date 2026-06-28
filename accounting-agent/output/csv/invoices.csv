@@ -1,2 +1,0 @@
-processed_at,file_name,invoice_number,issue_date,due_date,issuer_name,issuer_tax_id,issuer_email,recipient_name,recipient_tax_id,subtotal,total_tax,discount,total_amount,currency,payment_method,payment_terms,confidence,json_output
-2026-06-17T13:47:47.120Z,test_invoice.pdf,INV-CSV-TEST-001,2026-06-17,2026-07-17,Tech Solutions Ltd.,515234567,billing@tech.com,Startup Corp,523456789,5800,986,,6786,ILS,bank_transfer,Net 30,0.95,./output/test_invoice.json

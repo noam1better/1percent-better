@@ -1,10 +1,116 @@
 'use strict';
 
-const { onSchedule }        = require('firebase-functions/v2/scheduler');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
-const { initializeApp }     = require('firebase-admin/app');
-const { getFirestore }      = require('firebase-admin/firestore');
-const { getMessaging }      = require('firebase-admin/messaging');
+const { onSchedule }           = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten }    = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError }   = require('firebase-functions/v2/https');
+const { defineSecret }         = require('firebase-functions/params');
+const { initializeApp }        = require('firebase-admin/app');
+const { getFirestore }         = require('firebase-admin/firestore');
+const { getMessaging }         = require('firebase-admin/messaging');
+const Anthropic                = require('@anthropic-ai/sdk');
+
+// ── analyzeWithClaude ─────────────────────────────────────────────────────────
+// Callable function that proxies image and session analysis to Claude.
+// mode = 'image'   → base64Image + exercise + focusGoal → English coaching text
+// mode = 'session' → exercise + reps + duration + formScore → Hebrew summary
+
+const anthropicKey = defineSecret('ANTHROPIC_API_KEY');
+
+const EXERCISE_PROMPTS = {
+  pushups: 'The user is performing push-ups. Analyze: hand placement width, body alignment (straight line head to heels), core engagement, elbow angle and flare at the bottom, neck position, and hip sag.',
+  pullups: 'The user is performing pull-ups. Analyze: grip width and type, shoulder blade engagement (scapular retraction), chin height relative to bar, body swing or kipping, and lat activation.',
+  dips:    'The user is performing dips. Analyze: elbow flare, forward lean angle (chest dips vs tricep dips), shoulder depression and stability, wrist alignment, and depth of the movement.',
+  squats:  'The user is performing squats. Analyze: knee tracking over toes, squat depth, spine neutrality and back angle, foot stance width and toe angle, heel contact with ground, and chest position.',
+  boxing:  'The user is performing boxing or Muay Thai. Analyze: stance width and weight distribution, guard position and chin tuck, shoulder protection, hip rotation and power generation, and overall defensive posture.',
+};
+
+const GOAL_CONTEXT = {
+  fitness:  'Focus on exercise form, muscle engagement, body alignment, and movement technique.',
+  trading:  'Focus on desk ergonomics, sitting posture, and eye-level for a productive trading session.',
+  work:     'Focus on desk posture, shoulder position, screen distance, and workspace ergonomics.',
+  mindful:  'Focus on meditation posture, body alignment, breathing position, and relaxed but upright form.',
+  learning: 'Focus on study posture, head position, and desk setup for sustained focus.',
+  creative: 'Focus on body posture, arm position, and workspace setup for creative flow.',
+};
+
+const EXERCISE_NAMES_HE = {
+  pushups: 'שכיבות שמיכה',
+  pullups: 'מתח',
+  dips:    'מקבילים',
+  squats:  'סקוואטים',
+  boxing:  'אגרוף / מואי תאי',
+};
+
+exports.analyzeWithClaude = onCall(
+  {
+    secrets:        [anthropicKey],
+    region:         'europe-west1',
+    memory:         '512MiB',
+    timeoutSeconds: 60,
+    cors:           true,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in.');
+    }
+
+    const client = new Anthropic({ apiKey: anthropicKey.value() });
+    const { mode, exercise, focusGoal, base64Image, reps, duration, formScore } = request.data;
+
+    // ── Image analysis ──────────────────────────────────────────────────────
+    if (mode === 'image') {
+      if (!base64Image) throw new HttpsError('invalid-argument', 'base64Image required for image mode.');
+      const context = exercise
+        ? (EXERCISE_PROMPTS[exercise] || '')
+        : (GOAL_CONTEXT[focusGoal]   || 'Analyze posture, form, and body alignment.');
+
+      const message = await client.messages.create({
+        model:      'claude-opus-4-7',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type:   'image',
+              source: { type: 'base64', media_type: 'image/jpeg', data: base64Image },
+            },
+            {
+              type: 'text',
+              text: `You are an expert fitness and biomechanics coach. ${context} ` +
+                    `Look at this image carefully and give specific, actionable coaching feedback. ` +
+                    `Be encouraging but precise. Keep your response to 2–4 sentences. Plain text only, no markdown.`,
+            },
+          ],
+        }],
+      });
+      return { text: message.content[0].text };
+    }
+
+    // ── Session analysis (Hebrew) ───────────────────────────────────────────
+    if (mode === 'session') {
+      const name     = EXERCISE_NAMES_HE[exercise] || exercise;
+      const repLabel = exercise === 'boxing' ? 'אגרופים' : 'חזרות';
+
+      const message = await client.messages.create({
+        model:      'claude-opus-4-7',
+        max_tokens: 400,
+        messages: [{
+          role:    'user',
+          content: `אתה מאמן כושר ובמיומינות ביומכניקה מנוסה. המשתמש סיים סשן אימון עם ניתוח AI בזמן אמת:\n` +
+                   `תרגיל: ${name}\n` +
+                   `משך: ${duration} שניות\n` +
+                   `${repLabel}: ${reps}\n` +
+                   `ציון נוכחות בפריים (איכות זיהוי): ${formScore}/100\n\n` +
+                   `כתוב משוב מאמן בעברית בלבד. 3-4 משפטים. היה מעודד וספציפי. ` +
+                   `ציין מה הלך טוב ו-1-2 נקודות לשיפור על סמך הנתונים. טקסט רגיל בלבד, ללא markdown.`,
+        }],
+      });
+      return { text: message.content[0].text };
+    }
+
+    throw new HttpsError('invalid-argument', 'Invalid mode. Use "image" or "session".');
+  }
+);
 
 initializeApp();
 
