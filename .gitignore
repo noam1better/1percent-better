@@ -17,6 +17,9 @@ dist/
 my-new-idea/.env.local
 my-new-idea/.env.*.local
 
+# Claude Code internal
+.agents/
+
 # OS / editors
 .DS_Store
 *.sw?
