@@ -8,7 +8,7 @@
   ],
   "hosting": [
     {
-      "target": "1percent",
+      "target": "prime",
       "public": "dist",
       "ignore": [
         "firebase.json",

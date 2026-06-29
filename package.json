@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "vite build && npx firebase-tools deploy --only hosting:1percent",
+    "deploy": "vite build && npx firebase-tools deploy --only hosting:prime",
     "deploy:functions": "cd .. && npx firebase-tools deploy --only functions"
   },
   "dependencies": {

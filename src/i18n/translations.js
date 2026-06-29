@@ -1,8 +1,8 @@
 const t = {
   en: {
     welcome: {
-      title: 'Focus Trigger',
-      subtitle: 'Build habits that actually stick.',
+      title: 'PRIME',
+      subtitle: 'Your daily discipline course.',
       features: [
         ['🎯', 'Set your daily Focus Triggers'],
         ['⚡', 'Stack micro-habits onto existing cues'],
@@ -74,8 +74,8 @@ const t = {
 
   he: {
     welcome: {
-      title: 'פוקוס טריגר',
-      subtitle: 'בנה הרגלים שבאמת נשארים.',
+      title: 'PRIME',
+      subtitle: 'קורס המשמעת היומי שלך.',
       features: [
         ['🎯', 'הגדר טריגרים יומיים'],
         ['⚡', 'צרף הרגלים קטנים לרמזים קיימים'],

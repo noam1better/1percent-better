@@ -1,7 +1,7 @@
 {
-  "name": "1percent-better-functions",
+  "name": "prime-functions",
   "version": "1.0.0",
-  "description": "Firebase Cloud Functions for 1% Better",
+  "description": "Firebase Cloud Functions for PRIME",
   "private": true,
   "engines": { "node": "20" },
   "main": "index.js",

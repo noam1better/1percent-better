@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard } from '../services/focusTriggerService'
 import { requestPermission, checkNotifications } from '../services/notificationService'
-import { verifyDayCompletion } from '../services/coachService'
+import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
 import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, LESSON_WHY, DAILY_QUOTES } from '../data/challenges'
 import TracksPage from './TracksPage'
@@ -448,6 +448,28 @@ function WorkoutLibraryModal({ onSelect, onClose }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────
 
+// ── Video frame extractor ───────────────────────────────────────────
+
+function extractVideoFrame(blobUrl) {
+  return new Promise((resolve, reject) => {
+    const video  = document.createElement('video')
+    const canvas = document.createElement('canvas')
+    video.src   = blobUrl
+    video.muted = true
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(video.duration * 0.4, 3)
+    }
+    video.onseeked = () => {
+      canvas.width  = video.videoWidth  || 640
+      canvas.height = video.videoHeight || 480
+      canvas.getContext('2d').drawImage(video, 0, 0)
+      resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1])
+    }
+    video.onerror = () => reject(new Error('frame extract failed'))
+    video.load()
+  })
+}
+
 // ── Set Summary Modal ───────────────────────────────────────────────
 
 function SetSummaryModal({ exercise, onDone, onClose }) {
@@ -455,6 +477,8 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
   const [focus,        setFocus]        = useState('')
   const [saved,        setSaved]        = useState(false)
   const [videoBlobUrl, setVideoBlobUrl] = useState(null)
+  const [aiState,      setAiState]      = useState('idle')   // idle | analyzing | done | error
+  const [aiFeedback,   setAiFeedback]   = useState(null)
 
   const fileInputRef = useRef(null)
   const blobUrlRef   = useRef(null)
@@ -463,25 +487,33 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
     return () => { if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current) }
   }, [])
 
-  function handleVideoCapture(e) {
+  async function handleVideoCapture(e) {
     const file = e.target.files?.[0]
     if (!file) return
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
     const url = URL.createObjectURL(file)
     blobUrlRef.current = url
     setVideoBlobUrl(url)
-
-    // ── AI Vision hook-up point ────────────────────────────────────
-    // TODO: pipe `file` (File object) to Gemini Vision for posture analysis.
-    //   const base64 = await fileToBase64(file)
-    //   const feedback = await analyzeForm(base64, exercise.id, null)
-    //   setAIFeedback(feedback)
-    // ──────────────────────────────────────────────────────────────
+    setAiState('analyzing')
+    try {
+      const base64   = await extractVideoFrame(url)
+      const feedback = await analyzeVideoForm(base64, exercise.name)
+      if (feedback) {
+        setAiFeedback(feedback)
+        setAiState('done')
+      } else {
+        setAiState('idle')
+      }
+    } catch {
+      setAiState('error')
+    }
   }
 
   function deleteVideo() {
     if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null }
     setVideoBlobUrl(null)
+    setAiState('idle')
+    setAiFeedback(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -496,6 +528,7 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
       reps:           sanitizeInput(reps),
       technicalFocus: sanitizeInput(focus),
       hasVideo:       !!videoBlobUrl,
+      aiFeedback:     aiFeedback || null,
     }
     try {
       const prev = JSON.parse(localStorage.getItem('ft_workout_log') || '[]')
@@ -584,13 +617,47 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
 
             {/* Video preview */}
             {videoBlobUrl && (
-              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: '1rem', background: '#000', aspectRatio: '16/9' }}>
+              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: '0.75rem', background: '#000', aspectRatio: '16/9' }}>
                 <video
                   src={videoBlobUrl}
                   controls
                   playsInline
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
+              </div>
+            )}
+
+            {/* AI analysis — inline below video */}
+            {aiState === 'analyzing' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.7rem 0.85rem', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 11, marginBottom: '1rem' }}>
+                <div className="anim-spin" style={{ width: 16, height: 16, border: '2px solid rgba(99,102,241,0.25)', borderTopColor: '#818cf8', borderRadius: '50%', flexShrink: 0 }} />
+                <span style={{ color: 'rgba(165,180,252,0.8)', fontSize: '0.78rem', fontWeight: 600 }}>Loading Analysis…</span>
+              </div>
+            )}
+
+            {aiState === 'done' && aiFeedback && (
+              <div style={{ marginBottom: '1rem', animation: 'fadeIn 0.25s ease' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1rem' }}>🤖</span>
+                  <span style={{ color: '#a5b4fc', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase' }}>AI Form Coach</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {aiFeedback.split('\n').map(l => l.trim()).filter(Boolean).map((line, i) => (
+                    <div key={i} style={{
+                      background: i === 0 ? 'rgba(99,102,241,0.07)' : i === 1 ? 'rgba(196,121,90,0.07)' : 'rgba(16,185,129,0.07)',
+                      border: `1px solid ${i === 0 ? 'rgba(99,102,241,0.2)' : i === 1 ? 'rgba(196,121,90,0.2)' : 'rgba(16,185,129,0.2)'}`,
+                      borderRadius: 10, padding: '0.6rem 0.85rem',
+                    }}>
+                      <p style={{ color: 'rgba(241,245,249,0.85)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{line}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {aiState === 'error' && (
+              <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 11, marginBottom: '1rem', color: '#f87171', fontSize: '0.75rem' }}>
+                לא ניתן לנתח — בדוק חיבור רשת
               </div>
             )}
 
@@ -860,7 +927,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem 0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span>🎓</span>
-            <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.95rem' }}>מרכז המשמעת</span>
+            <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.06em' }}>PRIME</span>
           </div>
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 7, color: 'rgba(241,245,249,0.5)', fontSize: '0.68rem', fontWeight: 700, padding: '0.25rem 0.5rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>

@@ -5,7 +5,7 @@
   "targets": {
     "better-de9aa": {
       "hosting": {
-        "1percent": [
+        "prime": [
           "1percent-better-app"
         ]
       }

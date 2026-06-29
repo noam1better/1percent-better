@@ -133,6 +133,29 @@ export async function suggestChallenge(energy, timeAvail, focusGoal) {
   }
 }
 
+export async function analyzeVideoForm(base64Frame, exerciseName) {
+  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return null
+
+  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const prompt =
+    `You are an expert strength and conditioning coach. Analyze the provided workout image for the exercise: ${exerciseName}.\n` +
+    `Respond ONLY in Hebrew. Give exactly 3 numbered lines with NO markdown:\n` +
+    `1. הערכת חזרות — estimate the rep count or stage of movement based on body position\n` +
+    `2. ביקורת טכניקה — a specific critique on form (e.g., back alignment, range of motion, joint position)\n` +
+    `3. שיפור לסט הבא — one actionable improvement for the next set\n` +
+    `Be direct and specific. Plain text only — no asterisks, no bold, no bullet symbols.`
+
+  try {
+    const result = await model.generateContent([
+      { inlineData: { mimeType: 'image/jpeg', data: base64Frame } },
+      { text: prompt },
+    ])
+    return result.response.text().trim()
+  } catch {
+    return null
+  }
+}
+
 export async function analyzeSession(exercise, { reps, duration, formScore }) {
   const name     = EXERCISE_NAMES_HE[exercise] || exercise
   const repLabel = exercise === 'boxing' ? 'אגרופים' : 'חזרות'
