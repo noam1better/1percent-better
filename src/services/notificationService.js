@@ -83,12 +83,33 @@ export function fireEveningRecap(profile, triggers) {
   })
 }
 
-export function checkNotifications(triggers, profile, recapTime = '20:00') {
+export function getDailyNudgeMessage(name, streak) {
+  const n = name ? `, ${name}` : ''
+  if (streak >= 30) return { title: `🔥 ${streak} ימים${n}`, body: `אגדה. עוד יום אחד שומר את הלהבה דולקת. אל תשבור את מה שבנית.` }
+  if (streak >= 14) return { title: `💪 רצף של ${streak} ימים${n}!`, body: `שבועיים של נוכחות. היום זה עוד צעד אחד. אל תשבור את השרשרת.` }
+  if (streak >= 7)  return { title: `⚡ שבוע ברצף${n}!`, body: `7+ ימים ברצף. אתה כבר בין 10% הטובים. אל תיתן ליום הזה לשבור את הרצף.` }
+  if (streak >= 3)  return { title: `🚀 ${streak} ימים ברצף${n}`, body: `הרצף שלך בונה. הרגל אחד היום שומר על המומנטום. מוכן?` }
+  if (streak === 1) return { title: `✅ יום 1 הושלם${n}`, body: `התחלה טובה. ביום 2 רוב האנשים מוותרים. תגיע שוב היום.` }
+  return              { title: `⚡ ההרגלים שלך מחכים${n}`, body: `כל יום שאתה מגיע הוא הצבעה עבור האדם שאתה הופך להיות. תתחיל היום.` }
+}
+
+export function checkNotifications(triggers, profile, recapTime = '20:00', nudgeTime = '08:00') {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
 
   const now  = new Date()
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   const checkins = getCheckins()
+
+  // Morning streak nudge
+  if (hhmm === nudgeTime) {
+    const nudgeKey = `ft_nudge_${todayKey()}`
+    if (!localStorage.getItem(nudgeKey)) {
+      localStorage.setItem(nudgeKey, '1')
+      const streak  = profile?.streak?.count || 0
+      const { title, body } = getDailyNudgeMessage(profile?.name, streak)
+      new Notification(title, { body, icon: '/favicon.svg', tag: 'daily-nudge' })
+    }
+  }
 
   // Contextual trigger-time notifications
   triggers.forEach(tr => {

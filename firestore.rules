@@ -61,6 +61,12 @@ service cloud.firestore {
       allow read, write: if isOwner(uid);
     }
 
+    // ── LEADERBOARD (public XP + name only) ───────────
+    match /leaderboard/{uid} {
+      allow read:  if isSignedIn();
+      allow write: if isOwner(uid);
+    }
+
     // ── DENY EVERYTHING ELSE ───────────────────────────
     match /{document=**} {
       allow read, write: if false;

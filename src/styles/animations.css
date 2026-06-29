@@ -1,0 +1,151 @@
+/* ── Keyframes ───────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ob-slide {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes xp-pop {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.85); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes confetti-pop {
+  0%   { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+  60%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.2); }
+}
+
+@keyframes done-glow {
+  0%, 100% { box-shadow: none; }
+  50%       { box-shadow: 0 0 0 5px rgba(196,121,90,0.18); }
+}
+
+@keyframes fight-club-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(37,211,102,0.35); }
+  50%       { box-shadow: 0 4px 28px rgba(37,211,102,0.6); }
+}
+
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(251,191,36,0.15); }
+  50%       { box-shadow: 0 4px 28px rgba(251,191,36,0.3); }
+}
+
+@keyframes shimmer {
+  0%        { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(200%); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.92); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes initiation-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes initiation-slide {
+  from { opacity: 0; transform: scale(0.88) translateY(24px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes btn-burst {
+  0%   { transform: scale(1);    box-shadow: 0 8px 32px rgba(196,121,90,0.45); }
+  40%  { transform: scale(1.07); box-shadow: 0 0 0 10px rgba(196,121,90,0.15), 0 8px 40px rgba(196,121,90,0.65); }
+  70%  { transform: scale(0.97); }
+  100% { transform: scale(1);    box-shadow: 0 8px 32px rgba(196,121,90,0.45); }
+}
+
+.btn-burst {
+  animation: btn-burst 0.42s cubic-bezier(.34,1.56,.64,1) forwards !important;
+}
+
+/* ── Animation utility classes ───────────────────────────────────── */
+
+.anim-slide-up { animation: slide-up 0.3s ease both; }
+.anim-fade-in  { animation: fadeIn 0.3s ease both; }
+.anim-ob-slide { animation: ob-slide 0.28s ease both; }
+
+.anim-spin {
+  animation: spin 0.8s linear infinite;
+  border-radius: 50%;
+}
+
+/* ── btn-tactile — press feedback for any button ─────────────────── */
+
+.btn-tactile {
+  transition: transform 0.12s ease;
+  cursor: pointer;
+}
+.btn-tactile:active {
+  transform: scale(0.95) !important;
+}
+
+/* ── btn-primary — terracotta CTA ────────────────────────────────── */
+
+.btn-primary {
+  background: linear-gradient(135deg, #c4795a, #d4956e);
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(196,121,90,0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 12px 40px rgba(196,121,90,0.55);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* ── btn-ghost — dashed add button ──────────────────────────────── */
+
+.btn-ghost {
+  background: transparent;
+  border: 2px dashed rgba(196,121,90,0.28);
+  color: #d4956e;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn-ghost:hover {
+  border-color: rgba(196,121,90,0.5);
+  background: rgba(196,121,90,0.04);
+}
+
+/* ── track-card — library card hover lift ────────────────────────── */
+
+.track-card {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.track-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ── glow-input — textarea/input focus glow ─────────────────────── */
+
+.glow-input {
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glow-input:focus {
+  box-shadow: 0 0 0 3px rgba(196,121,90,0.12);
+}

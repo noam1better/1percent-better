@@ -4,7 +4,7 @@ import t from '../i18n/translations'
 const LangCtx = createContext()
 
 export function LangProvider({ children }) {
-  const [lang, setLangState] = useState(() => localStorage.getItem('ft_lang') || 'en')
+  const [lang, setLangState] = useState(() => localStorage.getItem('ft_lang') || 'he')
 
   function setLang(l) {
     localStorage.setItem('ft_lang', l)

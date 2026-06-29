@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { LangProvider } from './context/LangContext'
+import { UserProvider } from './context/UserContext'
 import LoadingWrapper from './components/LoadingWrapper'
 import GoogleAuthGuard from './components/GoogleAuthGuard'
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -11,6 +12,7 @@ export default function App() {
   return (
     <LangProvider>
     <AuthProvider>
+    <UserProvider>
       <BrowserRouter>
         <LoadingWrapper>
           <Routes>
@@ -22,6 +24,7 @@ export default function App() {
           </Routes>
         </LoadingWrapper>
       </BrowserRouter>
+    </UserProvider>
     </AuthProvider>
     </LangProvider>
   )

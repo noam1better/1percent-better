@@ -70,16 +70,4 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Confetti particle animation */
-@keyframes confetti-pop {
-  0%   { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
-  60%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.2); }
-}
-
-/* Trigger card done-glow pulse */
-@keyframes done-glow {
-  0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
-  50%  { box-shadow: 0 0 0 8px rgba(99,102,241,0); }
-  100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
-}
+/* Keyframes are in src/styles/animations.css */

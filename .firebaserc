@@ -5,8 +5,11 @@
   "targets": {
     "better-de9aa": {
       "hosting": {
-        "1percent": ["1percent-better-app"]
+        "1percent": [
+          "1percent-better-app"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }

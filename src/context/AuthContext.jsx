@@ -7,11 +7,13 @@ const Ctx = createContext(null)
 export function AuthProvider({ children }) {
   const [user,        setUser]        = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [isGuest,     setIsGuest]     = useState(false)
 
   useEffect(() => {
     if (!isFirebaseConfigured) { setAuthLoading(false); return }
     return onAuthStateChanged(auth, u => {
       setUser(u)
+      if (u) setIsGuest(false)
       setAuthLoading(false)
     })
   }, [])
@@ -22,13 +24,19 @@ export function AuthProvider({ children }) {
     return signInWithPopup(auth, googleProvider)
   }
 
-  const logout = async () => {
-    if (isFirebaseConfigured) await signOut(auth)
+  const loginAsGuest = () => {
+    setIsGuest(true)
     setUser(null)
   }
 
+  const logout = async () => {
+    if (isFirebaseConfigured && !isGuest) await signOut(auth)
+    setUser(null)
+    setIsGuest(false)
+  }
+
   return (
-    <Ctx.Provider value={{ user, authLoading, isFirebaseConfigured, loginWithGoogle, logout }}>
+    <Ctx.Provider value={{ user, authLoading, isFirebaseConfigured, isGuest, loginWithGoogle, loginAsGuest, logout }}>
       {children}
     </Ctx.Provider>
   )

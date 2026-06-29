@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './styles/animations.css'
 import App from './App.jsx'
 
 // One-time cache flush for v2 auth flow

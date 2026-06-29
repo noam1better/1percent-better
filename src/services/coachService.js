@@ -54,6 +54,85 @@ export async function analyzeForm(base64Image, exercise, focusGoal) {
   return result.response.text()
 }
 
+export async function verifyDayCompletion(challengeTitle, dayNum, taskDesc, userText) {
+  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') {
+    // No key — approve if answer is at least 25 chars
+    const ok = userText.trim().length >= 25
+    return { approved: ok, feedback: ok ? 'Great work! Keep it up.' : 'Please write at least a sentence describing what you did.' }
+  }
+
+  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const prompt =
+    `You are a strict accountability coach for the "${challengeTitle}" challenge.\n` +
+    `Today is Day ${dayNum}. The task was: "${taskDesc}".\n` +
+    `The user wrote: "${userText.trim()}"\n\n` +
+    `Rules:\n` +
+    `- Minimum 20 characters\n` +
+    `- Must describe a real action taken, not just "I did it"\n` +
+    `- Should be at least loosely related to the challenge theme\n\n` +
+    `Reply ONLY with valid JSON (no markdown): {"approved": true/false, "feedback": "one short sentence"}`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const raw    = result.response.text().trim().replace(/```json|```/g, '')
+    const match  = raw.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('no json')
+    return JSON.parse(match[0])
+  } catch {
+    const ok = userText.trim().length >= 20
+    return { approved: ok, feedback: ok ? 'Good effort — keep going!' : 'Add more detail about what you actually did today.' }
+  }
+}
+
+export async function getFocusTip(taskTitle) {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    systemInstruction: 'You are a professional focus coach. Provide a single, punchy, actionable sentence on how to start this specific task immediately. Be motivating but direct.',
+  })
+  const result = await model.generateContent(`Task: ${taskTitle}`)
+  return result.response.text().trim()
+}
+
+const CHALLENGE_FALLBACK = {
+  trading:  'deal-closer',
+  fitness:  'self-discipline',
+  learning: 'ai-beginners',
+  mindful:  'business-soul',
+  work:     'business-mind',
+  creative: 'product-builder',
+}
+
+const VALID_IDS = ['ai-beginners','business-mind','product-builder','deal-closer','ai-pioneer','business-soul','self-discipline']
+
+export async function suggestChallenge(energy, timeAvail, focusGoal) {
+  const fallback = CHALLENGE_FALLBACK[focusGoal] || 'ai-beginners'
+  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return fallback
+
+  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const prompt =
+    `You are a personal growth coach. Pick the single best challenge track for this user.\n` +
+    `Energy level: ${energy}\n` +
+    `Daily time available: ${timeAvail} minutes\n` +
+    `Main focus area: ${focusGoal}\n\n` +
+    `Available track IDs: ${VALID_IDS.join(', ')}\n\n` +
+    `Rules:\n` +
+    `- Low energy → prefer self-discipline or business-soul\n` +
+    `- High energy + 60+ min → prefer ai-pioneer or product-builder\n` +
+    `- trading/work focus → deal-closer or business-mind\n` +
+    `- fitness focus → self-discipline\n` +
+    `- learning focus → ai-beginners or ai-pioneer\n` +
+    `- mindful/creative → business-soul or product-builder\n\n` +
+    `Reply with ONLY the track ID. No explanation, no punctuation.`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const id     = result.response.text().trim().toLowerCase().replace(/[^a-z-]/g, '')
+    return VALID_IDS.includes(id) ? id : fallback
+  } catch {
+    return fallback
+  }
+}
+
 export async function analyzeSession(exercise, { reps, duration, formScore }) {
   const name     = EXERCISE_NAMES_HE[exercise] || exercise
   const repLabel = exercise === 'boxing' ? 'אגרופים' : 'חזרות'

@@ -16,7 +16,7 @@ const S = {
 }
 
 export default function WelcomeScreen() {
-  const { user, authLoading, loginWithGoogle } = useAuth()
+  const { user, authLoading, loginWithGoogle, loginAsGuest } = useAuth()
   const { lang, setLang, t } = useLang()
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -33,6 +33,11 @@ export default function WelcomeScreen() {
     setError(''); setLoading(true)
     try { await loginWithGoogle() }
     catch { setError(t.welcome.error); setLoading(false) }
+  }
+
+  function handleGuest() {
+    loginAsGuest()
+    navigate('/dashboard', { replace: true })
   }
 
   const isHe = lang === 'he'
@@ -73,7 +78,16 @@ export default function WelcomeScreen() {
             : <GoogleIcon />}
           {loading ? t.welcome.signingIn : t.welcome.signIn}
         </button>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+        <button
+          onClick={handleGuest}
+          disabled={loading}
+          style={{ ...S.btn, marginTop: '0.65rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(241,245,249,0.38)', fontSize: '0.83rem', opacity: loading ? 0.4 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.color = 'rgba(241,245,249,0.6)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(241,245,249,0.38)' }}
+        >
+          👁 המשך כאורח
+        </button>
 
         {error && <p style={S.err}>{error}</p>}
 
