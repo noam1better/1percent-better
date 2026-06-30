@@ -156,6 +156,39 @@ export async function analyzeVideoForm(base64Frame, exerciseName) {
   }
 }
 
+export async function getDisciplineCoachMessage({ goalMinutes, activity, streak, completed, minutesDone, history }) {
+  const historyLines = history.slice(0, 7)
+    .map(h => `${h.date}: ${h.completed ? `✓ ${h.minutesDone} דקות` : '✗ לא הושלם'}`)
+    .join('\n')
+
+  const levelUpTrigger = completed && streak > 0 && streak % 3 === 0
+  const newGoalSuggestion = goalMinutes + 5
+
+  const prompt =
+    `אתה מאמן משמעת סמכותי. היה תמציתי, ישיר, ממוקד בעקביות — לא רך ולא מפנק.\n\n` +
+    `מטרה יומית נוכחית: ${goalMinutes} דקות ${activity}\n` +
+    `רצף ימים: ${streak}\n` +
+    `היום: ${completed ? `הושלם ✓ (${minutesDone} דקות)` : 'לא הושלם ✗'}\n` +
+    `היסטוריה (7 ימים אחרונים):\n${historyLines}\n\n` +
+    `${levelUpTrigger
+      ? `המשתמש השלים ${streak} ימים ברצף. זו הישג אמיתי. הצע לשדרג את המטרה ל-${newGoalSuggestion} דקות ${activity} מחר.`
+      : completed
+        ? `המשתמש עמד במטרה היום. חזק אותו בקצרה וזרז אותו להמשיך מחר.`
+        : `המשתמש לא עמד במטרה היום. תן לו משוב ישיר וקשוח — אל תפנק. נתח מה כנראה השתבש ואיך לתקן מחר.`
+    }\n\n` +
+    `השב בעברית בלבד. 2–3 משפטים. ללא markdown. ישיר ומוטיבציוני.`
+
+  try {
+    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const result = await model.generateContent(prompt)
+    return result.response.text().trim()
+  } catch {
+    return completed
+      ? 'כל הכבוד על ההשלמה. שמור על הקצב — המשמעת בנויה יום אחד בכל פעם.'
+      : 'לא השלמת היום. אנחנו לא מתנצלים ולא מסבירים — חוזרים מחר ועושים.'
+  }
+}
+
 export async function analyzeSession(exercise, { reps, duration, formScore }) {
   const name     = EXERCISE_NAMES_HE[exercise] || exercise
   const repLabel = exercise === 'boxing' ? 'אגרופים' : 'חזרות'

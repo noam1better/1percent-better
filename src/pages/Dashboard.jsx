@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard } from '../services/focusTriggerService'
+import { checkContractStatus } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
@@ -9,6 +10,13 @@ import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, 
 import TracksPage from './TracksPage'
 import AnalyticsTab from './AnalyticsTab'
 import InitiationFlow from './InitiationFlow'
+import AddToHomeScreen from '../components/AddToHomeScreen'
+import DisciplineGoalCard from '../components/DisciplineGoalCard'
+import TrackSelector from '../components/TrackSelector'
+import MissionBriefing from '../components/MissionBriefing'
+import DailyBrief from '../components/DailyBrief'
+import ContractLock from '../components/ContractLock'
+import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboarding'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -361,10 +369,19 @@ function LeaderboardTab({ entries, currentUid, td }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
         <span style={{ fontSize: '1.2rem' }}>🏆</span>
         <h2 style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>{td.leaderboardSection}</h2>
-        <span style={{ marginLeft: 'auto', color: 'rgba(165,180,252,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>{td.topXP}</span>
+        <span style={{ marginInlineStart: 'auto', color: 'rgba(165,180,252,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>{td.topXP}</span>
       </div>
       {entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'rgba(241,245,249,0.22)', fontSize: '0.85rem' }}>השלם הרגלים כדי להופיע כאן 🏅</div>
+        <div style={{ textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>🏅</div>
+          <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.97rem', marginBottom: '0.35rem' }}>היה הראשון בלוח</div>
+          <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.8rem', lineHeight: 1.55, marginBottom: '1.1rem' }}>
+            השלם מסלולים ומשימות יומיות<br/>כדי לצבור XP ולעלות בדירוג
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
+            <span style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700 }}>⚡ השלם משימה ראשונה לפתיחת הדירוג</span>
+          </div>
+        </div>
       ) : (
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
           {entries.map((e, i) => {
@@ -372,7 +389,7 @@ function LeaderboardTab({ entries, currentUid, td }) {
             return (
               <div key={e.uid} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1rem', borderBottom: i < entries.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: isMe ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
                 <span style={{ fontSize: i < 3 ? '1.1rem' : '0.82rem', width: 28, textAlign: 'center', color: i >= 3 ? 'rgba(241,245,249,0.3)' : undefined, fontWeight: i >= 3 ? 700 : undefined }}>{medals[i] || `#${i + 1}`}</span>
-                <span style={{ flex: 1, color: isMe ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: isMe ? 700 : 500 }}>{e.name}{isMe ? ' (you)' : ''}</span>
+                <span style={{ flex: 1, color: isMe ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: isMe ? 700 : 500 }}>{e.name}{isMe ? ` (${td.you})` : ''}</span>
                 <span style={{ color: isMe ? '#a5b4fc' : 'rgba(241,245,249,0.4)', fontSize: '0.85rem', fontWeight: 700 }}>{e.xp} XP</span>
               </div>
             )
@@ -696,6 +713,8 @@ export default function Dashboard() {
   const [btnBurst,       setBtnBurst]       = useState(false)
   const [showWorkoutLib, setShowWorkoutLib] = useState(false)
   const [workoutSession, setWorkoutSession] = useState(null)
+  const [showDetails,    setShowDetails]    = useState(false)
+  const [contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
@@ -902,6 +921,10 @@ export default function Dashboard() {
     primaryAction = { type: 'all-done' }
   }
 
+  if (!hasSeenOnboarding()) return (
+    <PrimeOnboarding onDone={() => setInitiationDone(true)} />
+  )
+
   if (!initiationDone) return (
     <InitiationFlow onComplete={() => {
       localStorage.setItem('onboardingCompleted', 'true')
@@ -910,8 +933,24 @@ export default function Dashboard() {
   )
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0e0e16', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="anim-spin" style={{ width: 32, height: 32, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1' }} />
+    <div style={{ minHeight: '100vh', background: '#0e0e16', display: 'flex', flexDirection: 'column' }}>
+      {/* Skeleton header */}
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0.75rem 1.25rem 0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ width: 90, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+        </div>
+        <div style={{ width: 60, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s 0.1s infinite' }} />
+        </div>
+      </div>
+      {/* Skeleton cards */}
+      <div style={{ padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 480, width: '100%', margin: '0 auto' }}>
+        {[80, 120, 100, 60].map((h, i) => (
+          <div key={i} style={{ height: h, borderRadius: 16, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: `shimmer 1.4s ${i * 0.12}s infinite` }} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 
@@ -925,10 +964,11 @@ export default function Dashboard() {
       {/* ── Sticky Header ── */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, background: winnerGlow ? 'rgba(14,14,22,0.97)' : '#0e0e16', borderBottom: `1px solid ${winnerGlow ? 'rgba(251,191,36,0.18)' : 'rgba(255,255,255,0.07)'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem 0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span>🎓</span>
-            <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.06em' }}>PRIME</span>
-          </div>
+          <img
+            src="/prime-logo.svg"
+            alt="PRIME"
+            style={{ height: 28, width: 'auto', display: 'block' }}
+          />
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 7, color: 'rgba(241,245,249,0.5)', fontSize: '0.68rem', fontWeight: 700, padding: '0.25rem 0.5rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>
             <button onClick={logout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', padding: '0.25rem 0.6rem', cursor: 'pointer' }}>{td.signOut}</button>
@@ -958,36 +998,66 @@ export default function Dashboard() {
       {/* ── Scrollable Body ── */}
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: TAB_H + 16 }}>
 
-        {/* ── HOME TAB — Course Experience ── */}
+        {/* ── HOME TAB — Command Center ── */}
         {activeTab === 'home' && (
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
 
-            {/* Daily quote */}
-            <div style={{ background: 'rgba(196,121,90,0.05)', border: '1px solid rgba(196,121,90,0.13)', borderRadius: 14, padding: '0.8rem 1rem', marginBottom: '1.1rem' }}>
-              <div style={{ color: 'rgba(196,121,90,0.55)', fontSize: '0.57rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>📿 פתגם יומי</div>
-              <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.84rem', fontStyle: 'italic', lineHeight: 1.55, margin: 0 }}>"{dailyQuote}"</p>
-            </div>
+            {/* ── ZONE 1: MISSION BRIEFING ── */}
+            <ContractLock onRedeemed={() => setContractLocked(false)} />
+            <MissionBriefing />
+            <DailyBrief />
 
-            {/* Missed-day warning */}
-            {missedYesterday && primaryAction.type !== 'all-done' && (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem', animation: 'slide-up 0.3s ease both' }}>
-                <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
-                <div>
-                  <div style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.15rem' }}>פספסת אתמול</div>
-                  <div style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.72rem', lineHeight: 1.4 }}>הרצף שלך בסכנה. השלם את המשימה היום כדי לשמור עליו.</div>
+            {/* ── ZONE 2: ACTION CENTER ── */}
+            <TrackSelector />
+            <DisciplineGoalCard />
+
+            {/* ── ZONE 3: STATUS (collapsible) ── */}
+            <button
+              onClick={() => setShowDetails(v => !v)}
+              className="btn-tactile"
+              style={{
+                width: '100%', marginTop: '0.35rem', marginBottom: showDetails ? '0.85rem' : 0,
+                padding: '0.6rem', background: 'none',
+                border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
+                color: 'rgba(241,245,249,0.25)', fontSize: '0.6rem', fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                fontFamily: "'SF Mono','Fira Code',monospace",
+              }}
+            >
+              <span style={{ display: 'inline-block', transform: showDetails ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+              {showDetails ? 'סגור' : 'מסלולים · אתגרים · סטטוס'}
+            </button>
+
+            {showDetails && (
+              <div style={{ animation: 'fadeIn 0.22s ease' }}>
+
+                {/* Missed-day warning */}
+                {missedYesterday && primaryAction.type !== 'all-done' && (
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+                    <div>
+                      <div style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.15rem' }}>פספסת אתמול</div>
+                      <div style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.72rem', lineHeight: 1.4 }}>הרצף שלך בסכנה. השלם את המשימה היום כדי לשמור עליו.</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Greeting */}
+                <div style={{ marginBottom: '1.1rem' }}>
+                  <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.4, letterSpacing: '-0.01em', margin: 0, ...(winnerGlow ? { textShadow: '0 0 32px rgba(251,191,36,0.25)' } : {}) }}>
+                    {dynamicGreeting}
+                  </h2>
+                  <p style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                    {new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </p>
                 </div>
-              </div>
-            )}
 
-            {/* Greeting */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h1 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.25rem', lineHeight: 1.4, letterSpacing: '-0.01em', ...(winnerGlow ? { textShadow: '0 0 32px rgba(251,191,36,0.25)' } : {}) }}>
-                {dynamicGreeting}
-              </h1>
-              <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', marginTop: '0.3rem' }}>
-                {new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
-            </div>
+                {/* Daily quote */}
+                <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.1)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '1.1rem' }}>
+                  <div style={{ color: 'rgba(245,197,24,0.4)', fontSize: '0.54rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ INTEL</div>
+                  <p style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.55, margin: 0 }}>"{dailyQuote}"</p>
+                </div>
 
             {/* ── All done ── */}
             {primaryAction.type === 'all-done' && (
@@ -1191,16 +1261,27 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
-            {/* Training Library secondary access */}
-            <div style={{ paddingTop: '1.5rem', paddingBottom: TAB_H - 20 }}>
-              <button
-                className="btn-tactile"
-                onClick={() => setShowWorkoutLib(true)}
-                style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(196,121,90,0.25)', background: 'rgba(196,121,90,0.05)', color: '#d4956e', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-              >
-                <span>🏋️</span> לכל האימונים ←
-              </button>
-            </div>
+                {/* Training Library secondary access */}
+                <div style={{ paddingTop: '1rem', paddingBottom: TAB_H - 20 }}>
+                  {contractLocked ? (
+                    <div style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.9rem' }}>🔒</span>
+                      <span style={{ color: 'rgba(248,113,113,0.7)', fontSize: '0.82rem', fontWeight: 700 }}>ספריית האימונים נעולה — השלם גאולה</span>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn-tactile"
+                      onClick={() => setShowWorkoutLib(true)}
+                      style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(196,121,90,0.25)', background: 'rgba(196,121,90,0.05)', color: '#d4956e', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                    >
+                      <span>🏋️</span> לכל האימונים ←
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ height: TAB_H + 16 }} />
           </div>
         )}
 
@@ -1262,6 +1343,7 @@ export default function Dashboard() {
       )}
       {xpToast && <XPToast xp={xpToast} onDone={() => setXPToast(null)} />}
       {saving && <div style={{ position: 'fixed', bottom: TAB_H + 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(196,121,90,0.92)', color: '#fff', borderRadius: 20, padding: '0.45rem 1.1rem', fontSize: '0.78rem', fontWeight: 600, zIndex: 300 }}>{td.saving}</div>}
+      <AddToHomeScreen />
 
     </div>
   )

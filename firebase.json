@@ -8,7 +8,7 @@
   ],
   "hosting": [
     {
-      "target": "prime",
+      "target": "prime-app",
       "public": "dist",
       "ignore": [
         "firebase.json",
@@ -44,6 +44,17 @@
             { "key": "Permissions-Policy",       "value": "camera=(self), microphone=(), geolocation=()" },
             { "key": "Content-Security-Policy",  "value": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;" }
           ]
+        }
+      ]
+    },
+    {
+      "target": "prime",
+      "public": "dist",
+      "redirects": [
+        {
+          "source": "/**",
+          "destination": "https://prime-app-84fe0.web.app",
+          "type": 301
         }
       ]
     }

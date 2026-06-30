@@ -1,3 +1,38 @@
+/* ── Scanline overlay — subtle terminal atmosphere ───────────────── */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.032) 3px,
+    rgba(0, 0, 0, 0.032) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+@keyframes scanline-sweep {
+  0%   { transform: translateY(-80px); opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(transparent, rgba(245,197,24,0.010) 50%, transparent);
+  animation: scanline-sweep 12s linear infinite;
+  pointer-events: none;
+  z-index: 9997;
+}
+
 /* ── Keyframes ───────────────────────────────────────────────────── */
 
 @keyframes spin {
@@ -32,7 +67,7 @@
 
 @keyframes done-glow {
   0%, 100% { box-shadow: none; }
-  50%       { box-shadow: 0 0 0 5px rgba(196,121,90,0.18); }
+  50%       { box-shadow: 0 0 0 5px rgba(245,197,24,0.18); }
 }
 
 @keyframes fight-club-pulse {
@@ -43,6 +78,22 @@
 @keyframes badge-glow {
   0%, 100% { box-shadow: 0 4px 20px rgba(251,191,36,0.15); }
   50%       { box-shadow: 0 4px 28px rgba(251,191,36,0.3); }
+}
+
+@keyframes rep-flash {
+  0%   { color: #ffffff; text-shadow: 0 0 18px rgba(255,255,255,0.9); transform: scale(1.4); }
+  100% { color: #F5C518; text-shadow: none; transform: scale(1); }
+}
+
+@keyframes danger-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+@keyframes goal-burst {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0   rgba(16,185,129,0.5); }
+  50%  { transform: scale(1.08); box-shadow: 0 0 0 14px rgba(16,185,129,0); }
+  100% { transform: scale(1);    box-shadow: none; }
 }
 
 @keyframes shimmer {
@@ -66,10 +117,10 @@
 }
 
 @keyframes btn-burst {
-  0%   { transform: scale(1);    box-shadow: 0 8px 32px rgba(196,121,90,0.45); }
-  40%  { transform: scale(1.07); box-shadow: 0 0 0 10px rgba(196,121,90,0.15), 0 8px 40px rgba(196,121,90,0.65); }
+  0%   { transform: scale(1);    box-shadow: 0 8px 32px rgba(245,197,24,0.40); }
+  40%  { transform: scale(1.07); box-shadow: 0 0 0 10px rgba(245,197,24,0.15), 0 8px 40px rgba(245,197,24,0.60); }
   70%  { transform: scale(0.97); }
-  100% { transform: scale(1);    box-shadow: 0 8px 32px rgba(196,121,90,0.45); }
+  100% { transform: scale(1);    box-shadow: 0 8px 32px rgba(245,197,24,0.40); }
 }
 
 .btn-burst {
@@ -97,20 +148,20 @@
   transform: scale(0.95) !important;
 }
 
-/* ── btn-primary — terracotta CTA ────────────────────────────────── */
+/* ── btn-primary — gold CTA ──────────────────────────────────────── */
 
 .btn-primary {
-  background: linear-gradient(135deg, #c4795a, #d4956e);
+  background: linear-gradient(135deg, #D4A017, #F5C518);
   border: none;
-  color: #fff;
+  color: #050505;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 32px rgba(196,121,90,0.45);
+  box-shadow: 0 8px 32px rgba(245,197,24,0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .btn-primary:hover {
   transform: scale(1.04);
-  box-shadow: 0 12px 40px rgba(196,121,90,0.55);
+  box-shadow: 0 12px 40px rgba(245,197,24,0.50);
 }
 .btn-primary:active {
   transform: scale(0.97);
@@ -120,14 +171,14 @@
 
 .btn-ghost {
   background: transparent;
-  border: 2px dashed rgba(196,121,90,0.28);
-  color: #d4956e;
+  border: 2px dashed rgba(245,197,24,0.28);
+  color: #F5C518;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .btn-ghost:hover {
-  border-color: rgba(196,121,90,0.5);
-  background: rgba(196,121,90,0.04);
+  border-color: rgba(245,197,24,0.5);
+  background: rgba(245,197,24,0.04);
 }
 
 /* ── track-card — library card hover lift ────────────────────────── */
@@ -147,5 +198,5 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .glow-input:focus {
-  box-shadow: 0 0 0 3px rgba(196,121,90,0.12);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.14);
 }
