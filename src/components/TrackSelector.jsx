@@ -272,7 +272,7 @@ export default function TrackSelector() {
             <button
               onClick={startWorkout}
               className="btn-primary btn-tactile"
-              style={{ width: '100%', padding: '0.9rem', borderRadius: 13, fontSize: '0.95rem', fontWeight: 900 }}
+              style={{ width: '100%', padding: '1.4rem', borderRadius: 16, fontSize: '1.05rem', fontWeight: 900 }}
             >
               {activeTrack.useCamera ? '📸 התחל אימון עם מצלמה ←' : '▶ התחל אימון ←'}
             </button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard } from '../services/focusTriggerService'
-import { checkContractStatus } from '../services/disciplineScore'
+import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
@@ -35,6 +35,11 @@ const MIN_PROOF_LEN  = 20
 const getLevel   = xp => Math.floor((xp || 0) / XP_PER_LEVEL) + 1
 const getLevelXP = xp => (xp || 0) % XP_PER_LEVEL
 const getToNext  = xp => XP_PER_LEVEL - getLevelXP(xp)
+
+function fmtCountdown(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+}
 
 // ── Confetti ───────────────────────────────────────────────────────
 
@@ -715,6 +720,8 @@ export default function Dashboard() {
   const [workoutSession, setWorkoutSession] = useState(null)
   const [showDetails,    setShowDetails]    = useState(false)
   const [contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
+  const [secsLeft,       setSecsLeft]       = useState(() => { const n = new Date(); return (23 - n.getHours()) * 3600 + (59 - n.getMinutes()) * 60 + (59 - n.getSeconds()) })
+  const [headerScore,    setHeaderScore]    = useState(getScore)
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
@@ -737,6 +744,21 @@ export default function Dashboard() {
     const id = setInterval(run, 60_000)
     return () => clearInterval(id)
   }, [profile])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const n = new Date()
+      setSecsLeft((23 - n.getHours()) * 3600 + (59 - n.getMinutes()) * 60 + (59 - n.getSeconds()))
+      setHeaderScore(getScore())
+    }, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    function onRedeemed() { setHeaderScore(getScore()) }
+    window.addEventListener('prime:redeemed', onRedeemed)
+    return () => window.removeEventListener('prime:redeemed', onRedeemed)
+  }, [])
 
   // ── XP helpers ────────────────────────────────────────────────
 
@@ -963,26 +985,23 @@ export default function Dashboard() {
 
       {/* ── Sticky Header ── */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, background: winnerGlow ? 'rgba(14,14,22,0.97)' : '#0e0e16', borderBottom: `1px solid ${winnerGlow ? 'rgba(251,191,36,0.18)' : 'rgba(255,255,255,0.07)'}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem 0.5rem' }}>
-          <img
-            src="/prime-logo.svg"
-            alt="PRIME"
-            style={{ height: 28, width: 'auto', display: 'block' }}
-          />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 1.25rem' }}>
+          <img src="/prime-logo.svg" alt="PRIME" style={{ height: 26, width: 'auto', display: 'block' }} />
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-            <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 7, color: 'rgba(241,245,249,0.5)', fontSize: '0.68rem', fontWeight: 700, padding: '0.25rem 0.5rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>
-            <button onClick={logout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', padding: '0.25rem 0.6rem', cursor: 'pointer' }}>{td.signOut}</button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1.25rem 0.7rem' }}>
-          {streak > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.22)', borderRadius: 20, padding: '0.25rem 0.65rem' }}>
-              <span style={{ fontSize: '0.82rem' }}>🔥</span>
-              <span style={{ color: '#fbbf24', fontSize: '0.75rem', fontWeight: 800 }}>{streak} {td.streakDays}</span>
+            {(() => {
+              const rank = getRank(headerScore)
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: `${rank.color}15`, border: `1px solid ${rank.color}40`, borderRadius: 20, padding: '0.22rem 0.6rem' }}>
+                  <span style={{ fontSize: '0.72rem' }}>{rank.icon}</span>
+                  <span style={{ color: rank.color, fontSize: '0.68rem', fontWeight: 900, letterSpacing: '0.05em' }}>{rank.label}</span>
+                  <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.58rem' }}>·</span>
+                  <span style={{ color: rank.color, fontSize: '0.72rem', fontWeight: 800 }}>{headerScore}</span>
+                </div>
+              )
+            })()}
+            <div style={{ fontFamily: "'SF Mono','Fira Code',monospace", color: secsLeft < 3600 ? '#ef4444' : secsLeft < 10800 ? '#f59e0b' : 'rgba(245,197,24,0.65)', fontSize: '0.67rem', fontWeight: 700, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 8, padding: '0.2rem 0.5rem', letterSpacing: '0.04em' }}>
+              {fmtCountdown(secsLeft)}
             </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', background: 'rgba(196,121,90,0.1)', border: '1px solid rgba(196,121,90,0.22)', borderRadius: 20, padding: '0.25rem 0.65rem' }}>
-            <span style={{ color: '#d4956e', fontSize: '0.75rem', fontWeight: 800 }}>✨ {xp} XP · רמה {level}</span>
           </div>
         </div>
       </div>
@@ -1002,14 +1021,12 @@ export default function Dashboard() {
         {activeTab === 'home' && (
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
 
-            {/* ── ZONE 1: MISSION BRIEFING ── */}
+            {/* ── ZONE 1 ── */}
             <ContractLock onRedeemed={() => setContractLocked(false)} />
-            <MissionBriefing />
             <DailyBrief />
 
-            {/* ── ZONE 2: ACTION CENTER ── */}
+            {/* ── ZONE 2: PRIMARY ACTION ── */}
             <TrackSelector />
-            <DisciplineGoalCard />
 
             {/* ── ZONE 3: STATUS (collapsible) ── */}
             <button
@@ -1031,6 +1048,9 @@ export default function Dashboard() {
 
             {showDetails && (
               <div style={{ animation: 'fadeIn 0.22s ease' }}>
+
+                {/* Discipline goal */}
+                <DisciplineGoalCard />
 
                 {/* Missed-day warning */}
                 {missedYesterday && primaryAction.type !== 'all-done' && (
@@ -1261,8 +1281,14 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+                {/* Lang / sign out */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center' }}>
+                  <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>
+                  <button onClick={logout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem', padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{td.signOut}</button>
+                </div>
+
                 {/* Training Library secondary access */}
-                <div style={{ paddingTop: '1rem', paddingBottom: TAB_H - 20 }}>
+                <div style={{ paddingTop: '0', paddingBottom: TAB_H - 20 }}>
                   {contractLocked ? (
                     <div style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                       <span style={{ fontSize: '0.9rem' }}>🔒</span>
