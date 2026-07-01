@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
-import { completePathDay } from '../services/pathBuilderService'
+import { useState } from 'react'
 import { applyWin } from '../services/disciplineScore'
+import LessonView from './LessonView'
 
 const TODAY     = () => new Date().toISOString().slice(0, 10)
 const HABIT_KEY = date => `prime_path_habits_${date}`
@@ -20,10 +20,10 @@ const PHASE_COLORS = {
 }
 
 export default function CustomPathCard({ user, pathRecord, onPathUpdate }) {
-  const [record,   setRecord]   = useState(pathRecord)
-  const [habits,   setHabits]   = useState(loadHabits)
-  const [saving,   setSaving]   = useState(false)
-  const [toastMsg, setToastMsg] = useState(null)
+  const [record,      setRecord]      = useState(pathRecord)
+  const [habits,      setHabits]      = useState(loadHabits)
+  const [toastMsg,    setToastMsg]    = useState(null)
+  const [showLesson,  setShowLesson]  = useState(false)
 
   const { path, progress, status } = record
   const currentDay  = progress?.currentDay || 1
@@ -46,25 +46,14 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate }) {
     setHabits(next)
   }
 
-  async function handleCompleteDay() {
-    if (todayDone || saving) return
-    setSaving(true)
-    try {
-      const updated = await completePathDay(user.uid, record)
-      applyWin()
-      setRecord(updated)
-      setHabits({})
-      saveHabits({})
-      onPathUpdate?.(updated)
-      if (todayTask?.is_milestone) {
-        showToast(`🏆 אבן דרך! השלמת ${currentDay} ימים`)
-      } else {
-        showToast(`✅ יום ${currentDay} הושלם`)
-      }
-    } catch {
-      showToast('שגיאה — נסה שוב')
-    }
-    setSaving(false)
+  function handleLessonComplete(updatedRecord) {
+    setRecord(updatedRecord)
+    setHabits({})
+    saveHabits({})
+    onPathUpdate?.(updatedRecord)
+    setShowLesson(false)
+    const completedDay = record.progress?.currentDay || 1
+    showToast(todayTask?.is_milestone ? `🏆 אבן דרך! השלמת ${completedDay} ימים` : `✅ יום ${completedDay} הושלם`)
   }
 
   if (status === 'completed') {
@@ -141,15 +130,26 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate }) {
           </div>
         ) : (
           <button
-            onClick={handleCompleteDay}
-            disabled={saving}
+            onClick={() => setShowLesson(true)}
             className="btn-primary btn-tactile"
-            style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, opacity: saving ? 0.6 : 1 }}
+            style={{ width: '100%', padding: '1.1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           >
-            {saving ? '...' : `✅ סיימתי יום ${currentDay} ←`}
+            <span>📖</span>
+            <span>פתח שיעור יום {currentDay} ←</span>
           </button>
         )}
       </div>
+
+      {/* Focus Mode lesson overlay */}
+      {showLesson && (
+        <LessonView
+          user={user}
+          pathRecord={record}
+          dayIndex={currentDay}
+          onComplete={handleLessonComplete}
+          onClose={() => setShowLesson(false)}
+        />
+      )}
 
       {toastMsg && (
         <div style={{ position: 'fixed', bottom: '5rem', left: '50%', transform: 'translateX(-50%)', background: 'rgba(15,15,25,0.95)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 12, padding: '0.65rem 1.1rem', zIndex: 4000, color: '#F5C518', fontSize: '0.82rem', fontWeight: 700, animation: 'fadeIn 0.2s ease', whiteSpace: 'nowrap', boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>

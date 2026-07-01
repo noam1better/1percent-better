@@ -8,7 +8,7 @@ const TODAY   = () => new Date().toISOString().slice(0, 10)
 
 const pathDoc = uid => doc(db, 'userPaths', uid)
 
-// ── Fallback (no API key or Gemini failure) ─────────────────────────
+// ── Fallback path (no API key or Gemini failure) ─────────────────────
 function buildFallbackPath(answers) {
   const phases = ['בניית יסודות', 'בניית תאוצה', 'לחץ ובחינה', 'שילוב ועוצמה']
   const tasks = [
@@ -24,9 +24,9 @@ function buildFallbackPath(answers) {
     path_name: `מסלול ה${answers.goal}`,
     tagline: 'כל יום הוא צעד קדימה. כל צעד בונה את מי שאתה.',
     daily_habits: [
-      { id: 'h1', emoji: '🎯', title: 'כוונת בוקר',      description: 'מה המטרה האחת שתבצע היום? כתוב אותה.',    duration_min: 3  },
-      { id: 'h2', emoji: '⚡', title: 'בלוק מיקוד',      description: `${answers.timeCommitment} של עשייה ממוקדת ללא הפרעות.`, duration_min: 20 },
-      { id: 'h3', emoji: '📓', title: 'סיכום יומי',      description: 'מה עשיתי? מה הייתי עושה אחרת?',            duration_min: 3  },
+      { id: 'h1', emoji: '🎯', title: 'כוונת בוקר',  description: 'מה המטרה האחת שתבצע היום? כתוב אותה.',                   duration_min: 3  },
+      { id: 'h2', emoji: '⚡', title: 'בלוק מיקוד',  description: `${answers.timeCommitment} של עשייה ממוקדת ללא הפרעות.`, duration_min: 20 },
+      { id: 'h3', emoji: '📓', title: 'סיכום יומי',  description: 'מה עשיתי? מה הייתי עושה אחרת?',                           duration_min: 3  },
     ],
     roadmap: Array.from({ length: 30 }, (_, i) => ({
       day:          i + 1,
@@ -39,8 +39,25 @@ function buildFallbackPath(answers) {
   }
 }
 
-// ── Gemini system prompt ─────────────────────────────────────────────
-function buildPrompt(answers) {
+// ── Fallback lesson (no API key or Gemini failure) ───────────────────
+function buildFallbackLesson(dayEntry, answers) {
+  return {
+    title:    `יום ${dayEntry.day}: ${dayEntry.task}`,
+    concept:  `היום אנחנו מתמקדים בשלב "${dayEntry.phase}". המשימה שנבנתה עבורך: ${dayEntry.task}. שיעור זה יסביר את הרעיון המרכזי מאחורי המשימה ויתן לך את הכלים להצליח.`,
+    deep_dive:
+      `עקרון המשמעת האישית מבוסס על הבנה עמוקה של מנגנוני הרגל. המחקר של ד"ר פיליפה לאלי מאוניברסיטת קולג' לונדון הראה שנדרשים בממוצע 66 ימים ליצירת הרגל אמיתי — לא 21 ימים כפי שנהוג לחשוב. ההבדל המשמעותי הוא שב-21 הימים הראשונים הפעולה עדיין מצריכה כוח רצון. אחרי 66 יום היא הופכת אוטומטית.\n\nבשלב "${dayEntry.phase}" שבו אתה נמצא כעת, המוח שלך עובר תהליך של מחזור עצבי (neuroplasticity). כל פעם שאתה מבצע את ההרגל, אתה מחזק את הנתיב העצבי הקשור לפעולה. זה כמו שביל ביער — ככל שעוברים בו יותר, כך הוא הופך ברור ונגיש יותר.\n\nהמפתח להצלחה בשלב זה הוא להבין שהמוח מתנגד לשינוי לא מפני שהוא חלש — אלא מפני שהוא יעיל. כל הרגל קיים מטעמי חיסכון אנרגטי. כדי להחליף הרגל ישן, עליך ליצור "תגמול מיידי" שמגיע מהפעולה החדשה עצמה, לא רק מהתוצאה הסופית.\n\nהמדע אחורי ה"${answers.goal}" מראה שהעקביות חשובה פי עשרה מהעוצמה. 10 דקות כל יום עדיפות על 2 שעות פעם בשבוע. הסיבה: השינוי הנוירולוגי מצטבר רק כאשר הגירוי חוזר על עצמו בתדירות גבוהה.`,
+    case_study:
+      `ג'יימס קליר, מחבר הרב-מכר "Atomic Habits", עבד עם קבוצת הרכיבה הבריטית על אופניים לפני אולימפיאדת 2012. הקבוצה הייתה בינונית — אפס מדליות זהב ב-110 שנות תחרות. המאמן דייב ברייסלספורד החל ליישם את עיקרון ה"1% שיפור" בכל תחום: תנוחת שינה, תזונה, ניקוי ידיים למניעת מחלות, זווית האוכף, חומרי חיכוך על הגלגלים. כל שיפור בפני עצמו היה זניח. הצטברות כל השיפורים הייתה מהפכנית. ב-2012 הם ניצחו 8 מדליות זהב מתוך 10 אפשריות. שיעור אחד: אל תחפש את השינוי הגדול. חפש 100 שינויים קטנים.`,
+    pro_tip:
+      `רוב האנשים מודדים הצלחה בתוצאה ("ירדתי 5 קילו", "השלמתי פרויקט"). המקצוענים מודדים הצלחה בזהות ("אני אדם שמתאמן כל יום", "אני אדם שמסיים מה שהוא מתחיל"). ההבדל הוא קריטי: כשאתה מתמקד בתוצאה, כל יום שלא רואים תוצאה הוא כישלון. כשאתה מתמקד בזהות, כל יום שביצעת את ההרגל הוא הצלחה — גם אם התוצאה עדיין לא נראית. הזהות מקדימה תמיד את התוצאה.`,
+    challenge:
+      `האתגר שלך להיום: ${dayEntry.task}.\n\nצעד 1: לפני שאתה מבצע — כתוב בכתב יד (לא בטלפון) את המחשבה הראשונה שעולה לך כשאתה חושב על המשימה הזו. פחד? ספק? התרגשות?\n\nצעד 2: בצע את המשימה עצמה ללא הפרעות. טלפון בשקט. לא 'בעוד רגע'.\n\nצעד 3: מיד אחרי הסיום — כתוב 3 משפטים: מה הרגשת, מה הפתיע אותך, ומה תשמור על זה למחר.`,
+    duration_min: 15,
+  }
+}
+
+// ── Path generation prompt ───────────────────────────────────────────
+function buildPathPrompt(answers) {
   return (
     `אתה מאמן ביצועים אליטה — ישיר, מדויק, ולא מחמיא.\n` +
     `בנה תוכנית משמעת אישית ל-30 יום בעברית בלבד עבור המשתמש הזה:\n\n` +
@@ -77,6 +94,44 @@ function buildPrompt(answers) {
   )
 }
 
+// ── Day lesson prompt ────────────────────────────────────────────────
+function buildLessonPrompt(dayEntry, pathRecord) {
+  const q = pathRecord.questionnaire || {}
+  return (
+    `אתה מאמן ביצועים אליטה שכותב שיעור אימון פרמיום ברמת מומחה.\n\n` +
+    `פרטי המשתמש:\n` +
+    `- תוכנית: ${pathRecord.path?.path_name || ''}\n` +
+    `- מטרה: ${q.goal || ''}\n` +
+    `- אתגר: ${q.challenge || ''}\n` +
+    `- ניסיון: ${q.experience || ''}\n` +
+    `- יום: ${dayEntry.day} מתוך 30 | שלב: ${dayEntry.phase}\n` +
+    `- משימת היום: ${dayEntry.task}\n\n` +
+    `כתוב שיעור מקיף ומעמיק בעברית. החזר JSON תקין בלבד (ללא markdown, ללא backticks):\n` +
+    `{\n` +
+    `  "title": "כותרת מושכת וחזקה של 5-8 מילים",\n` +
+    `  "concept": "פסקת פתיחה — מה השיעור הזה נותן למשתמש (2-3 משפטים)",\n` +
+    `  "deep_dive": "הסבר מעמיק ומחקרי של 400+ מילה. כלול: מנגנונים פסיכולוגיים, עובדות מדעיות, עקרונות שלא ניתן למצוא בחיפוש גוגל בסיסי. כתוב צפוף ועשיר — לא שטחי. אין כוכביות או markdown.",\n` +
+    `  "case_study": "דוגמה אמיתית מהעולם (150+ מילה). ציין שמות, חברות, תאריכים ספציפיים. הסבר מה קרה ומדוע זה רלוונטי למשתמש.",\n` +
+    `  "pro_tip": "תובנה נסתרת אחת שרוב האנשים לא מגלים (100+ מילה). לא עצה בסיסית — משהו שרק מקצוענים יודעים.",\n` +
+    `  "challenge": "האתגר הספציפי להיום (100+ מילה). שלבים מדויקים, ניתנים לביצוע ביום זה. כלול: מה לעשות, איך לעשות, ומה לתעד.",\n` +
+    `  "duration_min": 20\n` +
+    `}\n\n` +
+    `דרישות: כל הטקסט בעברית. deep_dive חייב להיות לפחות 400 מילה. ללא markdown בתוך הטקסט.`
+  )
+}
+
+// ── Lesson cache (localStorage) ──────────────────────────────────────
+function lessonCacheKey(day, createdAt) { return `prime_lesson_${createdAt}_d${day}` }
+
+function getCachedLesson(day, createdAt) {
+  try { return JSON.parse(localStorage.getItem(lessonCacheKey(day, createdAt))) || null }
+  catch { return null }
+}
+
+function setCachedLesson(day, createdAt, lesson) {
+  try { localStorage.setItem(lessonCacheKey(day, createdAt), JSON.stringify(lesson)) } catch {}
+}
+
 // ── Public API ───────────────────────────────────────────────────────
 
 export async function buildCustomPath(uid, answers) {
@@ -87,7 +142,7 @@ export async function buildCustomPath(uid, answers) {
   } else {
     try {
       const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await model.generateContent(buildPrompt(answers))
+      const result = await model.generateContent(buildPathPrompt(answers))
       const raw    = result.response.text().trim()
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       pathData     = JSON.parse(raw)
@@ -121,12 +176,61 @@ export async function loadCustomPath(uid) {
   } catch { return null }
 }
 
+// On-demand lesson generation. Checks localStorage → Firestore → Gemini.
+// Generated lesson is persisted to both caches so subsequent loads are instant.
+export async function generateDayLesson(uid, pathRecord, dayIndex) {
+  const dayEntry  = pathRecord.path?.roadmap?.[dayIndex - 1]
+  if (!dayEntry) throw new Error(`Invalid day index: ${dayIndex}`)
+
+  const createdAt = pathRecord.createdAt || TODAY()
+
+  // 1. localStorage cache (fastest)
+  const cached = getCachedLesson(dayIndex, createdAt)
+  if (cached) return cached
+
+  // 2. Firestore cache (cross-device)
+  const stored = pathRecord.lessons?.[String(dayIndex)]
+  if (stored) {
+    setCachedLesson(dayIndex, createdAt, stored)
+    return stored
+  }
+
+  // 3. Generate via Gemini (or fallback)
+  let lesson
+  if (!API_KEY) {
+    lesson = buildFallbackLesson(dayEntry, pathRecord.questionnaire || {})
+  } else {
+    try {
+      const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const result = await model.generateContent(buildLessonPrompt(dayEntry, pathRecord))
+      const raw    = result.response.text().trim()
+        .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+      lesson = JSON.parse(raw)
+      if (!lesson.title || !lesson.deep_dive) throw new Error('Invalid lesson')
+    } catch {
+      lesson = buildFallbackLesson(dayEntry, pathRecord.questionnaire || {})
+    }
+  }
+
+  // Persist to localStorage + Firestore (merge so we don't overwrite other lessons)
+  setCachedLesson(dayIndex, createdAt, lesson)
+  try {
+    await setDoc(
+      pathDoc(uid),
+      { lessons: { [String(dayIndex)]: { ...lesson, generatedAt: TODAY() } } },
+      { merge: true }
+    )
+  } catch {}
+
+  return lesson
+}
+
 export async function completePathDay(uid, pathRecord) {
-  const day      = pathRecord.progress?.currentDay || 1
-  const prev     = pathRecord.progress?.completedDays || []
-  const done     = [...prev.filter(d => d.day !== day), { day, completedAt: TODAY() }]
-  const nextDay  = Math.min(day + 1, 30)
-  const status   = done.length >= 30 ? 'completed' : 'active'
+  const day     = pathRecord.progress?.currentDay || 1
+  const prev    = pathRecord.progress?.completedDays || []
+  const done    = [...prev.filter(d => d.day !== day), { day, completedAt: TODAY() }]
+  const nextDay = Math.min(day + 1, 30)
+  const status  = done.length >= 30 ? 'completed' : 'active'
 
   const updated = {
     ...pathRecord,
