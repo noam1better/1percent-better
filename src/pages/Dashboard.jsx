@@ -19,8 +19,10 @@ import ContractLock from '../components/ContractLock'
 import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboarding'
 import PathBuilder from '../components/PathBuilder'
 import CustomPathCard from '../components/CustomPathCard'
+import MirrorCard from '../components/MirrorCard'
 import Settings from '../components/Settings'
 import { loadCustomPath } from '../services/pathBuilderService'
+import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -729,6 +731,7 @@ export default function Dashboard() {
   const [customPath,     setCustomPath]     = useState(null)
   const [showPathBuilder,setShowPathBuilder]= useState(false)
   const [pathLoading,    setPathLoading]    = useState(true)
+  const [mirrorData,     setMirrorData]     = useState(null)   // { gapDays, message }
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
@@ -740,6 +743,7 @@ export default function Dashboard() {
     loadCustomPath(user.uid).then(p => {
       setCustomPath(p)
       if (!p) setShowPathBuilder(true)
+      if (p) checkAndGenerateMirror(p).then(data => { if (data) setMirrorData(data) }).catch(() => {})
     }).finally(() => setPathLoading(false))
   }, [user, isGuest])
 
@@ -1044,6 +1048,18 @@ export default function Dashboard() {
         {/* ── HOME TAB — Command Center ── */}
         {activeTab === 'home' && (
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
+
+            {/* ── MIRROR ── */}
+            {mirrorData && (
+              <MirrorCard
+                gapDays={mirrorData.gapDays}
+                message={mirrorData.message}
+                onRespond={() => {
+                  setMirrorData(null)
+                  setMirrorTriggered(user.uid)
+                }}
+              />
+            )}
 
             {/* ── ZONE 1 ── */}
             <ContractLock onRedeemed={() => setContractLocked(false)} />
