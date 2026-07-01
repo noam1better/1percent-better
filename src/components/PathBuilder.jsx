@@ -155,6 +155,12 @@ function PathPreview({ pathRecord, onConfirm }) {
 
 // ── Main component ────────────────────────────────────────────────────
 
+const ERROR_MESSAGES = {
+  GEMINI_TIMEOUT:    { he: 'ה-AI לקח יותר מ-20 שניות — ייתכן שהשרת עמוס', en: 'AI timeout (>20s)' },
+  FIRESTORE_TIMEOUT: { he: 'השמירה ל-Firestore לא הצליחה — בדוק חיבור', en: 'Firestore write timeout' },
+  default:           { he: 'שגיאה לא צפויה', en: 'Unexpected error' },
+}
+
 export default function PathBuilder({ user, onDone }) {
   const [chatItems,   setChatItems]   = useState([
     { type: 'agent', text: 'ברוך הבא לבניית המסלול האישי שלך. 5 שאלות. תוכנית 30 יום שבנויה בדיוק עבורך.' },
@@ -162,14 +168,38 @@ export default function PathBuilder({ user, onDone }) {
   ])
   const [currentQ,    setCurrentQ]    = useState(0)
   const [answers,     setAnswers]     = useState({})
-  const [phase,       setPhase]       = useState('questions')  // questions | building | preview
+  const [phase,       setPhase]       = useState('questions')  // questions | building | error | preview
   const [buildStep,   setBuildStep]   = useState(0)
+  const [apiStatus,   setApiStatus]   = useState(null)        // 'ai' | 'saving'
+  const [error,       setError]       = useState(null)        // error code string
   const [pathRecord,  setPathRecord]  = useState(null)
+  const pendingAnswers = useRef(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatItems, phase, buildStep])
+  }, [chatItems, phase, buildStep, apiStatus, error])
+
+  async function runBuild(savedAnswers) {
+    setPhase('building')
+    setError(null)
+    setApiStatus(null)
+    // Animation steps 0–2 (pure UI, no network)
+    for (let i = 0; i < 3; i++) {
+      setBuildStep(i)
+      await new Promise(r => setTimeout(r, 900))
+    }
+    // Step 3: actual API call
+    setBuildStep(3)
+    try {
+      const record = await buildCustomPath(user.uid, savedAnswers, status => setApiStatus(status))
+      setPathRecord(record)
+      setPhase('preview')
+    } catch (err) {
+      setError(err.code || 'default')
+      setPhase('error')
+    }
+  }
 
   function selectAnswer(qId, value, label, emoji) {
     setChatItems(prev => [...prev, { type: 'user', text: `${emoji} ${label}` }])
@@ -183,18 +213,13 @@ export default function PathBuilder({ user, onDone }) {
         setCurrentQ(next)
       }, 350)
     } else {
-      // All answered — build
-      setTimeout(async () => {
-        setPhase('building')
-        for (let i = 0; i < BUILDING_STEPS.length; i++) {
-          setBuildStep(i)
-          await new Promise(r => setTimeout(r, 900))
-        }
-        const record = await buildCustomPath(user.uid, newAnswers)
-        setPathRecord(record)
-        setPhase('preview')
-      }, 350)
+      pendingAnswers.current = newAnswers
+      setTimeout(() => runBuild(newAnswers), 350)
     }
+  }
+
+  function handleRetry() {
+    if (pendingAnswers.current) runBuild(pendingAnswers.current)
   }
 
   const activeQ = phase === 'questions' ? QUESTIONS[currentQ] : null
@@ -231,18 +256,55 @@ export default function PathBuilder({ user, onDone }) {
           return null
         })}
 
-        {phase === 'building' && (
+        {(phase === 'building' || phase === 'error') && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {BUILDING_STEPS.slice(0, buildStep + 1).map((step, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', animation: 'fadeIn 0.3s ease' }}>
-                {i === buildStep ? (
-                  <div className="anim-spin" style={{ width: 18, height: 18, border: '2px solid rgba(245,197,24,0.15)', borderTopColor: '#F5C518', borderRadius: '50%', flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', flexShrink: 0 }}>✓</div>
-                )}
-                <span style={{ color: i === buildStep ? '#f1f5f9' : 'rgba(241,245,249,0.35)', fontSize: '0.85rem', fontWeight: i === buildStep ? 700 : 400 }}>{step}</span>
+            {BUILDING_STEPS.slice(0, buildStep + 1).map((step, i) => {
+              const isCurrent = i === buildStep && phase === 'building'
+              const isDone    = i < buildStep || phase === 'error'
+              return (
+                <div key={i} style={{ animation: 'fadeIn 0.3s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    {isCurrent ? (
+                      <div className="anim-spin" style={{ width: 18, height: 18, border: '2px solid rgba(245,197,24,0.15)', borderTopColor: '#F5C518', borderRadius: '50%', flexShrink: 0 }} />
+                    ) : phase === 'error' && i === buildStep ? (
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', flexShrink: 0 }}>✗</div>
+                    ) : (
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', flexShrink: 0 }}>✓</div>
+                    )}
+                    <span style={{ color: isCurrent ? '#f1f5f9' : isDone ? 'rgba(241,245,249,0.35)' : 'rgba(241,245,249,0.35)', fontSize: '0.85rem', fontWeight: isCurrent ? 700 : 400 }}>{step}</span>
+                  </div>
+                  {/* Sub-status shown under step 3 while API runs */}
+                  {isCurrent && i === 3 && apiStatus && (
+                    <div style={{ marginTop: '0.35rem', marginRight: '1.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.68rem', fontFamily: "'SF Mono','Fira Code',monospace", fontWeight: 600 }}>
+                        {apiStatus === 'ai'     ? '→ שולח ל-Gemini AI...' : ''}
+                        {apiStatus === 'saving' ? '→ שומר ב-Firestore...' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Error panel */}
+            {phase === 'error' && error && (
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 14, padding: '1rem 1.1rem', marginTop: '0.5rem', animation: 'slide-up 0.3s ease' }}>
+                <div style={{ color: '#f87171', fontSize: '0.75rem', fontWeight: 800, marginBottom: '0.3rem' }}>⚠ שגיאה</div>
+                <div style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.78rem', marginBottom: '0.15rem' }}>
+                  {(ERROR_MESSAGES[error] || ERROR_MESSAGES.default).he}
+                </div>
+                <div style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.62rem', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.85rem' }}>
+                  code: {error}
+                </div>
+                <button
+                  onClick={handleRetry}
+                  className="btn-primary btn-tactile"
+                  style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.88rem', fontWeight: 800 }}
+                >
+                  🔄 נסה שוב
+                </button>
               </div>
-            ))}
+            )}
           </div>
         )}
 

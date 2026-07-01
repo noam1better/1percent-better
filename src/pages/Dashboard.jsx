@@ -1054,6 +1054,7 @@ export default function Dashboard() {
                 user={user}
                 pathRecord={customPath}
                 onPathUpdate={setCustomPath}
+                onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
               />
             )}
             {!customPath && !pathLoading && !isGuest && (
@@ -1324,10 +1325,13 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
-                {/* Lang / sign out */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center' }}>
+                {/* Lang / sign out / rebuild path */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>
                   <button onClick={logout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem', padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{td.signOut}</button>
+                  {!isGuest && (
+                    <button onClick={() => { setCustomPath(null); setShowPathBuilder(true) }} style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 8, color: 'rgba(245,197,24,0.5)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>♻️ בנה מסלול</button>
+                  )}
                 </div>
 
                 {/* Training Library secondary access */}

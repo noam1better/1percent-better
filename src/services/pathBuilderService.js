@@ -132,30 +132,50 @@ function setCachedLesson(day, createdAt, lesson) {
   try { localStorage.setItem(lessonCacheKey(day, createdAt), JSON.stringify(lesson)) } catch {}
 }
 
+// ── Timeout helper ───────────────────────────────────────────────────
+function withTimeout(promise, ms, code) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(Object.assign(new Error(code), { code })), ms)
+    ),
+  ])
+}
+
 // ── Public API ───────────────────────────────────────────────────────
 
-export async function buildCustomPath(uid, answers) {
+// onStatus(step) fires with: 'ai' (calling Gemini) | 'saving' (writing Firestore)
+export async function buildCustomPath(uid, answers, onStatus) {
   let pathData
+
+  onStatus?.('ai')
 
   if (!API_KEY) {
     pathData = buildFallbackPath(answers)
   } else {
     try {
       const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await model.generateContent(buildPathPrompt(answers))
-      const raw    = result.response.text().trim()
+      const result = await withTimeout(
+        model.generateContent(buildPathPrompt(answers)),
+        20000,
+        'GEMINI_TIMEOUT'
+      )
+      const raw = result.response.text().trim()
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-      pathData     = JSON.parse(raw)
+      pathData = JSON.parse(raw)
 
       if (
         !pathData.path_name ||
         !Array.isArray(pathData.daily_habits) || pathData.daily_habits.length !== 3 ||
         !Array.isArray(pathData.roadmap)      || pathData.roadmap.length      !== 30
-      ) throw new Error('Invalid structure')
-    } catch {
+      ) throw new Error('INVALID_STRUCTURE')
+    } catch (err) {
+      if (err.code === 'GEMINI_TIMEOUT') throw err
       pathData = buildFallbackPath(answers)
     }
   }
+
+  onStatus?.('saving')
 
   const record = {
     questionnaire: answers,
@@ -165,7 +185,7 @@ export async function buildCustomPath(uid, answers) {
     createdAt:     TODAY(),
     updatedAt:     TODAY(),
   }
-  await setDoc(pathDoc(uid), record)
+  await withTimeout(setDoc(pathDoc(uid), record), 10000, 'FIRESTORE_TIMEOUT')
   return record
 }
 

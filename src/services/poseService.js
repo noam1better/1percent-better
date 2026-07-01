@@ -22,7 +22,12 @@ export async function loadPoseLandmarker() {
       numPoses: 1,
     })
     return _landmarker
-  })()
+  })().catch(err => {
+    // Reset so the next call retries rather than returning the same rejected promise.
+    _loadPromise = null
+    _landmarker  = null
+    throw err
+  })
 
   return _loadPromise
 }

@@ -19,7 +19,7 @@ const PHASE_COLORS = {
   'שילוב ועוצמה': '#10b981',
 }
 
-export default function CustomPathCard({ user, pathRecord, onPathUpdate }) {
+export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebuild }) {
   const [record,      setRecord]      = useState(pathRecord)
   const [habits,      setHabits]      = useState(loadHabits)
   const [toastMsg,    setToastMsg]    = useState(null)
@@ -76,9 +76,19 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate }) {
             <div style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ מסלול אישי · יום {currentDay}/30</div>
             <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.95rem', marginTop: '0.1rem' }}>{path.path_name}</div>
           </div>
-          <div style={{ textAlign: 'center', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 12, padding: '0.35rem 0.65rem', minWidth: 48 }}>
-            <div style={{ color: '#F5C518', fontSize: '1.1rem', fontWeight: 900, lineHeight: 1 }}>{pct}%</div>
-            <div style={{ color: 'rgba(245,197,24,0.45)', fontSize: '0.5rem', fontWeight: 700 }}>הושלם</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ textAlign: 'center', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 12, padding: '0.35rem 0.65rem', minWidth: 48 }}>
+              <div style={{ color: '#F5C518', fontSize: '1.1rem', fontWeight: 900, lineHeight: 1 }}>{pct}%</div>
+              <div style={{ color: 'rgba(245,197,24,0.45)', fontSize: '0.5rem', fontWeight: 700 }}>הושלם</div>
+            </div>
+            {onRebuild && (
+              <button
+                onClick={onRebuild}
+                className="btn-tactile"
+                title="בנה מסלול חדש"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', opacity: 0.4, padding: '0.2rem', lineHeight: 1 }}
+              >♻️</button>
+            )}
           </div>
         </div>
 
