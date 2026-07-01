@@ -191,8 +191,24 @@ function normalizePathData(raw) {
 
 // ── Public API ───────────────────────────────────────────────────────
 
+// ── Consistency tracker ───────────────────────────────────────────────
+function calcConsistency(prev, todayStr) {
+  const last  = prev?.last_completed_date
+  const diffD = last ? Math.round((new Date(todayStr) - new Date(last)) / 86_400_000) : 0
+  const streak = diffD <= 1 ? (prev?.current_streak || 0) + 1 : 1
+  return {
+    last_completed_date: todayStr,
+    current_streak:      streak,
+    longest_streak:      Math.max(streak, prev?.longest_streak || 0),
+    gap_days:            0,
+    mirror_triggered:    false,
+  }
+}
+
+// ── Public API ─────────────────────────────────────────────────────────
 // onStatus(step) fires with: 'ai' (calling Gemini) | 'saving' (writing Firestore)
-export async function buildCustomPath(uid, answers, onStatus) {
+// motivation = { deep_why, identity_statement, pain_avoidance } — optional, stored verbatim
+export async function buildCustomPath(uid, answers, motivation, onStatus) {
   let pathData
 
   onStatus?.('ai')
@@ -226,12 +242,25 @@ export async function buildCustomPath(uid, answers, onStatus) {
   onStatus?.('saving')
 
   const record = deepSanitize({
-    questionnaire: answers,
-    path:          pathData,
-    progress:      { currentDay: 1, startedAt: TODAY(), completedDays: [] },
-    status:        'active',
-    createdAt:     TODAY(),
-    updatedAt:     TODAY(),
+    questionnaire:   answers,
+    core_motivation: {
+      deep_why:           String(motivation?.deep_why           || '').slice(0, 500),
+      identity_statement: String(motivation?.identity_statement || '').slice(0, 200),
+      pain_avoidance:     String(motivation?.pain_avoidance     || '').slice(0, 300),
+      captured_at:        TODAY(),
+    },
+    path:        pathData,
+    progress:    { currentDay: 1, startedAt: TODAY(), completedDays: [] },
+    consistency: {
+      last_completed_date: null,
+      current_streak:      0,
+      longest_streak:      0,
+      gap_days:            0,
+      mirror_triggered:    false,
+    },
+    status:    'active',
+    createdAt: TODAY(),
+    updatedAt: TODAY(),
   })
 
   console.log('[pathBuilder] writing record to Firestore:', JSON.stringify(record, null, 2))
@@ -310,9 +339,10 @@ export async function completePathDay(uid, pathRecord) {
 
   const updated = {
     ...pathRecord,
-    progress:  { ...pathRecord.progress, currentDay: nextDay, completedDays: done },
+    progress:    { ...pathRecord.progress, currentDay: nextDay, completedDays: done },
+    consistency: calcConsistency(pathRecord.consistency, TODAY()),
     status,
-    updatedAt: TODAY(),
+    updatedAt:   TODAY(),
   }
   await setDoc(pathDoc(uid), updated)
   return updated

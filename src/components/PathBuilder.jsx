@@ -1,6 +1,31 @@
 import { useState, useRef, useEffect } from 'react'
 import { buildCustomPath } from '../services/pathBuilderService'
 
+// ── Motivation questions (free-text, asked after Q1-5) ────────────────
+
+const MOTIVATION_QUESTIONS = [
+  {
+    id:          'deep_why',
+    question:    'שאלה אחרונה — ולא שטחית: למה זה חשוב לך באמת? מה מאחורי המטרה הזו?',
+    placeholder: 'כתוב את התשובה האמיתית, לא מה שנשמע טוב...',
+    minChars:    15,
+  },
+  {
+    id:          'identity_statement',
+    question:    'בעוד 30 יום, מי תהיה? כתוב משפט אחד בגוף ראשון.',
+    placeholder: 'אני אדם שׁ...',
+    minChars:    10,
+  },
+  {
+    id:          'pain_avoidance',
+    question:    'מה יקרה אם לא תצליח? מה המחיר האמיתי?',
+    placeholder: 'אם אוותר שוב...',
+    minChars:    10,
+  },
+]
+
+const TOTAL_STEPS = 5 + MOTIVATION_QUESTIONS.length  // 8
+
 // ── Questions ────────────────────────────────────────────────────────
 
 const QUESTIONS = [
@@ -163,36 +188,42 @@ const ERROR_MESSAGES = {
 
 export default function PathBuilder({ user, onDone }) {
   const [chatItems,   setChatItems]   = useState([
-    { type: 'agent', text: 'ברוך הבא לבניית המסלול האישי שלך. 5 שאלות. תוכנית 30 יום שבנויה בדיוק עבורך.' },
+    { type: 'agent', text: 'ברוך הבא לבניית המסלול האישי שלך. 8 שאלות. תוכנית 30 יום שבנויה בדיוק עבורך.' },
     { type: 'question', qIdx: 0 },
   ])
   const [currentQ,    setCurrentQ]    = useState(0)
   const [answers,     setAnswers]     = useState({})
-  const [phase,       setPhase]       = useState('questions')  // questions | building | error | preview
+  const [motivQ,      setMotivQ]      = useState(0)
+  const [motivation,  setMotivation]  = useState({})
+  const [motInput,    setMotInput]    = useState('')
+  const [phase,       setPhase]       = useState('questions')  // questions | motivation | building | error | preview
   const [buildStep,   setBuildStep]   = useState(0)
-  const [apiStatus,   setApiStatus]   = useState(null)        // 'ai' | 'saving'
-  const [error,       setError]       = useState(null)        // error code string
+  const [apiStatus,   setApiStatus]   = useState(null)
+  const [error,       setError]       = useState(null)
   const [pathRecord,  setPathRecord]  = useState(null)
-  const pendingAnswers = useRef(null)
-  const bottomRef = useRef(null)
+  const pendingData = useRef(null)    // { answers, motivation }
+  const bottomRef   = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatItems, phase, buildStep, apiStatus, error])
 
-  async function runBuild(savedAnswers) {
+  useEffect(() => {
+    if (phase === 'motivation') textareaRef.current?.focus()
+  }, [phase, motivQ])
+
+  async function runBuild(savedAnswers, savedMotivation) {
     setPhase('building')
     setError(null)
     setApiStatus(null)
-    // Animation steps 0–2 (pure UI, no network)
     for (let i = 0; i < 3; i++) {
       setBuildStep(i)
       await new Promise(r => setTimeout(r, 900))
     }
-    // Step 3: actual API call
     setBuildStep(3)
     try {
-      const record = await buildCustomPath(user.uid, savedAnswers, status => setApiStatus(status))
+      const record = await buildCustomPath(user.uid, savedAnswers, savedMotivation, status => setApiStatus(status))
       setPathRecord(record)
       setPhase('preview')
     } catch (err) {
@@ -213,16 +244,46 @@ export default function PathBuilder({ user, onDone }) {
         setCurrentQ(next)
       }, 350)
     } else {
-      pendingAnswers.current = newAnswers
-      setTimeout(() => runBuild(newAnswers), 350)
+      // Q1-5 done → enter motivation phase
+      setTimeout(() => {
+        setChatItems(prev => [...prev,
+          { type: 'agent', text: 'מעולה. עכשיו 3 שאלות עמוקות יותר — התשובות שלך ישמשו את המאמן כשתזדקק לו הכי הרבה.' },
+          { type: 'motiv_q', mIdx: 0 },
+        ])
+        setPhase('motivation')
+        setMotivQ(0)
+      }, 350)
+    }
+  }
+
+  function submitMotivation(value) {
+    const trimmed     = value.trim()
+    const mq          = MOTIVATION_QUESTIONS[motivQ]
+    const newMotivation = { ...motivation, [mq.id]: trimmed }
+    setMotivation(newMotivation)
+    setMotInput('')
+
+    setChatItems(prev => [...prev, { type: 'user', text: trimmed || '(דילוג)' }])
+
+    if (motivQ < MOTIVATION_QUESTIONS.length - 1) {
+      const next = motivQ + 1
+      setTimeout(() => {
+        setChatItems(prev => [...prev, { type: 'motiv_q', mIdx: next }])
+        setMotivQ(next)
+      }, 350)
+    } else {
+      pendingData.current = { answers, motivation: newMotivation }
+      setTimeout(() => runBuild(answers, newMotivation), 350)
     }
   }
 
   function handleRetry() {
-    if (pendingAnswers.current) runBuild(pendingAnswers.current)
+    if (pendingData.current) runBuild(pendingData.current.answers, pendingData.current.motivation)
   }
 
-  const activeQ = phase === 'questions' ? QUESTIONS[currentQ] : null
+  const activeQ      = phase === 'questions'  ? QUESTIONS[currentQ]             : null
+  const activeMotivQ = phase === 'motivation' ? MOTIVATION_QUESTIONS[motivQ]    : null
+  const globalStep   = phase === 'questions'  ? currentQ : 5 + motivQ
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,10,0.98)', display: 'flex', flexDirection: 'column', zIndex: 5000 }}>
@@ -233,25 +294,34 @@ export default function PathBuilder({ user, onDone }) {
         <div style={{ fontFamily: "'SF Mono','Fira Code',monospace", color: 'rgba(245,197,24,0.5)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em' }}>
           ◈ PERSONAL PATH BUILDER
         </div>
-        {/* Progress dots */}
+        {/* Progress dots — 8 total */}
         <div style={{ display: 'flex', gap: '0.3rem' }}>
-          {QUESTIONS.map((_, i) => (
-            <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i < currentQ || phase !== 'questions' ? '#F5C518' : i === currentQ && phase === 'questions' ? 'rgba(245,197,24,0.6)' : 'rgba(255,255,255,0.12)', transition: 'background 0.3s' }} />
-          ))}
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => {
+            const filled  = i < globalStep || (phase !== 'questions' && phase !== 'motivation')
+            const current = i === globalStep && (phase === 'questions' || phase === 'motivation')
+            const isMotiv = i >= 5
+            return (
+              <div key={i} style={{
+                width: isMotiv ? 4 : 5, height: isMotiv ? 4 : 5, borderRadius: '50%',
+                background: filled ? '#F5C518' : current ? 'rgba(245,197,24,0.6)' : 'rgba(255,255,255,0.12)',
+                transition: 'background 0.3s',
+              }} />
+            )
+          })}
         </div>
       </div>
 
       {/* Chat scroll area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
 
-        {phase === 'questions' && chatItems.map((item, i) => {
-          if (item.type === 'agent')    return <AgentBubble    key={i} text={item.text} />
-          if (item.type === 'user')     return <UserBubble     key={i} text={item.text} />
+        {(phase === 'questions' || phase === 'motivation') && chatItems.map((item, i) => {
+          if (item.type === 'agent')    return <AgentBubble key={i} text={item.text} />
+          if (item.type === 'user')     return <UserBubble  key={i} text={item.text} />
           if (item.type === 'question') {
-            const q = QUESTIONS[item.qIdx]
-            return (
-              <AgentBubble key={i} text={q.question} delay={i === 0 ? 0 : 250} />
-            )
+            return <AgentBubble key={i} text={QUESTIONS[item.qIdx].question} delay={i === 0 ? 0 : 250} />
+          }
+          if (item.type === 'motiv_q') {
+            return <AgentBubble key={i} text={MOTIVATION_QUESTIONS[item.mIdx].question} delay={250} />
           }
           return null
         })}
@@ -315,7 +385,7 @@ export default function PathBuilder({ user, onDone }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Option buttons — only shown during questions */}
+      {/* Option buttons — Q1–5 */}
       {phase === 'questions' && activeQ && (
         <div style={{ padding: '0.85rem 1.25rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(5,5,10,0.95)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: activeQ.options.length === 3 ? 'repeat(3,1fr)' : 'repeat(2,1fr)', gap: '0.5rem' }}>
@@ -330,6 +400,47 @@ export default function PathBuilder({ user, onDone }) {
                 <span style={{ color: '#f1f5f9', fontSize: '0.72rem', fontWeight: 700, textAlign: 'center' }}>{opt.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Free-text input — motivation Q6–8 */}
+      {phase === 'motivation' && activeMotivQ && (
+        <div style={{ padding: '0.85rem 1.25rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(5,5,10,0.95)' }}>
+          <textarea
+            ref={textareaRef}
+            value={motInput}
+            onChange={e => setMotInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey && motInput.trim().length >= activeMotivQ.minChars) {
+                e.preventDefault()
+                submitMotivation(motInput)
+              }
+            }}
+            placeholder={activeMotivQ.placeholder}
+            rows={3}
+            className="glow-input"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '0.85rem 0.95rem', borderRadius: 14, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.9rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.6, marginBottom: '0.6rem', direction: 'rtl' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              onClick={() => submitMotivation(motInput)}
+              disabled={motInput.trim().length < activeMotivQ.minChars}
+              className="btn-primary btn-tactile"
+              style={{ flex: 1, padding: '0.85rem', borderRadius: 12, fontSize: '0.9rem', fontWeight: 800, opacity: motInput.trim().length < activeMotivQ.minChars ? 0.4 : 1 }}
+            >
+              המשך ←
+            </button>
+            <button
+              onClick={() => submitMotivation('')}
+              className="btn-tactile"
+              style={{ padding: '0.85rem 1rem', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(241,245,249,0.3)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              דלג
+            </button>
+          </div>
+          <div style={{ marginTop: '0.4rem', color: motInput.trim().length >= activeMotivQ.minChars ? 'rgba(16,185,129,0.6)' : 'rgba(241,245,249,0.18)', fontSize: '0.62rem', fontFamily: "'SF Mono','Fira Code',monospace", textAlign: 'left' }}>
+            {motInput.trim().length} / {activeMotivQ.minChars} תווים לפחות · Enter לשליחה
           </div>
         </div>
       )}

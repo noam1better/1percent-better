@@ -19,6 +19,7 @@ import ContractLock from '../components/ContractLock'
 import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboarding'
 import PathBuilder from '../components/PathBuilder'
 import CustomPathCard from '../components/CustomPathCard'
+import Settings from '../components/Settings'
 import { loadCustomPath } from '../services/pathBuilderService'
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -1325,13 +1326,9 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
-                {/* Lang / sign out / rebuild path */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button onClick={() => setLang(isHe ? 'en' : 'he')} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{isHe ? 'EN' : 'עב'}</button>
-                  <button onClick={logout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem', padding: '0.3rem 0.7rem', cursor: 'pointer' }}>{td.signOut}</button>
-                  {!isGuest && (
-                    <button onClick={() => { setCustomPath(null); setShowPathBuilder(true) }} style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 8, color: 'rgba(245,197,24,0.5)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>♻️ בנה מסלול</button>
-                  )}
+                {/* Settings shortcut */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                  <button onClick={() => setActiveTab('settings')} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: 'rgba(241,245,249,0.3)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.8rem', cursor: 'pointer' }}>⚙ הגדרות</button>
                 </div>
 
                 {/* Training Library secondary access */}
@@ -1376,11 +1373,20 @@ export default function Dashboard() {
             </div>
           </>
         )}
+
+        {/* ── SETTINGS TAB ── */}
+        {activeTab === 'settings' && (
+          <div style={{ paddingBottom: TAB_H + 16 }}>
+            <Settings
+              onRebuildPath={() => { setCustomPath(null); setShowPathBuilder(true); setActiveTab('home') }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Bottom Tab Bar ── */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: TAB_H, background: '#111118', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', zIndex: 200 }}>
-        {[{ id: 'home', icon: '🏠', label: 'היום שלי' }, { id: 'tracks', icon: '📚', label: 'מסלולים' }, { id: 'stats', icon: '📊', label: 'סטטס' }].map(tab => (
+        {[{ id: 'home', icon: '🏠', label: 'היום שלי' }, { id: 'tracks', icon: '📚', label: 'מסלולים' }, { id: 'stats', icon: '📊', label: 'סטטס' }, { id: 'settings', icon: '⚙️', label: 'הגדרות' }].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0' }}>
             <span style={{ fontSize: '1.2rem', filter: activeTab === tab.id ? 'none' : 'grayscale(0.8) opacity(0.45)' }}>{tab.icon}</span>
             <span style={{ fontSize: '0.61rem', fontWeight: 700, color: activeTab === tab.id ? '#d4956e' : 'rgba(241,245,249,0.28)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{tab.label}</span>

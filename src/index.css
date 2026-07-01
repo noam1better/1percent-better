@@ -71,3 +71,10 @@ html {
 }
 
 /* Keyframes are in src/styles/animations.css */
+
+/* ── High contrast mode ─────────────────────────────────────────── */
+/* Applied via body.hc class from Settings toggle. #root fills the
+   full viewport so position:fixed children still cover the screen. */
+body.hc #root {
+  filter: contrast(1.18) brightness(1.1);
+}
