@@ -142,6 +142,53 @@ function withTimeout(promise, ms, code) {
   ])
 }
 
+// ── Data sanitizers ───────────────────────────────────────────────────
+// Firestore rejects: undefined values, nested arrays, NaN, Infinity.
+function deepSanitize(val) {
+  if (val === undefined || (typeof val === 'number' && !isFinite(val))) return null
+  if (val === null || typeof val !== 'object') return val
+  if (Array.isArray(val)) {
+    // flatten any nested arrays into strings to avoid Firestore invalid-argument
+    return val.map(item => Array.isArray(item) ? JSON.stringify(item) : deepSanitize(item))
+  }
+  return Object.fromEntries(
+    Object.entries(val)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, deepSanitize(v)])
+  )
+}
+
+// Coerce Gemini output to the exact types Firestore + the UI expect.
+function normalizePathData(raw) {
+  const str = v => (typeof v === 'string' ? v : String(v ?? ''))
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0 }
+  const bool = v => v === true || v === 'true' || v === 1
+
+  const habits = (Array.isArray(raw.daily_habits) ? raw.daily_habits : []).slice(0, 3).map((h, i) => ({
+    id:           str(h?.id   || `h${i + 1}`),
+    emoji:        str(h?.emoji || '🎯'),
+    title:        str(h?.title || ''),
+    description:  str(h?.description || ''),
+    duration_min: num(h?.duration_min ?? 5),
+  }))
+
+  const roadmap = (Array.isArray(raw.roadmap) ? raw.roadmap : []).slice(0, 30).map((r, i) => ({
+    day:          num(r?.day  ?? i + 1),
+    week:         num(r?.week ?? Math.ceil((i + 1) / 7)),
+    phase:        str(r?.phase || ''),
+    task:         str(r?.task  || ''),
+    is_milestone: bool(r?.is_milestone),
+  }))
+
+  return {
+    path_name:    str(raw.path_name),
+    tagline:      str(raw.tagline),
+    daily_habits: habits,
+    roadmap,
+    coach_note:   str(raw.coach_note),
+  }
+}
+
 // ── Public API ───────────────────────────────────────────────────────
 
 // onStatus(step) fires with: 'ai' (calling Gemini) | 'saving' (writing Firestore)
@@ -162,12 +209,13 @@ export async function buildCustomPath(uid, answers, onStatus) {
       )
       const raw = result.response.text().trim()
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-      pathData = JSON.parse(raw)
+      const parsed = JSON.parse(raw)
+      pathData = normalizePathData(parsed)
 
       if (
         !pathData.path_name ||
-        !Array.isArray(pathData.daily_habits) || pathData.daily_habits.length !== 3 ||
-        !Array.isArray(pathData.roadmap)      || pathData.roadmap.length      !== 30
+        pathData.daily_habits.length !== 3 ||
+        pathData.roadmap.length      !== 30
       ) throw new Error('INVALID_STRUCTURE')
     } catch (err) {
       if (err.code === 'GEMINI_TIMEOUT') throw err
@@ -177,15 +225,23 @@ export async function buildCustomPath(uid, answers, onStatus) {
 
   onStatus?.('saving')
 
-  const record = {
+  const record = deepSanitize({
     questionnaire: answers,
     path:          pathData,
     progress:      { currentDay: 1, startedAt: TODAY(), completedDays: [] },
     status:        'active',
     createdAt:     TODAY(),
     updatedAt:     TODAY(),
+  })
+
+  console.log('[pathBuilder] writing record to Firestore:', JSON.stringify(record, null, 2))
+
+  try {
+    await withTimeout(setDoc(pathDoc(uid), record), 10000, 'FIRESTORE_TIMEOUT')
+  } catch (err) {
+    console.error('[pathBuilder] Firestore write failed:', err.code, err.message, record)
+    throw err
   }
-  await withTimeout(setDoc(pathDoc(uid), record), 10000, 'FIRESTORE_TIMEOUT')
   return record
 }
 
