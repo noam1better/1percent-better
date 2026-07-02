@@ -11,7 +11,6 @@ export async function loadPoseLandmarker() {
     const vision = await FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
     )
-
     _landmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath:
@@ -23,7 +22,6 @@ export async function loadPoseLandmarker() {
     })
     return _landmarker
   })().catch(err => {
-    // Reset so the next call retries rather than returning the same rejected promise.
     _loadPromise = null
     _landmarker  = null
     throw err
@@ -32,63 +30,126 @@ export async function loadPoseLandmarker() {
   return _loadPromise
 }
 
-function angleDeg(A, B, C) {
+function v(lm) { return lm?.visibility ?? 0 }
+
+// 2D angle for pushups (side view, z irrelevant)
+function angleDeg2D(A, B, C) {
   const ab = { x: A.x - B.x, y: A.y - B.y }
   const cb = { x: C.x - B.x, y: C.y - B.y }
   const dot = ab.x * cb.x + ab.y * cb.y
   const mag = Math.sqrt(ab.x ** 2 + ab.y ** 2) * Math.sqrt(cb.x ** 2 + cb.y ** 2)
-  if (mag === 0) return 0
+  if (mag === 0) return 180
   return Math.acos(Math.max(-1, Math.min(1, dot / mag))) * (180 / Math.PI)
 }
 
-// ── Pushups: elbow angle ──────────────────────────────────────────────
-// Landmarks: 12=R-shoulder 14=R-elbow 16=R-wrist | 11=L-shoulder 13=L-elbow 15=L-wrist
-export function analyzePushup(lm, prevState) {
-  const visible = v => v && (v.visibility ?? 1) > 0.4
-  let s, e, w
-  if (visible(lm[12]) && visible(lm[14]) && visible(lm[16])) {
-    ;[s, e, w] = [lm[12], lm[14], lm[16]]
-  } else if (visible(lm[11]) && visible(lm[13]) && visible(lm[15])) {
-    ;[s, e, w] = [lm[11], lm[13], lm[15]]
-  } else {
-    return { angle: null, state: prevState, repCompleted: false }
+// ── Skeleton connections ──────────────────────────────────────────────
+const PUSHUP_SEGS = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24]]
+const SQUAT_SEGS  = [[23,25],[25,27],[24,26],[26,28],[23,24],[11,23],[12,24],[11,12]]
+
+export function drawSkeleton(ctx, lm, poseType, w, h, confidence = 1) {
+  const segs = poseType === 'squats' ? SQUAT_SEGS : PUSHUP_SEGS
+  const good = confidence >= 0.7
+  const lineColor = good ? 'rgba(245,197,24,0.6)' : 'rgba(239,68,68,0.75)'
+  const dotColor  = good ? '#F5C518'               : '#ef4444'
+
+  ctx.lineWidth = 2.5
+  ctx.strokeStyle = lineColor
+  for (const [a, b] of segs) {
+    const A = lm[a], B = lm[b]
+    if ((A?.visibility ?? 0) < 0.3 || (B?.visibility ?? 0) < 0.3) continue
+    ctx.beginPath()
+    ctx.moveTo(A.x * w, A.y * h)
+    ctx.lineTo(B.x * w, B.y * h)
+    ctx.stroke()
   }
 
-  const angle       = Math.round(angleDeg(s, e, w))
-  let newState      = prevState
-  let repCompleted  = false
+  ctx.fillStyle = dotColor
+  for (const pt of lm) {
+    if ((pt?.visibility ?? 0) < 0.3) continue
+    ctx.beginPath()
+    ctx.arc(pt.x * w, pt.y * h, 4, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
 
+// ── Pushups: elbow angle, 2D side-view ────────────────────────────────
+export function analyzePushup(lm, prevState) {
+  let s, e, w2
+  const rConf = v(lm[12]) + v(lm[14]) + v(lm[16])
+  const lConf = v(lm[11]) + v(lm[13]) + v(lm[15])
+  if (rConf >= lConf && v(lm[12]) > 0.4 && v(lm[14]) > 0.4 && v(lm[16]) > 0.4) {
+    ;[s, e, w2] = [lm[12], lm[14], lm[16]]
+  } else if (v(lm[11]) > 0.4 && v(lm[13]) > 0.4 && v(lm[15]) > 0.4) {
+    ;[s, e, w2] = [lm[11], lm[13], lm[15]]
+  } else {
+    return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
+  }
+
+  const angle      = Math.round(angleDeg2D(s, e, w2))
+  let newState     = prevState
+  let repCompleted = false
   if (prevState === 'up'   && angle < 80)  newState = 'down'
   if (prevState === 'down' && angle > 145) { newState = 'up'; repCompleted = true }
 
-  return { angle, state: newState, repCompleted }
+  const conf = (v(s) + v(e) + v(w2)) / 3
+  return { angle, depth: 0, state: newState, confidence: conf, kneeCaveIn: false, repCompleted }
 }
 
-// ── Squats: knee angle ────────────────────────────────────────────────
-// Landmarks: 24=R-hip 26=R-knee 28=R-ankle | 23=L-hip 25=L-knee 27=L-ankle
+// ── Squats: hip-Y displacement method ────────────────────────────────
+//
+// "depth" = how far the hip has dropped relative to the knee.
+//   0.0 = standing (hip well above knee)
+//   1.0 = hip at knee height (parallel squat)
+//
+// rep completion is handled in the component (100ms hold timer).
+// this function never sets repCompleted — always false.
+
 export function analyzeSquat(lm, prevState) {
-  const visible = v => v && (v.visibility ?? 1) > 0.4
-  let h, k, a
-  if (visible(lm[24]) && visible(lm[26]) && visible(lm[28])) {
-    ;[h, k, a] = [lm[24], lm[26], lm[28]]
-  } else if (visible(lm[23]) && visible(lm[25]) && visible(lm[27])) {
-    ;[h, k, a] = [lm[23], lm[25], lm[27]]
+  // Pick better-visibility side
+  const rConf = v(lm[24]) + v(lm[26]) + v(lm[28])
+  const lConf = v(lm[23]) + v(lm[25]) + v(lm[27])
+
+  let hip, knee, ankle
+  if (rConf >= lConf && v(lm[24]) > 0.3 && v(lm[26]) > 0.3) {
+    ;[hip, knee, ankle] = [lm[24], lm[26], lm[28]]
+  } else if (v(lm[23]) > 0.3 && v(lm[25]) > 0.3) {
+    ;[hip, knee, ankle] = [lm[23], lm[25], lm[27]]
   } else {
-    return { angle: null, state: prevState, repCompleted: false }
+    return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
   }
 
-  const angle      = Math.round(angleDeg(h, k, a))
-  let newState     = prevState
-  let repCompleted = false
+  const conf = (v(hip) + v(knee) + (ankle ? v(ankle) : 0)) / 3
 
-  if (prevState === 'up'   && angle < 100) newState = 'down'
-  if (prevState === 'down' && angle > 160) { newState = 'up'; repCompleted = true }
+  // gap = knee.y - hip.y  (positive = hip above knee, normal standing)
+  // standing gap ≈ 0.22–0.28; parallel squat gap ≈ 0.0–0.05
+  const gap = knee.y - hip.y
+  // clamp depth to [0, 1]
+  const STANDING_GAP = 0.24   // expected gap when upright (tunable)
+  const depth = Math.max(0, Math.min(1, 1 - gap / STANDING_GAP))
 
-  return { angle, state: newState, repCompleted }
+  let newState = prevState
+  // DOWN: hip has dropped to 70% of the way to parallel (depth ≥ 0.70)
+  if (prevState === 'up'   && depth >= 0.70) newState = 'down'
+  // UP: hip has returned to within 25% of standing (depth ≤ 0.25)
+  if (prevState === 'down' && depth <= 0.25) newState = 'up'
+
+  // Knee cave-in: both knees visible & narrower than ankles by > 25%
+  let kneeCaveIn = false
+  const rk = lm[26], lk = lm[25], ra = lm[28], la = lm[27]
+  if (v(rk) > 0.5 && v(lk) > 0.5 && v(ra) > 0.5 && v(la) > 0.5) {
+    const kneeW  = Math.abs(rk.x - lk.x)
+    const ankleW = Math.abs(ra.x - la.x)
+    kneeCaveIn = ankleW > 0.05 && kneeW < ankleW * 0.72
+  }
+
+  // angle for display: map depth → visual "angle" so badge still makes sense
+  const displayAngle = Math.round(180 - depth * 90)   // 180° standing → 90° full squat
+
+  return { angle: displayAngle, depth, state: newState, confidence: conf, kneeCaveIn, repCompleted: false }
 }
 
 export function analyzeFrame(poseType, landmarks, prevState) {
   if (poseType === 'pushups') return analyzePushup(landmarks, prevState)
   if (poseType === 'squats')  return analyzeSquat(landmarks, prevState)
-  return { angle: null, state: prevState, repCompleted: false }
+  return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { loadPoseLandmarker, analyzeFrame } from '../services/poseService'
+import { loadPoseLandmarker, analyzeFrame, drawSkeleton } from '../services/poseService'
 import { hapticRep, hapticMilestone, hapticGoal } from '../services/hapticService'
 
 // ── Cardio (timer-based) ────────────────────────────────────────────
@@ -95,6 +95,8 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
 
 // ── Strength (camera + pose) ────────────────────────────────────────
 
+const HOLD_MS = 120   // min time at bottom before rep counts
+
 function StrengthWorkout({ track, goal, onComplete, onClose }) {
   const videoRef      = useRef(null)
   const canvasRef     = useRef(null)
@@ -104,105 +106,136 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
   const poseStateRef  = useRef('up')
   const repsRef       = useRef(0)
   const lastTsRef     = useRef(-1)
-
-  const [phase,     setPhase]     = useState('loading')  // loading | running | done | manual | error
-  const [reps,      setReps]      = useState(0)
-  const [angle,     setAngle]     = useState(null)
-  const [poseState, setPoseState] = useState('up')
-  const [manualRep, setManualRep] = useState('')
+  const downSinceRef  = useRef(null)   // timestamp when state entered 'down'
   const goalHaptedRef = useRef(false)
   const halfHaptedRef = useRef(false)
 
+  const [phase,       setPhase]       = useState('loading')
+  const [reps,        setReps]        = useState(0)
+  const [repFlash,    setRepFlash]    = useState(false)
+  const [angle,       setAngle]       = useState(null)
+  const [poseState,   setPoseState]   = useState('up')
+  const [squatDepth,  setSquatDepth]  = useState(0)      // 0-1 for depth bar
+  const [confidence,  setConfidence]  = useState(1)
+  const [formWarning, setFormWarning] = useState(false)
+  const [manualRep,   setManualRep]   = useState('')
+  const formWarnTimer = useRef(null)
+
   const cleanup = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    clearTimeout(formWarnTimer.current)
   }, [])
 
+  // Effect 1: acquire camera stream + load landmarker → set phase to 'running'
+  // Does NOT touch videoRef — video element doesn't exist yet during 'loading'
   useEffect(() => {
     let cancelled = false
-
     async function init() {
       try {
+        console.log('[camera] requesting stream…')
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
         })
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
-        streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          await videoRef.current.play()
-        }
+        console.log('[camera] stream acquired, tracks:', stream.getVideoTracks().map(t => t.label))
+        streamRef.current = stream   // store; will attach to <video> in Effect 2
 
         const lm = await loadPoseLandmarker()
         if (cancelled) return
         if (!lm) { setPhase('manual'); return }
         landmarkerRef.current = lm
-        setPhase('running')
+        setPhase('running')          // <video> now mounts → Effect 2 attaches stream
       } catch (err) {
-        if (!cancelled) setPhase(err.name === 'NotAllowedError' ? 'error' : 'manual')
+        if (cancelled) return
+        console.error('[camera] init error:', err.name, err.message)
+        setPhase(err.name === 'NotAllowedError' ? 'error' : 'manual')
       }
     }
-
     init()
     return () => { cancelled = true; cleanup() }
   }, [cleanup])
+
+  // Effect 2: attach stream to <video> once it's in the DOM (phase === 'running')
+  useEffect(() => {
+    if (phase !== 'running') return
+    const video = videoRef.current
+    if (!video || !streamRef.current) return
+    video.srcObject = streamRef.current
+    video.play().catch(err => console.error('[camera] play() failed:', err.name, err.message))
+    console.log('[camera] stream attached to <video>, readyState:', video.readyState)
+  }, [phase])
 
   // Pose detection loop
   useEffect(() => {
     if (phase !== 'running') return
 
     function loop(ts) {
-      const video = videoRef.current
+      const video  = videoRef.current
       const canvas = canvasRef.current
-      const lm = landmarkerRef.current
+      const lm     = landmarkerRef.current
       if (!video || !canvas || !lm || video.readyState < 2) {
         rafRef.current = requestAnimationFrame(loop)
         return
       }
 
-      if (ts !== lastTsRef.current) {
-        lastTsRef.current = ts
-        const results = lm.detectForVideo(video, ts)
-        const ctx = canvas.getContext('2d')
-        canvas.width  = video.videoWidth
-        canvas.height = video.videoHeight
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (ts === lastTsRef.current) { rafRef.current = requestAnimationFrame(loop); return }
+      lastTsRef.current = ts
 
-        if (results.landmarks?.length) {
-          const landmarks = results.landmarks[0]
-          const { angle: a, state: s, repCompleted } = analyzeFrame(track.poseType, landmarks, poseStateRef.current)
+      const results = lm.detectForVideo(video, ts)
+      const ctx = canvas.getContext('2d')
+      canvas.width  = video.videoWidth
+      canvas.height = video.videoHeight
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-          if (a !== null) {
-            poseStateRef.current = s
-            setPoseState(s)
-            setAngle(a)
-            if (repCompleted) {
-              repsRef.current += 1
-              const newReps = repsRef.current
-              setReps(newReps)
-              hapticRep()
-              const half = Math.floor(goal / 2)
-              if (newReps === half && !halfHaptedRef.current) {
-                halfHaptedRef.current = true
-                hapticMilestone()
-              }
-              if (newReps >= goal && !goalHaptedRef.current) {
-                goalHaptedRef.current = true
-                hapticGoal()
-              }
+      if (results.landmarks?.length) {
+        const landmarks = results.landmarks[0]
+        const result    = analyzeFrame(track.poseType, landmarks, poseStateRef.current)
+
+        if (result.angle !== null) {
+          const prevState = poseStateRef.current
+          const newState  = result.state
+
+          // ── Squat hold-timer rep logic ──────────────────────────────
+          let repCompleted = result.repCompleted   // pushups: from service
+          if (track.poseType === 'squats') {
+            if (prevState === 'up' && newState === 'down') {
+              downSinceRef.current = ts              // start hold timer
+            }
+            if (prevState === 'down' && newState === 'up') {
+              const held = ts - (downSinceRef.current ?? ts)
+              repCompleted = held >= HOLD_MS
+              downSinceRef.current = null
+            }
+            setSquatDepth(result.depth)
+            setConfidence(result.confidence)
+
+            // Knee cave-in: show warning for 2s
+            if (result.kneeCaveIn && !formWarning) {
+              setFormWarning(true)
+              clearTimeout(formWarnTimer.current)
+              formWarnTimer.current = setTimeout(() => setFormWarning(false), 2000)
             }
           }
 
-          // Draw skeleton dots
-          ctx.fillStyle = '#F5C518'
-          for (const pt of landmarks) {
-            if ((pt.visibility ?? 1) > 0.5) {
-              ctx.beginPath()
-              ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 4, 0, Math.PI * 2)
-              ctx.fill()
-            }
+          poseStateRef.current = newState
+          setPoseState(newState)
+          setAngle(result.angle)
+
+          if (repCompleted) {
+            repsRef.current += 1
+            const n = repsRef.current
+            setReps(n)
+            setRepFlash(true)
+            setTimeout(() => setRepFlash(false), 380)
+            hapticRep()
+            const half = Math.floor(goal / 2)
+            if (n === half && !halfHaptedRef.current) { halfHaptedRef.current = true; hapticMilestone() }
+            if (n >= goal  && !goalHaptedRef.current) { goalHaptedRef.current = true; hapticGoal() }
           }
+
+          drawSkeleton(ctx, landmarks, track.poseType, canvas.width, canvas.height, result.confidence)
         }
       }
 
@@ -211,13 +244,9 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [phase, track.poseType])
+  }, [phase, track.poseType, goal])
 
-  function handleDone() {
-    cleanup()
-    onComplete({ amount: repsRef.current, unit: track.unit })
-  }
-
+  function handleDone() { cleanup(); onComplete({ amount: repsRef.current, unit: track.unit }) }
   function handleManualSave() {
     const n = parseInt(manualRep)
     if (!n || n < 0) return
@@ -225,66 +254,191 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
     onComplete({ amount: n, unit: track.unit })
   }
 
+  function retryCamera() {
+    cleanup()
+    poseStateRef.current  = 'up'
+    repsRef.current       = 0
+    lastTsRef.current     = -1
+    downSinceRef.current  = null
+    goalHaptedRef.current = false
+    halfHaptedRef.current = false
+    setReps(0); setAngle(null); setPoseState('up')
+    setSquatDepth(0); setConfidence(1); setFormWarning(false)
+    setPhase('loading')
+  }
+
   // ── Loading ──
   if (phase === 'loading') return (
-    <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+    <div style={{ textAlign: 'center', padding: '2.5rem 0' }}>
       <div className="anim-spin" style={{ width: 36, height: 36, border: '3px solid rgba(245,197,24,0.2)', borderTopColor: '#F5C518', borderRadius: '50%', margin: '0 auto 1rem' }} />
       <p style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.85rem' }}>טוען מצלמה ו-AI…</p>
     </div>
   )
 
-  // ── Camera error / manual fallback ──
+  // ── Error / manual fallback ──
   if (phase === 'error' || phase === 'manual') return (
     <div style={{ padding: '1rem 0' }}>
-      {phase === 'error' && (
-        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1rem', color: '#f87171', fontSize: '0.82rem' }}>
-          ⚠️ לא ניתן לגשת למצלמה — הרשאה נדחתה
-        </div>
-      )}
-      <label style={{ color: 'rgba(241,245,249,0.55)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>כמה חזרות עשית?</label>
+      <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
+        <p style={{ color: '#f87171', fontSize: '0.82rem', fontWeight: 700, margin: '0 0 0.5rem' }}>
+          {phase === 'error' ? '⚠️ הרשאת מצלמה נדחתה' : '⚠️ לא ניתן לטעון את המצלמה'}
+        </p>
+        <p style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.72rem', margin: '0 0 0.75rem' }}>
+          {phase === 'error'
+            ? 'אפשר גישה למצלמה בהגדרות הדפדפן ולאחר מכן נסה שוב.'
+            : 'ייתכן שהמודל לא נטען. בדוק חיבור לאינטרנט.'}
+        </p>
+        <button
+          onClick={retryCamera}
+          className="btn-tactile"
+          style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 10, padding: '0.5rem 1rem', color: '#F5C518', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+        >
+          🔄 נסה שוב
+        </button>
+      </div>
+
+      <label style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>
+        או הכנס ידנית
+      </label>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <input
-          type="number"
-          inputMode="numeric"
-          value={manualRep}
+          type="number" inputMode="numeric" value={manualRep}
           onChange={e => setManualRep(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleManualSave()}
-          placeholder={`יעד: ${goal} חזרות`}
-          className="glow-input"
-          autoFocus
+          placeholder={`יעד: ${goal} חזרות`} className="glow-input"
           style={{ flex: 1, padding: '0.75rem', borderRadius: 11, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.9rem', fontFamily: 'inherit' }}
         />
-        <button onClick={handleManualSave} disabled={!manualRep} className="btn-primary btn-tactile" style={{ padding: '0.75rem 1.1rem', borderRadius: 11, fontSize: '0.9rem', fontWeight: 800, opacity: manualRep ? 1 : 0.4 }}>
+        <button onClick={handleManualSave} disabled={!manualRep} className="btn-primary btn-tactile"
+          style={{ padding: '0.75rem 1.1rem', borderRadius: 11, fontSize: '0.9rem', fontWeight: 800, opacity: manualRep ? 1 : 0.4 }}>
           שמור ←
         </button>
       </div>
     </div>
   )
 
-  // ── Live camera + pose ──
-  const goalReached = reps >= goal
+  // ── Live camera ──
+  const goalReached   = reps >= goal
+  const isSquat       = track.poseType === 'squats'
+  const confidenceLow = confidence < 0.7
+
+  const corner = (top, right, bottom, left) => ({
+    position: 'absolute', width: 22, height: 22,
+    borderColor: confidenceLow ? 'rgba(239,68,68,0.6)' : 'rgba(245,197,24,0.7)',
+    borderStyle: 'solid', borderWidth: 0,
+    ...(top    != null ? { top:    top    + '%' } : {}),
+    ...(right  != null ? { right:  right  + '%' } : {}),
+    ...(bottom != null ? { bottom: bottom + '%' } : {}),
+    ...(left   != null ? { left:   left   + '%' } : {}),
+    borderTopWidth:    top    != null ? 2 : 0,
+    borderRightWidth:  right  != null ? 2 : 0,
+    borderBottomWidth: bottom != null ? 2 : 0,
+    borderLeftWidth:   left   != null ? 2 : 0,
+  })
+
+  // Squat depth bar color
+  const depthColor = squatDepth >= 0.70 ? '#34d399'
+                   : squatDepth >= 0.40 ? '#F5C518'
+                   : 'rgba(255,255,255,0.25)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {/* Camera + overlay */}
       <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
-        <video ref={videoRef} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} />
-        <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
+        <video ref={videoRef} muted playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} />
+        <canvas ref={canvasRef}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
 
-        {/* Rep counter overlay */}
-        <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,5,5,0.78)', borderRadius: 12, padding: '0.5rem 0.85rem', backdropFilter: 'blur(8px)' }}>
-          <div key={reps} style={{ color: '#F5C518', fontSize: '2rem', fontWeight: 900, lineHeight: 1, animation: reps > 0 ? 'rep-flash 0.28s ease-out' : 'none' }}>{reps}</div>
-          <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.62rem', fontWeight: 700 }}>/ {goal} חזרות</div>
-        </div>
+        {/* Corner brackets — red when confidence low */}
+        {!goalReached && (<>
+          <div style={corner(8,  null, null, 8)}  />
+          <div style={corner(8,  8,    null, null)} />
+          <div style={corner(null, null, 8,   8)}  />
+          <div style={corner(null, 8,   8,   null)} />
+        </>)}
 
-        {/* Pose state badge */}
-        {angle !== null && (
-          <div style={{ position: 'absolute', top: 10, right: 10, background: poseState === 'down' ? 'rgba(16,185,129,0.8)' : 'rgba(99,102,241,0.8)', borderRadius: 10, padding: '0.3rem 0.65rem', backdropFilter: 'blur(6px)' }}>
-            <span style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 800 }}>{angle}° {poseState === 'down' ? '▼' : '▲'}</span>
+        {/* Squat depth bar — right edge */}
+        {isSquat && !goalReached && (
+          <div style={{ position: 'absolute', right: 8, top: '12%', bottom: '12%', width: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', bottom: 0, width: '100%',
+              height: `${squatDepth * 100}%`,
+              background: depthColor,
+              borderRadius: 99,
+              transition: 'height 0.05s linear, background 0.2s ease',
+            }} />
           </div>
         )}
 
-        {/* Goal reached banner */}
+        {/* Rep counter — top left */}
+        <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,5,5,0.78)', borderRadius: 12, padding: '0.5rem 0.85rem', backdropFilter: 'blur(8px)' }}>
+          <div key={reps} style={{
+            fontSize: '2rem', fontWeight: 900, lineHeight: 1,
+            color: repFlash ? '#34d399' : '#F5C518',
+            transform: repFlash ? 'scale(1.4)' : 'scale(1)',
+            transition: 'transform 0.15s ease, color 0.15s ease',
+            animation: reps > 0 && !repFlash ? 'rep-flash 0.28s ease-out' : 'none',
+          }}>{reps}</div>
+          <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.62rem', fontWeight: 700 }}>/ {goal} חזרות</div>
+        </div>
+
+        {/* State / angle badge — top right */}
+        {angle !== null && (
+          <div style={{
+            position: 'absolute', top: 10, right: 10,
+            background: poseState === 'down' ? 'rgba(16,185,129,0.82)' : 'rgba(99,102,241,0.82)',
+            borderRadius: 10, padding: '0.3rem 0.65rem', backdropFilter: 'blur(6px)',
+          }}>
+            <span style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 800 }}>
+              {isSquat
+                ? (poseState === 'down' ? '⬇ שוקע' : '⬆ עומד')
+                : `${angle}° ${poseState === 'down' ? '▼' : '▲'}`
+              }
+            </span>
+          </div>
+        )}
+
+        {/* Form warning — knee cave-in */}
+        {formWarning && (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            background: 'rgba(239,68,68,0.88)', borderRadius: 12, padding: '0.5rem 1rem',
+            backdropFilter: 'blur(6px)', animation: 'fadeIn 0.15s ease',
+            color: '#fff', fontSize: '0.8rem', fontWeight: 800, whiteSpace: 'nowrap',
+          }}>
+            ⚠️ שים לב לברכיים!
+          </div>
+        )}
+
+        {/* Low confidence hint */}
+        {confidenceLow && !goalReached && (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            background: 'rgba(239,68,68,0.75)', borderRadius: 10, padding: '0.4rem 0.85rem',
+            color: '#fff', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
+            animation: 'fadeIn 0.2s ease', backdropFilter: 'blur(4px)',
+          }}>
+            🔍 זוז לתוך הפריים
+          </div>
+        )}
+
+        {/* AI pulse — bottom left */}
+        {!goalReached && (
+          <div style={{ position: 'absolute', bottom: 10, left: 10, display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(5,5,5,0.72)', borderRadius: 20, padding: '0.25rem 0.6rem', backdropFilter: 'blur(6px)' }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: confidenceLow ? '#ef4444' : '#34d399', animation: 'cam-pulse 1.4s ease-in-out infinite', flexShrink: 0 }} />
+            <span style={{ color: confidenceLow ? '#fca5a5' : 'rgba(52,211,153,0.9)', fontSize: '0.6rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>
+              {confidenceLow ? 'זיהוי חלש' : 'AI פעיל'}
+            </span>
+          </div>
+        )}
+
+        {/* Close camera — bottom right */}
+        {!goalReached && (
+          <button onClick={() => { cleanup(); onClose() }} className="btn-tactile"
+            style={{ position: 'absolute', bottom: 10, right: isSquat ? 22 : 10, background: 'rgba(5,5,5,0.72)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '0.25rem 0.7rem', backdropFilter: 'blur(6px)', color: 'rgba(241,245,249,0.55)', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer' }}>
+            ✕ סגור מצלמה
+          </button>
+        )}
+
+        {/* Goal banner */}
         {goalReached && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', animation: 'fadeIn 0.3s ease' }}>
             <div style={{ background: 'rgba(5,5,5,0.9)', borderRadius: 18, padding: '1.25rem 2rem', textAlign: 'center', border: '2px solid rgba(245,197,24,0.5)' }}>
@@ -295,11 +449,8 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
         )}
       </div>
 
-      <button
-        onClick={handleDone}
-        className="btn-primary btn-tactile"
-        style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 800 }}
-      >
+      <button onClick={handleDone} className="btn-primary btn-tactile"
+        style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 800 }}>
         {goalReached ? 'סיום אימון ←' : `סיימתי (${reps} חזרות) ←`}
       </button>
     </div>
