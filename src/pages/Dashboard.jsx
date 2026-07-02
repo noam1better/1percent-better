@@ -742,7 +742,6 @@ export default function Dashboard() {
     if (!user || isGuest) { setPathLoading(false); return }
     loadCustomPath(user.uid).then(p => {
       setCustomPath(p)
-      if (!p) setShowPathBuilder(true)
       if (p) checkAndGenerateMirror(p).then(data => { if (data) setMirrorData(data) }).catch(() => {})
     }).finally(() => setPathLoading(false))
   }, [user, isGuest])
@@ -1066,26 +1065,13 @@ export default function Dashboard() {
             <DailyBrief />
 
             {/* ── ZONE 2: PRIMARY ACTION ── */}
-            {customPath && !pathLoading && (
+            {!pathLoading && !isGuest && (
               <CustomPathCard
                 user={user}
                 pathRecord={customPath}
                 onPathUpdate={setCustomPath}
                 onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
               />
-            )}
-            {!customPath && !pathLoading && !isGuest && (
-              <button
-                onClick={() => setShowPathBuilder(true)}
-                className="btn-tactile"
-                style={{ width: '100%', marginBottom: '1.1rem', padding: '1rem', borderRadius: 16, background: 'linear-gradient(145deg,rgba(245,197,24,0.1),rgba(245,197,24,0.04))', border: '1px solid rgba(245,197,24,0.25)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: '#F5C518', fontWeight: 900, fontSize: '0.92rem' }}>◈ בנה את המסלול האישי שלך</div>
-                  <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.72rem', marginTop: '0.15rem' }}>תוכנית 30 יום מותאמת AI ← 5 שאלות</div>
-                </div>
-                <span style={{ fontSize: '1.4rem', opacity: 0.7 }}>🚀</span>
-              </button>
             )}
             <TrackSelector />
 
