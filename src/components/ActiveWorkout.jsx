@@ -95,7 +95,82 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
 
 // ── Strength (camera + pose) ────────────────────────────────────────
 
-const HOLD_MS = 120   // min time at bottom before rep counts
+const HOLD_MS = 120
+
+const SET_LOG_KEY = 'prime_set_log'
+function saveSetLog(entry) {
+  try {
+    const prev = JSON.parse(localStorage.getItem(SET_LOG_KEY) || '[]')
+    localStorage.setItem(SET_LOG_KEY, JSON.stringify([entry, ...prev].slice(0, 200)))
+  } catch {}
+}
+
+function calcSummary(reps, goal, caveInCount) {
+  let score = 100
+  if (reps > 0) score -= Math.round(Math.min(60, (caveInCount / reps) * 100))
+  score = Math.max(0, Math.round(score / 10) * 10)
+
+  const tips = []
+  if (caveInCount > 0) tips.push('שמור על ברכיים מעוגנות מעל אצבעות הרגל')
+  if (reps < goal)     tips.push(`השלמת ${reps} מתוך ${goal} — נסה שוב בסט הבא`)
+  if (caveInCount > 2) tips.push('הורד את הקצב — איכות עדיפה על כמות')
+
+  const headline = score >= 90 ? 'סט מצוין! 🔥'
+                 : score >= 70 ? 'עבודה טובה — שים לב לטכניקה'
+                 : score >= 50 ? 'בוא נשפר את הטכניקה'
+                 :               'האט — אכפת לנו מהצורה'
+
+  return { score, headline, tips }
+}
+
+// ── Post-set summary panel ────────────────────────────────────────────
+function SetSummaryPanel({ track, reps, goal, score, headline, tips, onSave }) {
+  const scoreColor = score >= 90 ? '#34d399' : score >= 70 ? '#F5C518' : score >= 50 ? '#f59e0b' : '#ef4444'
+  return (
+    <div style={{ animation: 'slide-up 0.3s ease both' }}>
+      {/* Score circle */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.25rem 0 1rem' }}>
+        <div style={{ width: 88, height: 88, borderRadius: '50%', border: `3px solid ${scoreColor}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: `${scoreColor}12`, marginBottom: '0.75rem' }}>
+          <span style={{ color: scoreColor, fontSize: '1.7rem', fontWeight: 900, lineHeight: 1 }}>{score}</span>
+          <span style={{ color: `${scoreColor}99`, fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>ניקוד</span>
+        </div>
+        <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', textAlign: 'center' }}>{headline}</div>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem' }}>
+        {[
+          { label: 'חזרות', value: reps },
+          { label: 'יעד', value: goal },
+          { label: '%', value: `${Math.round((reps / goal) * 100)}%` },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+            <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem' }}>{s.value}</div>
+            <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tips */}
+      {tips.length > 0 && (
+        <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 12, padding: '0.75rem 0.9rem', marginBottom: '1rem' }}>
+          <div style={{ color: 'rgba(245,197,24,0.6)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.5rem' }}>◈ טיפים לסט הבא</div>
+          {tips.map((t, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: i < tips.length - 1 ? '0.35rem' : 0 }}>
+              <span style={{ color: '#F5C518', fontSize: '0.7rem', flexShrink: 0, marginTop: '0.05rem' }}>›</span>
+              <span style={{ color: 'rgba(241,245,249,0.7)', fontSize: '0.78rem', lineHeight: 1.5 }}>{t}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={onSave} className="btn-primary btn-tactile"
+        style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 900 }}>
+        שמור וסגור ←
+      </button>
+    </div>
+  )
+}
 
 function StrengthWorkout({ track, goal, onComplete, onClose }) {
   const videoRef      = useRef(null)
@@ -106,19 +181,22 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
   const poseStateRef  = useRef('up')
   const repsRef       = useRef(0)
   const lastTsRef     = useRef(-1)
-  const downSinceRef  = useRef(null)   // timestamp when state entered 'down'
+  const downSinceRef  = useRef(null)
   const goalHaptedRef = useRef(false)
   const halfHaptedRef = useRef(false)
+  const caveInCountRef   = useRef(0)
+  const caveInActiveRef  = useRef(false)   // debounce: one event per 2s
 
   const [phase,       setPhase]       = useState('loading')
   const [reps,        setReps]        = useState(0)
   const [repFlash,    setRepFlash]    = useState(false)
   const [angle,       setAngle]       = useState(null)
   const [poseState,   setPoseState]   = useState('up')
-  const [squatDepth,  setSquatDepth]  = useState(0)      // 0-1 for depth bar
+  const [squatDepth,  setSquatDepth]  = useState(0)
   const [confidence,  setConfidence]  = useState(1)
   const [formWarning, setFormWarning] = useState(false)
   const [manualRep,   setManualRep]   = useState('')
+  const [summary,     setSummary]     = useState(null)   // { score, headline, tips }
   const formWarnTimer = useRef(null)
 
   const cleanup = useCallback(() => {
@@ -133,23 +211,25 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
     let cancelled = false
     async function init() {
       try {
-        console.log('[camera] requesting stream…')
+        console.log('Camera Stream Status: Attempting...')
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
         })
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
-        console.log('[camera] stream acquired, tracks:', stream.getVideoTracks().map(t => t.label))
-        streamRef.current = stream   // store; will attach to <video> in Effect 2
+        const tracks = stream.getVideoTracks()
+        console.log('Camera Stream Status: Success —', tracks.length, 'track(s):', tracks.map(t => `${t.label} [${t.readyState}]`))
+        streamRef.current = stream
 
         const lm = await loadPoseLandmarker()
         if (cancelled) return
-        if (!lm) { setPhase('manual'); return }
+        if (!lm) { console.error('[camera] landmarker returned null'); setPhase('manual'); return }
+        console.log('[camera] pose landmarker loaded — setting phase to running')
         landmarkerRef.current = lm
-        setPhase('running')          // <video> now mounts → Effect 2 attaches stream
+        setPhase('running')
       } catch (err) {
         if (cancelled) return
-        console.error('[camera] init error:', err.name, err.message)
+        console.error('Camera Stream Status: Error —', err.name, '—', err.message, err)
         setPhase(err.name === 'NotAllowedError' ? 'error' : 'manual')
       }
     }
@@ -160,11 +240,30 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
   // Effect 2: attach stream to <video> once it's in the DOM (phase === 'running')
   useEffect(() => {
     if (phase !== 'running') return
+
     const video = videoRef.current
-    if (!video || !streamRef.current) return
+    console.log('[camera] Effect 2 fired — videoRef.current:', video)
+    console.log('[camera] streamRef.current:', streamRef.current)
+
+    if (!video) { console.error('[camera] videoRef.current is null — video not in DOM yet'); return }
+    if (!streamRef.current) { console.error('[camera] streamRef.current is null — stream was lost'); return }
+
+    // React muted prop is a known bug — set attributes imperatively
+    video.muted      = true
+    video.playsInline = true
+    video.setAttribute('muted', '')
+    video.setAttribute('playsinline', '')
+    video.setAttribute('autoplay', '')
+
+    console.log('[camera] video attributes — muted:', video.muted, 'playsInline:', video.playsInline, 'autoplay:', video.hasAttribute('autoplay'))
+
     video.srcObject = streamRef.current
-    video.play().catch(err => console.error('[camera] play() failed:', err.name, err.message))
-    console.log('[camera] stream attached to <video>, readyState:', video.readyState)
+    console.log('[camera] srcObject set, readyState before play():', video.readyState)
+
+    video.load()   // required after setting srcObject in some browsers
+    video.play()
+      .then(() => console.log('[camera] play() resolved — readyState:', video.readyState, 'videoWidth:', video.videoWidth))
+      .catch(err  => console.error('[camera] play() FAILED:', err.name, '—', err.message))
   }, [phase])
 
   // Pose detection loop
@@ -211,11 +310,16 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
             setSquatDepth(result.depth)
             setConfidence(result.confidence)
 
-            // Knee cave-in: show warning for 2s
-            if (result.kneeCaveIn && !formWarning) {
+            // Knee cave-in: debounced (ref-based, not state) — one count per 2s
+            if (result.kneeCaveIn && !caveInActiveRef.current) {
+              caveInActiveRef.current = true
+              caveInCountRef.current += 1
               setFormWarning(true)
               clearTimeout(formWarnTimer.current)
-              formWarnTimer.current = setTimeout(() => setFormWarning(false), 2000)
+              formWarnTimer.current = setTimeout(() => {
+                setFormWarning(false)
+                caveInActiveRef.current = false
+              }, 2000)
             }
           }
 
@@ -246,24 +350,37 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, track.poseType, goal])
 
-  function handleDone() { cleanup(); onComplete({ amount: repsRef.current, unit: track.unit }) }
+  function finishSet(finalReps) {
+    cleanup()
+    const s = calcSummary(finalReps, goal, caveInCountRef.current)
+    saveSetLog({
+      id: Date.now(), date: new Date().toISOString().slice(0, 10), timestamp: Date.now(),
+      exerciseId: track.id, exerciseName: track.name, exerciseEmoji: track.emoji,
+      reps: finalReps, goal, techniqueScore: s.score, caveInCount: caveInCountRef.current,
+    })
+    setSummary({ ...s, reps: finalReps })
+    setPhase('summary')
+  }
+
+  function handleDone() { finishSet(repsRef.current) }
   function handleManualSave() {
     const n = parseInt(manualRep)
     if (!n || n < 0) return
-    cleanup()
-    onComplete({ amount: n, unit: track.unit })
+    finishSet(n)
   }
 
   function retryCamera() {
     cleanup()
-    poseStateRef.current  = 'up'
-    repsRef.current       = 0
-    lastTsRef.current     = -1
-    downSinceRef.current  = null
-    goalHaptedRef.current = false
-    halfHaptedRef.current = false
+    poseStateRef.current   = 'up'
+    repsRef.current        = 0
+    lastTsRef.current      = -1
+    downSinceRef.current   = null
+    goalHaptedRef.current  = false
+    halfHaptedRef.current  = false
+    caveInCountRef.current = 0
+    caveInActiveRef.current = false
     setReps(0); setAngle(null); setPoseState('up')
-    setSquatDepth(0); setConfidence(1); setFormWarning(false)
+    setSquatDepth(0); setConfidence(1); setFormWarning(false); setSummary(null)
     setPhase('loading')
   }
 
@@ -315,6 +432,19 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
     </div>
   )
 
+  // ── Summary ──
+  if (phase === 'summary' && summary) return (
+    <SetSummaryPanel
+      track={track}
+      reps={summary.reps}
+      goal={goal}
+      score={summary.score}
+      headline={summary.headline}
+      tips={summary.tips}
+      onSave={() => onComplete({ amount: summary.reps, unit: track.unit })}
+    />
+  )
+
   // ── Live camera ──
   const goalReached   = reps >= goal
   const isSquat       = track.poseType === 'squats'
@@ -342,7 +472,7 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
-        <video ref={videoRef} muted playsInline
+        <video ref={videoRef} muted playsInline autoPlay
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} />
         <canvas ref={canvasRef}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
