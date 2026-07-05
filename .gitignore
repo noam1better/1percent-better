@@ -26,5 +26,8 @@ my-new-idea/.env.*.local
 .idea/
 .vscode/
 
+# Next.js
+real-estate-agent-tool/.next/
+
 # Misc
 *.log
