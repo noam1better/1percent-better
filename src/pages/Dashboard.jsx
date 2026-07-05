@@ -20,6 +20,7 @@ import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboardin
 import PathBuilder from '../components/PathBuilder'
 import CustomPathCard from '../components/CustomPathCard'
 import MirrorCard from '../components/MirrorCard'
+import SquadLeaderboard from '../components/SquadLeaderboard'
 import Settings from '../components/Settings'
 import { loadCustomPath } from '../services/pathBuilderService'
 import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
@@ -1073,7 +1074,10 @@ export default function Dashboard() {
                 onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
               />
             )}
-            <TrackSelector />
+            {!isGuest && (
+              <SquadLeaderboard uid={user?.uid} userName={profile?.name || 'PRIME User'} />
+            )}
+            <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />
 
             {/* ── ZONE 3: STATUS (collapsible) ── */}
             <button

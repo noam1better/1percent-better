@@ -47,7 +47,7 @@ function getGoal(trackState, track) {
 
 const MAX_TRACKS = 2
 
-export default function TrackSelector() {
+export default function TrackSelector({ uid, userName }) {
   const [state,         setState]  = useState(loadState)
   const [activeWorkout, setWorkout] = useState(null)   // { track, goal }
   const [expanded,      setExpanded] = useState(false)
@@ -285,6 +285,8 @@ export default function TrackSelector() {
         <ActiveWorkout
           track={activeWorkout.track}
           goal={activeWorkout.goal}
+          uid={uid}
+          userName={userName}
           onComplete={handleWorkoutComplete}
           onClose={() => setWorkout(null)}
         />

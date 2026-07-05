@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { loadPoseLandmarker, analyzeFrame, drawSkeleton } from '../services/poseService'
 import { hapticRep, hapticMilestone, hapticGoal } from '../services/hapticService'
+import { syncWeeklyReps } from '../services/squadService'
 
 // ── Cardio (timer-based) ────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ function SetSummaryPanel({ track, reps, goal, score, headline, tips, onSave }) {
   )
 }
 
-function StrengthWorkout({ track, goal, onComplete, onClose }) {
+function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
   const videoRef      = useRef(null)
   const canvasRef     = useRef(null)
   const landmarkerRef = useRef(null)
@@ -358,6 +359,9 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
       exerciseId: track.id, exerciseName: track.name, exerciseEmoji: track.emoji,
       reps: finalReps, goal, techniqueScore: s.score, caveInCount: caveInCountRef.current,
     })
+    if (uid && finalReps > 0) {
+      syncWeeklyReps(uid, userName || 'PRIME User', track.id, finalReps).catch(() => {})
+    }
     setSummary({ ...s, reps: finalReps })
     setPhase('summary')
   }
@@ -589,7 +593,7 @@ function StrengthWorkout({ track, goal, onComplete, onClose }) {
 
 // ── Shell modal ─────────────────────────────────────────────────────
 
-export default function ActiveWorkout({ track, goal, onComplete, onClose }) {
+export default function ActiveWorkout({ track, goal, uid, userName, onComplete, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 3100 }}>
       <div style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', padding: '1.4rem 1.4rem 2.5rem', borderTop: '2px solid rgba(245,197,24,0.3)', animation: 'slide-up 0.28s ease' }}>
@@ -606,7 +610,7 @@ export default function ActiveWorkout({ track, goal, onComplete, onClose }) {
         </div>
 
         {track.useCamera
-          ? <StrengthWorkout track={track} goal={goal} onComplete={onComplete} onClose={onClose} />
+          ? <StrengthWorkout track={track} goal={goal} uid={uid} userName={userName} onComplete={onComplete} onClose={onClose} />
           : <CardioWorkout   track={track} goal={goal} onComplete={onComplete} onClose={onClose} />
         }
       </div>

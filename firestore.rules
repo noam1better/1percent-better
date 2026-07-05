@@ -93,6 +93,35 @@ service cloud.firestore {
                   && (!('status' in request.resource.data)        || request.resource.data.status in ['active','completed','pending','reset']);
     }
 
+    // ── SQUADS ─────────────────────────────────────────
+    match /squads/{squadId} {
+      allow read:   if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid
+                   && request.resource.data.name is string
+                   && request.resource.data.name.size() <= 40;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+    }
+
+    // ── WEEKLY REPS (readable by any signed-in user for squad leaderboard) ──
+    match /weeklyReps/{uid} {
+      allow read:  if isSignedIn();
+      allow write: if isOwner(uid)
+                  && request.resource.data.totalReps is number
+                  && request.resource.data.totalReps >= 0;
+    }
+
+    // ── HEAD-TO-HEAD CHALLENGES ────────────────────────
+    match /challenges/{challengeId} {
+      allow read:   if isSignedIn()
+                   && (resource.data.challenger == request.auth.uid
+                       || resource.data.challenged == request.auth.uid);
+      allow create: if isSignedIn()
+                   && request.resource.data.challenger == request.auth.uid;
+      allow update: if isSignedIn()
+                   && (resource.data.challenger == request.auth.uid
+                       || resource.data.challenged == request.auth.uid);
+    }
+
     // ── DENY EVERYTHING ELSE ───────────────────────────
     match /{document=**} {
       allow read, write: if false;
