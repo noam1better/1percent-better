@@ -1771,6 +1771,1364 @@ export const LESSON_CONTENT = {
 
   ], // end product-builder
 
+  'deal-closer': [
+    // Module 0 · Days 1–5 · פסיכולוגיית משא ומתן
+    {
+      bottomLine: 'כל מכירה מנוצחת או מפוסדת בראש שלך לפני שפתחת פה. מי ששולט בפסיכולוגיה שלו — שולט בשיחה.',
+      days: [
+        {
+          fieldAction: [
+            'כתוב 3 אמונות מגבילות שיש לך לגבי מכירות ("אני לא טוב ב...", "אנשים לא אוהבים...").',
+            'לכל אמונה — כתוב את ההפך המדויק כעובדה ("האמת היא ש...").',
+            'קרא את ההפכים בקול רם 3 פעמים לפני שיחת מכירה הבאה.',
+            'שאל: "מה הייתי עושה אחרת אם ידעתי שאני Deal Closer מובטח?"',
+          ],
+          realExample: 'Grant Cardone חזר על "10X Rule" עד שהוא הפך לאמונה — לא אסטרטגיה. לפני כל שיחה הוא אמר "אני close this deal" — לא "אנסה". התוצאה: $300M real estate portfolio. ה-Mindset לא היה תוצר של הצלחה — הוא היה הסיבה לה.',
+          microTask: 'כתוב: "אמונה מגבילה שלי: ___. האמת: ___. מה אעשה אחרת עם Mindset נכון: ___."',
+        },
+        {
+          fieldAction: [
+            'לפני כל שיחת מכירה — קח 60 שניות של נשימה עמוקה ואמור: "המטרה שלי היא לעזור."',
+            'החלף את המילה "מכירה" ב"פתרון" בשיחה הבאה שלך.',
+            'שאל את עצמך: "מה הלקוח הזה צריך באמת, גם אם לא יקנה ממני?"',
+            'אחרי השיחה — כתוב מה הרגשת: לחץ או זרימה?',
+          ],
+          realExample: 'Zig Ziglar: "You can have everything in life you want, if you will just help other people get what they want." Salespeople שמרגישים שהם "עוזרים" — לא "מוכרים" — מציגים win rate גבוה ב-37% בממוצע. לקוחות מרגישים את הכוונה.',
+          microTask: 'כתוב: "שיחת מכירה אחרונה — הרגשתי: ___. הייתי ממוקד ב: ___. בשיחה הבאה אתמקד ב: ___."',
+        },
+        {
+          fieldAction: [
+            'הכן רשימה של 5 הסיבות הגדולות שהלקוח הטיפוסי שלך קונה.',
+            'לכל סיבה — כתוב: "הפחד שמאחורי הסיבה הזו."',
+            'אנשים קונים מתוך כאב או תשוקה. זהה: הלקוח שלך פועל מאיזה כוח?',
+            'כתוב משפט אחד שמדבר ישירות לכאב/תשוקה הכי גדולה שלו.',
+          ],
+          realExample: 'Apple לא מוכרת מחשבים — היא מוכרת "אתה חלק מהיצירתיים שמשנים את העולם." iPhone לא "מאפשר שיחות" — הוא "סטטוס, שייכות, יצירה." Jony Ive: "We design the desire." ה-Fear Of Missing Out מכרה יותר אייפונים מכל מפרט טכני.',
+          microTask: 'כתוב: "הכאב הגדול ביותר של הלקוח שלי: ___. התשוקה הגדולה ביותר: ___. המשפט שמדבר לזה: ___."',
+        },
+        {
+          fieldAction: [
+            'למד את "Anchoring Effect": הצע תמיד את המחיר הגבוה ביותר ראשון.',
+            'בשיחה הבאה — הכן שלושה מסלולי תמחור: Premium, Standard, Basic.',
+            'שים את Premium ראשון ותאר אותו בהרחבה לפני שאמרת Standard.',
+            'שים לב: האם הלקוח "קנה" את Logic הCompare למסלול הזול יותר?',
+          ],
+          realExample: 'Williams-Sonoma הוסיפה breadmaker ב-$279 לצד אחד ב-$429. מכירות ה-$279 עלו ב-50% — כי פתאום הוא נראה "ברור". Anchoring Effect הוא מדעי: ה-Frame הראשון שומר על המחשבה.',
+          microTask: 'כתוב: "Anchor שאשתמש בו בשיחה הבאה: ___. שלושת המסלולים שלי: Premium=___, Standard=___, Basic=___."',
+        },
+        {
+          fieldAction: [
+            'קרא על Sunk Cost Fallacy: אנשים ממשיכים להשקיע כי "כבר השקעו".',
+            'בשיחה עם לקוח שמהסס — שאל: "כבר כמה זמן הבעיה הזו קיימת?"',
+            'חשב בקול: "כמה עלה לך כל חודש שלא פתרת את זה?"',
+            'תן ללקוח להגיע למסקנה לבד — אל תגיד לו את התשובה.',
+          ],
+          realExample: 'Warren Buffett: "The most important thing to do if you find yourself in a hole is to stop digging." אבל לקוחות בעסקים לרוב ממשיכים לחפור — כי שינוי מפחיד יותר מהמשך. Deal Closer טוב עוזר ללקוח לראות את ה-Hole, לא לדחוף פתרון.',
+          microTask: 'כתוב: "לקוח שמהסס — מה ה-Sunk Cost שלו: ___. שאלה שתעזור לו לראות את זה: ___."',
+        },
+      ],
+    },
+    // Module 1 · Days 6–10 · בניית רפור ואמון
+    {
+      bottomLine: 'אנשים קונים מאנשים שהם אוהבים ובוטחים בהם. Rapport אינו טריק — הוא התשתית שעליה נבנית כל עסקה.',
+      days: [
+        {
+          fieldAction: [
+            'בשיחה הבאה — בלה 3 הדקות הראשונות רק בהקשבה, ללא שום Pitch.',
+            'חזור על 3 מילות המפתח שהלקוח אמר — בדיוק כפי שאמר אותן.',
+            'שאל שאלה Follow-Up על משהו אישי שהוא ציין (עיר, פרויקט, בעיה).',
+            'שים לב: האם הוא החל לדבר יותר? זה סימן לRapport.',
+          ],
+          realExample: 'Bill Clinton ידוע כאדם שכשאתה מדבר איתו — אתה היחיד בחדר. הוא חוזר על שמך, מסתכל בעיניים, מציין פרטים קטנים. Survey: 71% of people say they trust someone more when they feel listened to.',
+          microTask: 'כתוב: "3 מילות מפתח שהלקוח האחרון אמר: ___. שאלה Follow-Up ששאלתי: ___. תגובתו: ___."',
+        },
+        {
+          fieldAction: [
+            'זהה שפת הגוף שלך בשיחה: האם ידיים צלובות? גוף סגור? מיקרו-בעות?',
+            'תרגל "Mirroring": חזור באיטיות על תנועת ידיים/נטיית ראש של הלקוח.',
+            'הכוונה: לא חיקוי מגוחך — שיקוף עדין שיוצר חיבור לא מודע.',
+            'אחרי שיחה — כתוב: "מה שפת גוף שלי אמרה?", "מה שפת הגוף שלו אמרה?"',
+          ],
+          realExample: 'מחקר UCLA של Albert Mehrabian: 55% מהתקשורת היא שפת גוף, 38% טון קול, 7% מילים. Elite salespeople כמו Jordan Belfort מזהים תזוזות קטנות ומגיבים להן — לא למה שנאמר.',
+          microTask: 'כתוב: "Mirroring ניסיתי: ___. תגובת הלקוח: ___. מה למדתי על שפת גוף שלי: ___."',
+        },
+        {
+          fieldAction: [
+            'מצא 3 דברים משותפים עם הלקוח הבא לפני הפגישה (LinkedIn, אתר, רשת).',
+            'הזכר דבר משותף אחד בטבעיות בתחילת השיחה ("ראיתי שאתה מ...", "גם אני...").',
+            'שאל על חיי העסק שלו: "מה הכי מאתגר אותך כרגע?"',
+            'הקשב להקשר הרגשי — לא רק לנתונים שהוא נותן.',
+          ],
+          realExample: 'LinkedIn שינתה את כללי הRapport: עכשיו אתה יכול לדעת מה המנהל קרא, אחר מה הוא עקב, מה חשוב לו — לפני שהגעת לפגישה. Top performers מגיעים מוכנים עם 3 "נקודות חיבור" מוכנות.',
+          microTask: 'כתוב: "3 דברים שמצאתי על הלקוח הבא: ___. נקודת חיבור שאשתמש בה: ___."',
+        },
+        {
+          fieldAction: [
+            'ספר סיפור אישי קצר (90 שניות) שקשור לבעיה שהלקוח חווה.',
+            'הסיפור צריך להיות: רגע של כישלון/אתגר → מה למדתי → איך זה רלוונטי לו.',
+            'אל תציג את עצמך כגיבור — הלקוח הוא הגיבור. אתה המדריך.',
+            'שאל אחרי הסיפור: "האם זה מוכר לך?" — שתיקה היא תשובה.',
+          ],
+          realExample: 'Donald Miller ב-StoryBrand: "The customer is the hero, not your brand." Salespeople שמספרים סיפורים על כישלון ומה למדו ממנו — נתפסים כ-6× יותר אמינים מאלה שמספרים רק הצלחות.',
+          microTask: 'כתוב: "סיפור אישי שאשתמש בו: ___. הלקח: ___. הקשר לבעיית הלקוח: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל "Vulnerability Loop": שתף בעיה שחווית בתחום, בלי לתת את הפתרון.',
+            'שאל: "האם זה קורה גם אצלך?" — הלקוח ישלים את הלופ.',
+            'כשאדם משלים "Vulnerability Loop" הוא מרגיש בטוח לחשוף בעיות שלו.',
+            'רשום: מה גילה הלקוח כשהרגיש בטוח?',
+          ],
+          realExample: 'Brené Brown: "Vulnerability is the birthplace of connection." B2B sales teams שאימנו על Vulnerability Sharing ראו 34% עלייה בClose Rate כי לקוחות התחילו לחשוף את הבעיות האמיתיות — לא רק "נשקול את זה".',
+          microTask: 'כתוב: "Vulnerability Loop שתרגלתי: ___. מה הלקוח חשף: ___. כיצד זה שינה את השיחה: ___."',
+        },
+      ],
+    },
+    // Module 2 · Days 11–15 · גילוי וכשירות
+    {
+      bottomLine: 'שאלה טובה שווה יותר ממאה Pitch. מי ששואל — מוביל. מי שמדבר — מאבד שליטה.',
+      days: [
+        {
+          fieldAction: [
+            'הכן רשימת 10 שאלות Discovery לשיחה הבאה — אסור שיחה תחלק לפני שעברת דרכן.',
+            'חלק: 3 שאלות על מצב נוכחי, 3 על בעיות, 2 על השלכות, 2 על חלומות.',
+            'תרגל: שאל שאלה ואז שתוק — עד שהלקוח מסיים לענות לחלוטין.',
+            'שים לב: הלקוח שמדבר 70% מהשיחה — זה Discovery מוצלח.',
+          ],
+          realExample: 'Neil Rackham חקר 35,000 שיחות מכירה וכתב SPIN Selling: Situation, Problem, Implication, Need-Payoff. Top salespeople שואלים 6-7 שאלות Implication ("מה קורה אם הבעיה לא נפתרת?") לעומת 2 בממוצע. ה-Implication היא שמגדירה דחיפות.',
+          microTask: 'כתוב: "10 שאלות Discovery שלי: ___. שאלת Implication חזקה: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל "5 Whys" בשיחה: לכל בעיה שהלקוח מציין — שאל "למה?" שוב ושוב.',
+            'מטרה: הגע לשורש הבעיה האמיתית — לא הסימפטום.',
+            'דוגמה: "אנחנו לא מגיעים לMRR המטרה" → "למה?" → "Churn גבוה" → "למה?" → "Onboarding גרוע" → "למה?"',
+            'כתוב את ה-Root Cause שגילית.',
+          ],
+          realExample: 'Toyota Manufacturing System: "5 Whys" הומצא על ידי Taiichi Ohno. McKinsey Consultants משתמשים בו ב-Discovery Calls — לא כדי לגרות, אלא כדי לעזור ללקוח לגלות מה הוא באמת צריך. הרבה פעמים הלקוח עצמו לא יודע.',
+          microTask: 'כתוב: "בעיה שהלקוח ציין: ___. Root Cause אחרי 5 Whys: ___."',
+        },
+        {
+          fieldAction: [
+            'בדוק Qualification: BANT — Budget, Authority, Need, Timeline.',
+            'בשיחה — גלה את כל 4 לפני שאתה מציג פתרון.',
+            'אם חסר אחד — החלט: האם כדאי להמשיך?',
+            'כתוב: "מה הסיגנל שיגיד לי שהלקוח הזה לא Qualified?"',
+          ],
+          realExample: 'HubSpot Internal Data: 79% של Leads שנכשלים היו Unqualified — לא Unconvinced. Top performers מבצעים Disqualification בכוונה: הם פוסלים לקוחות שלא מתאימים כדי למקד אנרגיה על אלה שכן.',
+          microTask: 'כתוב: "BANT של הלקוח הבא: Budget=___, Authority=___, Need=___, Timeline=___. Qualified? ___."',
+        },
+        {
+          fieldAction: [
+            'שאל את שאלת "Dream State": "אם הבעיה הזו נפתרת לחלוטין — איך נראה החיים שלך?"',
+            'הנח ללקוח לצייר את הVision — ואתה שתוק ומקשיב.',
+            'חזור על הVision שלו בדיוק: "אז אתה אומר שאתה רוצה..."',
+            'זה הרגע שה-Desire מתחזק — השיחה הפכה אמוציונלית, לא לוגית.',
+          ],
+          realExample: 'Tony Robbins ב-Date With Destiny: הוא שואל "מה אתה רוצה?" עד שה-Desire הופך ל-Compelling Vision. Research: לקוחות שמצייר את Dream State בשיחת מכירה — Close Rate גבוה ב-42% כי הם עצמם "מכרו לעצמם" את הפתרון.',
+          microTask: 'כתוב: "Dream State שהלקוח תיאר: ___. כיצד הפתרון שלי מממש את זה: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Problem Cost Calculator" לשיחה: חשב כמה עולה הבעיה לחודש/שנה.',
+            'אל תחשב לבד — עשה את זה בשיחה, יחד עם הלקוח.',
+            'כשהמספר גדול מהפתרון שלך — שאל: "מה זה אומר?"',
+            'הלקוח יגיד לך למה הוא צריך לקנות — אתה לא תצטרך לשכנע.',
+          ],
+          realExample: 'Salesforce Discovery deck: הם שואלים "כמה שעות השבוע אתם מבזבזים על Data Entry ידני?" → כופלים ב-50 שבועות ב-Cost Per Hour → הלקוח מגלה שמוציא $120K/שנה על בעיה שהפתרון שלהם עולה $30K.',
+          microTask: 'כתוב: "Problem Cost שחישבתי יחד עם הלקוח: ___/שנה. עלות הפתרון שלי: ___. המספר דיבר? ___."',
+        },
+      ],
+    },
+    // Module 3 · Days 16–20 · הצגת ערך ומיצוב
+    {
+      bottomLine: 'לא המחיר מוכר — ה-Value מוכר. כשהלקוח רואה ערך גדול ממחיר — הוא קונה. תמיד.',
+      days: [
+        {
+          fieldAction: [
+            'הכן "Value Proposition" בפורמט: "אנחנו עוזרים ל[מי] ל[מה], כך ש[תוצאה]."',
+            'כתוב 3 גרסאות — לכל Persona שונה של לקוח.',
+            'תרגל כל אחת בקול רם — 45 שניות מקסימום.',
+            'שאל: "האם זה מדבר לבעיה שגיליתי ב-Discovery?"',
+          ],
+          realExample: 'Slack Value Prop: "Where work happens — Replace email, reduce meetings, find files fast." לא "Platform for team communication." Specific → Measurable → Relevant. הם גדלו מ-0 ל-$7.1B בפחות מ-5 שנים עם Value Prop שמדבר ישירות לכאב.',
+          microTask: 'כתוב: "Value Proposition שלי ל[לקוח הבא]: אנחנו עוזרים ל___ ל___, כך ש___."',
+        },
+        {
+          fieldAction: [
+            'בנה "ROI Story": לקוח דומה → מה הבעיה שלו היתה → מה השתנה → מספרים.',
+            'השתמש בCase Study אמיתי — גם קטן וספציפי עדיף על גדול ומעורפל.',
+            'תרגל לספר אותו ב-90 שניות: Before/After/Number.',
+            'שאל בסוף: "האם המצב שלך דומה?"',
+          ],
+          realExample: '"לקוח שלנו ב-SaaS Sales היה מבזבז 4 שעות ביום על CRM Manual Entry. אחרי 30 יום — 40 דקות. הוא הגדיל את Pipeline שלו ב-3× כי פינה זמן למכירות." — זה ROI Story. Specific, True, Relatable. לא Buzzwords.',
+          microTask: 'כתוב: "ROI Story שלי: לקוח ___ → בעיה ___ → פתרון ___ → תוצאה ___. 90 שניות?"',
+        },
+        {
+          fieldAction: [
+            'הכן Comparison Framework: "בלי הפתרון שלנו / עם הפתרון שלנו."',
+            'כתוב 5 שורות — כל שורה: מצב בלי VS מצב עם.',
+            'הצג ויזואלית (טבלה, ציור, שני עמודים) — לא בקול בלבד.',
+            'שאל: "מהצד שלך — באיזה צד אתה עכשיו?"',
+          ],
+          realExample: 'Apple MacBook Air Campaign: "PC vs Mac" — לא Specs comparison, אלא Life Experience comparison. 2006-2009: Mac market share עלה מ-5% ל-13% בחסות הFramework הזה. הVisualization מבהיר שהCompetition היא לא רק מוצרים — אלא חיים שונים לחלוטין.',
+          microTask: 'כתוב: "Comparison Framework שלי — בלי הפתרון: ___. עם הפתרון: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Unique Mechanism": מה יחודי ב-HOW שאתה עושה מה שאתה עושה?',
+            'לא "אנחנו מספקים שירות אישי" — כולם אומרים את זה.',
+            'מה הProcess/Method/Framework הייחודי שגורם לתוצאה?',
+            'תן לו שם. "The ___ Method" / "Our ___ System."',
+          ],
+          realExample: 'Alex Hormozi: "Hormozi Offer Framework — 4 Value Levers: Dream Outcome, Perceived Likelihood, Time Delay, Effort & Sacrifice." הוא לא "ייעוץ עסקי" — הוא Framework. לקוחות משלמים $1M+ כי הוא שם לUnique Mechanism ומראה את המנגנון.',
+          microTask: 'כתוב: "Unique Mechanism שלי: ___. שם: \'The ___ Method\'. מה הוא עושה שאחרים לא: ___."',
+        },
+        {
+          fieldAction: [
+            'הכן Testimonial שהוא יותר מהצעת מחיר — חוות דעת שמדברת לתוצאה ספציפית.',
+            'אסוף: "לפני שעבדנו, הייתי...", "אחרי 30 יום...", "התוצאה שלא ציפיתי לה..."',
+            'הוסף מספרים לכל Testimonial שיש.',
+            'שלח 2 Testimonials ללקוח לפני הסגירה — לא כדי לשכנע, כדי לאשר.',
+          ],
+          realExample: 'Amazon Customer Reviews שינו את ה-Commerce: Products עם 4+ Stars ו-100+ Reviews נמכרים ב-73% יותר. B2B: Gartner מצא ש-89% מרוכשי B2B מתחילים את התהליך עם Peer Reviews. Social Proof לא תומכת בהחלטה — היא מחליפה סיכון.',
+          microTask: 'כתוב: "Testimonial חזק שיש לי: ___. מספר שיש בו: ___. מתי אשלח אותו בשיחה: ___."',
+        },
+      ],
+    },
+    // Module 4 · Days 21–25 · טיפול בהתנגדויות
+    {
+      bottomLine: 'התנגדות אינה סירוב — היא בקשה למידע. מי שמפחד מהתנגדויות — יפסיד עסקאות. מי שמחפש אותן — יסגור.',
+      days: [
+        {
+          fieldAction: [
+            'כתוב 10 ההתנגדויות הכי נפוצות שאתה שומע.',
+            'לכל אחת — כתוב: "מה הפחד האמיתי מאחוריה?"',
+            'הכן תשובה שמכירה בפחד לפני שהיא מתמודדת איתו.',
+            'תרגל: "אני מבין. הרבה מלקוחותינו אמרו את אותו הדבר לפני שהחליטו..."',
+          ],
+          realExample: 'Chris Voss, FBI Lead Negotiator ב-"Never Split The Difference": "Tactical Empathy" — לפני שאתה עונה, repeat back מה שאמרו ותן להם להרגיש נשמעים. Sales Win Rate עולה ב-20-30% כשהראשון שאתה עושה הוא לאשר — לא לנגד.',
+          microTask: 'כתוב: "התנגדות שאני שומע הכי הרבה: ___. הפחד מאחוריה: ___. תשובה שמתחילה בהכרה: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל Objection Pattern: Feel/Felt/Found — "אני מבין שאתה מרגיש X. לקוחות רבים הרגישו כך. מה שמצאו הוא..."',
+            'בשיחה הבאה — השתמש בFormula הזו עם ההתנגדות הראשונה שקיבלת.',
+            'שים לב: ה"Found" חייב להיות ספציפי ואמיתי — לא כלל.',
+            'כתוב אחרי: "מה הלקוח אמר אחרי שהשתמשתי ב-Feel/Felt/Found?"',
+          ],
+          realExample: 'IBM Sales Training ב-60s-70s: Feel/Felt/Found היתה הCore Technique. IBM אחרי training זה הגיע ל-70% שוק מחשבים. הFormula פועלת כי היא מנטרלת Adversarial Frame ומחברת עם Community — "לא רק אתה חשב כך."',
+          microTask: 'כתוב: "השתמשתי ב-Feel/Felt/Found עם: ___. תגובת הלקוח: ___."',
+        },
+        {
+          fieldAction: [
+            'ב"זה יקר מדי" — אל תסביר ואל תתנצל. שאל: "יקר ביחס למה?"',
+            'הקשב לתשובה — היא תגיד לך מה ה-Comparison האמיתי.',
+            'חשב Cost of Inaction יחד: "מה עולה לך לא לפתור את זה?"',
+            'הצע מסלול Payment — לא הנחה. "אנחנו יכולים לחלק ל-3 תשלומים."',
+          ],
+          realExample: 'Rolls-Royce Quote: "If you have to ask the price, you can\'t afford it." ה-Reframe של Value vs Cost: מחיר הוא מה שאתה משלם, ערך הוא מה שאתה מקבל. כשהערך גדול ממחיר — Price Objection נעלמת. כשהיא קיימת — ה-Discovery לא הושלם.',
+          microTask: 'כתוב: "לקוח אמר \'יקר\' — שאלתי: ___. התשובה שלו: ___. מה גיליתי: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל "Preemptive Objection Handling" — הכנס את ההתנגדות לפני שהלקוח אומר אותה.',
+            '"כמה שאלות שאנשים בדרך כלל שואלים בשלב הזה..." ואז ענה לה.',
+            'זה יוצר Trust כי אתה שקוף, ומוסיר את ה-Power מההתנגדות.',
+            'כתוב 3 Preemptive Objections שתשלב בPresentation.',
+          ],
+          realExample: 'Steve Jobs ב-iPhone Launch 2007: "Some people are saying, why would Apple make a phone? — let me tell you why." הוא Preempted כל ספק לפני שקם. ה-Press Coverage? 95% Positive. Preemptive framing הופך את הReporter לשליח.',
+          microTask: 'כתוב: "3 Preemptive Objections: 1. ___ 2. ___ 3. ___. מתי אכניס אותן בשיחה: ___."',
+        },
+        {
+          fieldAction: [
+            'ב"צריך לחשוב על זה" — שאל: "מה בדיוק אתה צריך לחשוב?"',
+            'אם הם אומרים "להתייעץ עם שותף" — שאל: "מה הוא יצטרך לדעת כדי להחליט?"',
+            'הצע: "אולי ניקח 15 דקות ונעשה את זה ביחד — אני כאן."',
+            'מטרה: לגלות מה החסם האמיתי — ולא להסכים לDelay ללא תאריך.',
+          ],
+          realExample: 'Sandler Selling System: "Going for the No" — Deal Closer טוב מחפש סגירה או דחייה ברורה, לא Maybe. "אם זה לא נראה מתאים, אני מעדיף שתאמר לי עכשיו — פשוט לדעת." הMaybe Zone הורגת Pipeline יותר מכל דחייה.',
+          microTask: 'כתוב: "לקוח אמר \'אחשוב על זה\' — שאלתי: ___. החסם האמיתי: ___. הצעד הבא: ___."',
+        },
+      ],
+    },
+    // Module 5 · Days 26–30 · סגירת עסקאות ומעקב
+    {
+      bottomLine: 'Close אינו לחץ — הוא שירות. כשאתה בטוח שהפתרון שלך עוזר — אתה חייב לבקש את ה-Yes. זו האחריות שלך.',
+      days: [
+        {
+          fieldAction: [
+            'תרגל Assumptive Close: "מתי נתחיל?" — לא "האם תרצה להתחיל?"',
+            'שנה שאלות מ-Yes/No ל-Either/Or: "מה נוח לך — שני בבוקר או ראשון בצהריים?"',
+            'בשיחה הבאה — נסה Assumptive Close ורשום את תגובת הלקוח.',
+            'אם הוא עצר — זו התנגדות. חזור לModule 4.',
+          ],
+          realExample: 'אמריקאי Car Salesmen דרגה A משתמשים ב-Assumptive Close מהרגע הראשון: "כשתיסע הביתה עם הרכב — תיקח את הכחול?" לא "אם תקנה". ה-Frame מניח שהעסקה קורית — והלקוח בוחר Details, לא Yes/No.',
+          microTask: 'כתוב: "Assumptive Close שתרגלתי: ___. תגובת הלקוח: ___. מה קרה אחר כך: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל Summary Close: סכם את כל מה שהלקוח הסכים עליו לאורך השיחה.',
+            '"אם אני מבין נכון — אתה אמרת X, Y, Z. הפתרון שלנו מתמודד עם כל אלה. מתי מתחילים?"',
+            'כתוב לפני הפגישה: 5 הסכמות שאצטרך לסכם.',
+            'השתמש בשפת הלקוח — לא השפה שלך.',
+          ],
+          realExample: 'Oren Klaff ב-"Pitch Anything": בסוף כל Pitch הוא עושה Reframe Summary — "הצגנו X, ראית Y, הרגשת Z. השאלה היחידה שנשארת היא: מתי?" הוא מעולם לא שואל "מה אתה חושב?" — הוא מסכם ומוביל לAction.',
+          microTask: 'כתוב: "Summary Close שאכין לשיחה הבאה: הסכמה 1=___, 2=___, 3=___. משפט הסגירה: ___."',
+        },
+        {
+          fieldAction: [
+            'לאחר Close — שתוק. מי שמדבר ראשון משלם.',
+            'תרגל: אמור את ה-Close ואז ספור בראש עד 10 — בשתיקה.',
+            'רשום: כמה שניות לקח ללקוח לענות?',
+            'אם הלקוח ממלא את השתיקה — היה מוכן להתנגדות.',
+          ],
+          realExample: 'David Sandler Principle: "After you ask for the order, shut up." מחקר Gong.io: Sales Reps שמחכים לפחות 5 שניות לאחר Close — מגיעים ל-Close Rate גבוה ב-18%. השתיקה מוסיפה Weight לClose — דיבור אחריה מוחק אותו.',
+          microTask: 'כתוב: "כמה שניות שתקתי אחרי Close הבא: ___. מה הלקוח אמר: ___."',
+        },
+        {
+          fieldAction: [
+            'הכן Follow-Up System: מה קורה אחרי "לא עכשיו"?',
+            'כלל: Follow-Up לפי Value — לא Pressure. כל מגע חייב לתת משהו.',
+            'בנה Sequence: יום 1 (Summary Email), יום 3 (Relevant Article), יום 7 (Case Study), יום 14 (New Development).',
+            'שאל: "מתי יהיה זמן טוב יותר לדבר על זה?"',
+          ],
+          realExample: 'HubSpot Data: 80% of sales require 5+ follow-ups, but 44% of salespeople give up after one. אנשי מכירות שמחזיקים ב-Systematic Follow-Up בונים Pipeline שממשיך לעבוד גם כשהם ישנים.',
+          microTask: 'כתוב: "Follow-Up Sequence שלי: יום 1=___, יום 3=___, יום 7=___, יום 14=___."',
+        },
+        {
+          fieldAction: [
+            'Debrief כל עסקה — Close או Lost — עם 3 שאלות: "מה עשיתי טוב? מה אפשר לשפר? מה לא הבנתי?"',
+            'בנה Win/Loss Journal — שורה לכל עסקה.',
+            'מצא Pattern: "מה המשותף ל-3 העסקאות האחרונות שסגרתי?"',
+            'כתוב: "ה-Deal Closing Signature שלי — הדבר שאני עושה שסוגר עסקאות."',
+          ],
+          realExample: 'Salesforce Top Performer Study: Elite salespeople מבצעים Win/Loss Analysis על 100% מהעסקאות שלהם. Bottom performers — 0%. ה-Delta: Deliberate Practice. כל "אובדן" הוא שיעור $0 — אם למדת ממנו.',
+          microTask: 'כתוב: "Win/Loss של עסקה אחרונה: מה טוב: ___. מה לשפר: ___. Deal Closing Signature שלי: ___."',
+        },
+      ],
+    },
+  ], // end deal-closer
+
+  'ai-pioneer': [
+    // Module 0 · Days 1–5 · בסיס AI Agents ואוטומציה
+    {
+      bottomLine: 'AI Agents הם תוכנות שפועלות אוטונומית בשם המשתמש. מי שמבין כיצד לבנות אותם — יכול להחליף צוותים שלמים.',
+      days: [
+        {
+          fieldAction: [
+            'הגדר: מה ההבדל בין LLM לבין AI Agent? כתוב בשורה אחת.',
+            'זהה 3 תהליכים עסקיים שאתה עושה שבועית שניתן לאוטמט עם Agent.',
+            'בחר את הפשוט ביותר — כתוב את ה-Steps שלו בפרוט.',
+            'שאל: "אם Agent היה עושה את זה — מה הוא היה צריך לדעת?"',
+          ],
+          realExample: 'AutoGPT 2023: הפרויקט הראשון שהוכיח שLLM יכול לאוטמט tasks מקצה לקצה. בשבוע הראשון: 20,000 GitHub Stars. בחברות כמו Klarna — AI Agent מחליף 700 Customer Service agents עם זמן תגובה של דקה במקום 11 דקות.',
+          microTask: 'כתוב: "תהליך שאוטמט עם Agent: ___. Steps שלו: ___. מה ה-Agent יצטרך לדעת: ___."',
+        },
+        {
+          fieldAction: [
+            'למד את ארכיטקטורת ReAct: Reason + Act. Agent חושב → פועל → מצפה לתוצאה → חוזר.',
+            'כתוב Prompt שמאפשר ל-Claude לפעול ב-ReAct mode על Task שבחרת.',
+            'הרץ בClaude API או Claude.ai — צפה כיצד הוא מפרק לSteps.',
+            'שאל: "היכן ה-Agent "נתקע"? מה הוסיף/הפחית?"',
+          ],
+          realExample: 'Google DeepMind ReAct Paper (2022): LLMs עם ReAct pattern הביאו לירידה של 34% ב-Hallucination ועלייה של 20% ב-Task Completion כי ה-Agent מחשב before acting. כל Framework מודרני (LangChain, AutoGen) בנוי על עיקרון זה.',
+          microTask: 'כתוב: "ReAct Prompt שכתבתי: ___. תוצאה שה-Agent קיבל: ___. מה לשפר: ___."',
+        },
+        {
+          fieldAction: [
+            'הכר Tools: AI Agent זקוק ל"כלים" — Browser, Code Executor, File Reader, API Caller.',
+            'כתוב רשימת 5 Tools שה-Agent שלך יצטרך לTask שבחרת.',
+            'בחר Tool אחד ממש — APIs שמאפשרות Function Calling (OpenAI, Claude, Gemini).',
+            'קרא את ה-Docs של Function Calling ב-Claude API — כתוב דוגמה בסיסית.',
+          ],
+          realExample: 'Zapier AI Actions: כל Zap הוא Tool לAI Agent. עם 6,000+ Apps — Agent יכול לשלוח email, עדכן CRM, פרסם טוויט, הוסף RowSheet — הכל בלי קוד. הם מדווחים שMRR שלהם קפץ ב-40% אחרי שחשפו AI Agent integrations.',
+          microTask: 'כתוב: "5 Tools לAgent שלי: ___. Tool שממשתי: ___. Function Calling schema שכתבתי: ___."',
+        },
+        {
+          fieldAction: [
+            'הבן Memory ב-AI Agents: Short-term (Context Window) vs Long-term (Vector DB / Files).',
+            'בחר Use Case שדורש Memory לאורך זמן (e.g. Customer history, Project state).',
+            'חקור: Pinecone, Chroma, Supabase pgvector — כיצד הם שומרים Embeddings?',
+            'כתוב בדיאגרמה: איך Agent שלך יזכור מה קרה אתמול?',
+          ],
+          realExample: 'Mem.ai: Personal AI assistant עם Long-term Memory. הם גדלו ל-1M users בלי Marketing — רק מWord of Mouth. בAgentic Coding (Cursor, Devin): Project Memory הוא מה שמאפשר ל-Agent לכתוב Code עקבי על פני שבועות, לא רק שורות.',
+          microTask: 'כתוב: "Memory Strategy לAgent שלי: ___. כיצד יאחסן: ___. כיצד יאחזר: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Hello World Agent": Agent פשוט שמקבל Task טקסטואלי ומחזיר Output.',
+            'השתמש ב-Claude API עם Tool Use — כלי אחד בלבד (e.g. search_web / read_file).',
+            'הרץ על Task אמיתי: "מצא לי 3 מחקרים חדשים על [נושא שלי]".',
+            'תעד: כמה Tokens צרך? כמה זמן לקח? מה הצליח/נכשל?',
+          ],
+          realExample: 'Andrej Karpathy (לשעבר Tesla AI): "The hottest new programming language is English." First Agent שכתב לקח לו 50 שורות Python עם Claude API. שני שבועות אחר כך — אוטמט 80% מ-Research Pipeline שלו. Entry cost: $0 מעבר לAPI key.',
+          microTask: 'כתוב: "Hello World Agent שבניתי: ___. תוצאה: ___. עלות ב-Tokens: ___. מה אוטמט: ___."',
+        },
+      ],
+    },
+    // Module 1 · Days 6–10 · Workflow Automation
+    {
+      bottomLine: 'Automation אינה החלפת עבודה — היא שחרור קיבולת. מי שאוטמט את ה-80% הנמוך — פנוי ל-20% שמשנה.',
+      days: [
+        {
+          fieldAction: [
+            'מפה את כל ה-Workflows השבועיים שלך — כמה זמן כל אחד לוקח?',
+            'Rank: ROI = זמן שחסכת × שכר שעתי שלך / זמן פיתוח.',
+            'בחר את Top 2 Workflows לאוטומציה מיידית.',
+            'כתוב Input/Output ברורים לכל אחד.',
+          ],
+          realExample: 'Sam Altman ב-2024: "In 2025, an AI agent will write 90% of the code at some companies." אבל ה-ROI מיידי: Zapier User שאוטמט Email Follow-Ups חסך 12 שעות/שבוע. ב-$100/שעה — זה $62,400/שנה ב-Productivity שחולץ.',
+          microTask: 'כתוב: "Top 2 Workflows לאוטמט: 1. ___ (זמן: ___/שבוע), 2. ___ (זמן: ___/שבוע). ROI משוער: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Workflow אוטומטי עם n8n או Make.com — ללא קוד.',
+            'Trigger: כניסת Email → AI Summarizer → Output לSlack/Notion.',
+            'הוסף שלב AI: שלח ל-Claude API לסיכום ב-3 נקודות.',
+            'הרץ על 5 Emails אמיתיים — בדוק את האיכות.',
+          ],
+          realExample: 'n8n Community: 400+ AI Workflow templates ב-2024. Case Study: Marketing Agency אוטמטה Client Reporting עם n8n + Claude — זמן יצירת דוח ירד מ-6 שעות ל-12 דקות. ROI: 97% חיסכון בזמן.',
+          microTask: 'כתוב: "Workflow שבניתי: ___. Steps: ___. תוצאה מ-5 ריצות: ___. מה שיפרתי: ___."',
+        },
+        {
+          fieldAction: [
+            'למד Error Handling ב-Workflows: מה קורה כשAPI נופל? כשInput לא תקין?',
+            'הוסף לWorkflow שלך: Retry Logic + Fallback + Alert כשנכשל.',
+            'תרגל: כבה API אחד בכוונה — מה קרה?',
+            'כתוב: "איך ה-Workflow מגיב ל-Failure?"',
+          ],
+          realExample: 'AWS Well-Architected Framework: "Design for failure." Automation בלי Error Handling היא פצצה מתקתקת. Netflix Chaos Monkey מכבה Servers בכוונה בProduction כדי לבדוק Resilience. גם Workflow קטן חייב לשרוד Edge Cases.',
+          microTask: 'כתוב: "Error שהוספתי Handling לו: ___. Fallback שהגדרתי: ___. מה קרה כשבדקתי: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "AI Content Pipeline": Blog Idea → Outline → Draft → SEO Check → Publish Draft.',
+            'כל שלב: Prompt נפרד לClaude API.',
+            'הרץ על Topic שלך — כמה זמן לקח? מה האיכות?',
+            'מצא את ה-Bottleneck — איפה לוקח הכי הרבה זמן/כסף?',
+          ],
+          realExample: 'HubSpot AI Content Pipeline: מ-Idea ל-Published Article ב-23 דקות עם 80% AI-generated + 20% Human Edit. Output עלה מ-4 ל-40 articles/חודש. Organic Traffic עלה ב-200% ב-6 חודשים.',
+          microTask: 'כתוב: "AI Content Pipeline שבניתי: Steps: ___. זמן ריצה: ___. Bottleneck: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Daily Briefing Agent": Agent שמאסף מידע מ-3 מקורות בכל בוקר ושולח סיכום.',
+            'מקורות: RSS Feed + Twitter/X + Email Inbox.',
+            'Output: WhatsApp Message / Telegram / Email — כפי שנוח לך.',
+            'הפעל ב-Schedule: 7:00 בבוקר כל יום.',
+          ],
+          realExample: 'Andrew Wilkinson (Tiny Capital): "I have an AI agent that reads my email every morning and tells me the 3 things I need to know." הוא חוסך 2 שעות ביום. ב-250 ימי עבודה — 500 שעות/שנה שחוזרות ל-Highest Leverage Work.',
+          microTask: 'כתוב: "Daily Briefing Agent שבניתי: מקורות: ___. Output: ___. מה קיבלתי בבוקר הראשון: ___."',
+        },
+      ],
+    },
+    // Module 2 · Days 11–15 · LLM Integration מתקדם
+    {
+      bottomLine: 'LLM Integration אינה "שלח prompt וקבל תשובה." זו ארכיטקטורה: Input Processing → Model Selection → Output Parsing → Quality Control.',
+      days: [
+        {
+          fieldAction: [
+            'למד Prompt Engineering מתקדם: System Prompt vs User Prompt vs Assistant Prefill.',
+            'כתוב System Prompt שמגדיר Role, Constraints, Output Format ב-100 מילים.',
+            'תרגל: אותו Task עם 3 System Prompts שונים — מדוד איכות.',
+            'שאל: "איזה System Prompt נותן Output הכי עקבי?"',
+          ],
+          realExample: 'Anthropic Internal Research: System Prompts שמגדירים "Output Format" בדיוק (JSON Schema, Numbered List, Table) מקטינים Hallucination ב-28% ומגדילים Parsability ב-67%. Format הוא Constraint — Constraint הוא Clarity.',
+          microTask: 'כתוב: "System Prompt שכתבתי: ___. 3 גרסאות ותוצאותיהן: ___. הזוכה: ___."',
+        },
+        {
+          fieldAction: [
+            'למד Chain-of-Thought Prompting: "Think step by step" vs Zero-Shot vs Few-Shot.',
+            'בחר Task מורכב — כתוב Prompt עם Few-Shot Examples (3 דוגמאות).',
+            'הרץ אותו Prompt עם ובלי Few-Shot — מדוד הבדל.',
+            'כתוב: "כמה Examples מינימום נדרשים לTask שלי?"',
+          ],
+          realExample: 'GPT-4 Technical Report: Few-Shot Learning עם 3 Examples מגיע ל-87% Accuracy על Math Problems לעומת 47% בZero-Shot. Claude 3 Opus: Similar results. "In-context Learning" הוא Algorithm בתוך ה-Transformer — לא Magic.',
+          microTask: 'כתוב: "Task שבדקתי: ___. Zero-Shot Result: ___. Few-Shot Result: ___. ההבדל: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Output Parser: LLM מחזיר טקסט — אתה צריך Structured Data.',
+            'כתוב Prompt שמחזיר JSON מוגדר היטב עם Schema ברור.',
+            'הוסף Validation: מה קורה אם LLM מחזיר JSON שבור?',
+            'תרגל: Parse Output ל-Database Row או Spreadsheet.',
+          ],
+          realExample: 'Stripe Engineering: כל AI Feature שלהם מחזיר Typed JSON — לא free text. הם כותבים Zod Schema לפני שכותבים Prompt. "If you can\'t validate the output, you can\'t ship it to production." Production-grade AI = Typed AI.',
+          microTask: 'כתוב: "JSON Schema שהגדרתי: ___. Prompt שמייצר אותו: ___. Validation שהוספתי: ___."',
+        },
+        {
+          fieldAction: [
+            'למד RAG: Retrieval-Augmented Generation — חבר LLM למסמכי הארגון שלך.',
+            'בחר 5 מסמכים (PDF, Notion, Docs) — Embed אותם עם OpenAI Embeddings / Claude.',
+            'בנה שאילתה: "מה כתוב ב[מסמך] על [נושא]?" — קבל תשובה מבוססת מסמכים.',
+            'בדוק: האם ה-LLM "ממציא" או מצטט? הוסף Source Citation.',
+          ],
+          realExample: 'Notion AI: RAG על ה-Workspace שלך. ChatPDF: 5M+ users ב-6 חודשים — כולם צריכים לחקור מסמכים. Enterprise: Morgan Stanley אוטמט Financial Analysis עם RAG על 100K+ Documents. LLM ללא RAG הוא כמו אנציקלופדיה — לא עוזר לContext הספציפי שלך.',
+          microTask: 'כתוב: "מסמכים שהכנסתי לRAG: ___. שאלה ששאלתי: ___. תשובה מבוססת מסמכים: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Evaluation Framework: כיצד אתה יודע שה-LLM Integration טוב?',
+            'הגדר 5 Test Cases עם Expected Output.',
+            'הרץ Automated Evaluation: Compare LLM Output vs Expected.',
+            'דווח: Score %, מה נכשל, למה.',
+          ],
+          realExample: 'Hamel Husain (AI Researcher): "Evals are the most important thing you can build for an AI product." Anthropic מריצה מיליוני Eval Tests לפני כל Model Release. אתה לא יכול לשפר מה שאתה לא מודד.',
+          microTask: 'כתוב: "5 Test Cases שלי: ___. Score שקיבלתי: ___/5. מה נכשל: ___. תיקון: ___."',
+        },
+      ],
+    },
+    // Module 3 · Days 16–20 · Multi-Agent Systems
+    {
+      bottomLine: 'Agentic מערכות מרובות Agents כוחניות פי עשר ממה שAgent בודד יכול. הסוד: Specialization + Orchestration.',
+      days: [
+        {
+          fieldAction: [
+            'הגדר: מה ההבדל בין Single Agent לMulti-Agent System?',
+            'תאר Use Case שבו Multi-Agent עדיף — מצא 2 שניתן לבנות השבוע.',
+            'זהה: אילו Agents ייפעלו במקביל? אילו בסדרה?',
+            'כתוב Diagram: Agent A → [B, C במקביל] → D → Output.',
+          ],
+          realExample: 'Microsoft AutoGen: Framework לMulti-Agent Conversations שמאפשר לAgents "לדון" ביניהם. Case Study: Legal Research עם 3 Agents (Researcher, Critic, Summarizer) הגיע לAcuuracy גבוה ב-41% מAgent בודד.',
+          microTask: 'כתוב: "Multi-Agent System שתכננתי: ___. Agents: ___. Flow: ___. מה ה-Specialization של כל אחד: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Orchestrator Agent: Agent שמחלק Tasks לSub-Agents.',
+            'הגדר: Orchestrator מקבל Task גדול → מפרק → שולח לSubAgents → מרכז תוצאות.',
+            'Implement עם Claude API: Orchestrator Prompt שמייצר Task List.',
+            'הרץ על Task אמיתי: "כתוב דוח על שוק ה-AI ב-Israel."',
+          ],
+          realExample: 'LangGraph (LangChain): Orchestration Framework שמאפשר State Machine לAgents. Startup שבנה Competitive Intelligence System עם Orchestrator + 5 Sub-Agents (Market, Pricing, Tech, Social, Regulatory) — מחליף 3 Analysts.',
+          microTask: 'כתוב: "Orchestrator Prompt שלי: ___. Sub-Agents שיצר: ___. תוצאה הסופית: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Critic Agent: Agent שבודק את Output של Agent אחר ומחזיר Feedback.',
+            'Prompt: "Review the following output. Find factual errors, logical gaps, missing information."',
+            'הרץ: Generator Agent → Critic Agent → Revised Output.',
+            'מדוד: האם ה-Revision טובה יותר מהOriginal?',
+          ],
+          realExample: 'Constitutional AI (Anthropic): Claude מאומן לביקורת עצמית — Critic בתוך ה-Model. LLM ביקורת חיצונית: Reflexion Paper (MIT/Google): Agents עם "Self-Reflection Loop" שיפרו Task Success ב-22% ב-Coding Tasks.',
+          microTask: 'כתוב: "Critic Agent Prompt שלי: ___. Original Output: ___. Revised Output: ___. מה השתנה: ___."',
+        },
+        {
+          fieldAction: [
+            'הוסף Human-in-the-Loop: קבע מתי Agent עוצר וממתין לאישור אנושי.',
+            'הגדר "Confidence Threshold": אם LLM לא בטוח — הוא שולח לBoss לאישור.',
+            'Implement: Output JSON שכולל "confidence": 0-1 ו"requires_approval": bool.',
+            'בדוק: האם הה-Agent יודע מתי לעצור?',
+          ],
+          realExample: 'GitHub Copilot Enterprise: כל Commit שה-Agent מציע עובר Code Review אנושי. Palantir AIP: "Human-in-the-Loop" הוא Feature לא Bug — הם מוכרים את זה לDefense Customers כGuarantee שAI לא פועל לבד על משימות קריטיות.',
+          microTask: 'כתוב: "Confidence Threshold שהגדרתי: ___. Task שה-Agent עצר עליו: ___. מה אישרתי/דחיתי: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Research Team" System: 3 Agents שעובדים יחד.',
+            'Agent 1: Web Researcher — מאסף מידע.',
+            'Agent 2: Analyst — מנתח ומסיק מסקנות.',
+            'Agent 3: Writer — כותב דוח מסודר.',
+            'הרץ על Topic שחשוב לעסק שלך.',
+          ],
+          realExample: 'Perplexity AI: מהות המוצר היא Multi-Agent Research: Query Planner + Web Search + Source Validator + Answer Synthesizer. $500M Valuation ב-2024 — כל זה על ארכיטקטורה שניתן לבנות ב-500 שורות Python.',
+          microTask: 'כתוב: "Research Team שבניתי — Topic: ___. Agent 1 מצא: ___. Agent 2 ניתח: ___. Agent 3 כתב: ___."',
+        },
+      ],
+    },
+    // Module 4 · Days 21–25 · AI Business Strategy
+    {
+      bottomLine: 'AI אינו יתרון תחרותי — הוא Hygiene. מי שלא מאמץ AI היום — יהיה Irrelevant מחר. המוקדמים בונים את ה-Moat.',
+      days: [
+        {
+          fieldAction: [
+            'מפה: "AI Readiness" של הארגון/עסק שלך — 1-10 בכל ממד.',
+            'ממדים: Data Quality, Technical Talent, Process Maturity, Budget, Culture.',
+            'זהה: מה ה-Bottleneck שמונע מאימוץ AI מהיר?',
+            'כתוב: "3 Quick Wins שאפשר לעשות ב-30 יום."',
+          ],
+          realExample: 'McKinsey Global AI Survey 2024: חברות שהשיגו "AI Scaling" (לא רק Pilot) הציגו EBITDA גבוה ב-6% ממתחרים. ה-Bottleneck 1: Data Silos (47%). ה-Bottleneck 2: Talent Gap (38%). ה-Bottleneck 3: Culture Fear (31%).',
+          microTask: 'כתוב: "AI Readiness Score שלי: ___/10. Bottleneck: ___. 3 Quick Wins: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "AI Cost/Benefit Model" לPotential Use Case שלך.',
+            'עמודה 1: עלות יישום (פיתוח, API, Hosting).',
+            'עמודה 2: ערך (שעות שחסכו × שכר, Revenue שנוסף, Errors שנמנעו).',
+            'חשב: Break-even Month. ROI ב-12 חודשים.',
+          ],
+          realExample: 'Goldman Sachs Internal Memo 2024: AI Tools להם עולים $300M/שנה — מחסכים $900M ב-Productivity (3× ROI). Small Business: Florist שהוסיפה AI Chatbot — $200/חודש, חסכה 15 שעות שבועיות של Inquiry Handling = $1,500/חודש Equivalent.',
+          microTask: 'כתוב: "Use Case לBusiness שלי: ___. עלות: ___. ערך: ___. ROI ב-12 חודשים: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר "AI Moat" — מה יקשה על המתחרים להעתיק את ה-AI שלך?',
+            'Moats: Proprietary Data, Fine-tuned Model, Unique Integration, Network Effect.',
+            'כתוב: "ה-AI Moat שאני בונה: ___"',
+            'שאל: "אם מתחרה קנה את אותהAPI שלי — האם הוא מחקה אותי?"',
+          ],
+          realExample: 'Salesforce Einstein: Moat = 150,000 Enterprise Customers × Data שנאסף עשורים. הם לא "better AI" מOpenAI — הם AI + Data + Distribution. Harvey AI (Legal): Moat = case law training data שאחרים לא יכולים לגשת. Data Moat > Model Moat.',
+          microTask: 'כתוב: "AI Moat שלי: ___. מה הופך אותו ל-Defensible: ___. מה עוד צריך לבנות: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה AI Roadmap ל-6 חודשים: Month 1-2, Month 3-4, Month 5-6.',
+            'כל Phase: מה בונה, מה מודד, מה מגדיר הצלחה.',
+            'הגדר: מי אחראי? אילו משאבים נדרשים? אילו Risks?',
+            'שתף עם שותף/מנטור — קבל Feedback.',
+          ],
+          realExample: 'Shopify AI Roadmap 2023-2024: Phase 1 — AI Product Descriptions (Quick Win), Phase 2 — AI Customer Service (Scale), Phase 3 — AI Inventory Prediction (Strategic). כל Phase מימן את הבא. MRR עלה 27% ב-2024 — AI הוא Key Driver.',
+          microTask: 'כתוב: "AI Roadmap שלי: Month 1-2=___, Month 3-4=___, Month 5-6=___. KPI הצלחה: ___."',
+        },
+        {
+          fieldAction: [
+            'הכן "AI Ethics & Risk" Framework לעסק שלך.',
+            'שאלות לבדיקה: האם AI שלי מגלה Bias? פוגע בPrivacy? ניתן לHack?',
+            'כתוב: 3 Red Lines שה-AI שלך לא יחצה.',
+            'הוסף Human Override לכל Decision שיש לה השלכות משמעותיות.',
+          ],
+          realExample: 'EU AI Act 2024: חברות שלא מיישמות AI Risk Management — קנסות עד 7% ממחזור גלובלי. IBM AI Ethics Board: הם פרסמו "AI Principles" שמבדלים אותם מGoogle/OpenAI. Responsible AI הוא גם PR Asset.',
+          microTask: 'כתוב: "3 Red Lines של AI שלי: 1. ___ 2. ___ 3. ___. Human Override שהגדרתי: ___."',
+        },
+      ],
+    },
+    // Module 5 · Days 26–30 · בניית AI Products
+    {
+      bottomLine: 'AI Product אינו Feature — הוא מנוע צמיחה. הבדל בין AI Wrapper (ידוע כ-Toy) לAI Native Product (ידוע כ-Business).',
+      days: [
+        {
+          fieldAction: [
+            'הגדר את ה-AI Product שתבנה: מה הבעיה? מי המשתמש? מה ה-Core AI Action?',
+            'כתוב: "ה-Product שלי עוזר ל[מי] ל[מה] — AI עושה [X] שבני אדם עשו [Y]."',
+            'בדוק: "האם זה AI Wrapper (Thin) או AI Native (Deep)?" — מה ההבדל בשבילך?',
+            'שרטט: User Flow פשוט — 5 Steps מהInput לOutput.',
+          ],
+          realExample: 'Notion AI: AI Native — ה-AI מאורגן בתוך Structure של Workspace, לא add-on. Gamma.app: AI Native — ה-Presentation Structure מוצעת ע"י AI, לא מתווספת עליה. Canva AI: AI Feature on Non-AI Platform — פחות Defensible.',
+          microTask: 'כתוב: "AI Product שלי: ___. Core AI Action: ___. AI Native או Wrapper: ___. User Flow: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה MVP בClaude API: רק מה שנדרש להוכחת Concept.',
+            'MVP = One Core AI Action + Minimal UI (CLI / Simple Form / Streamlit).',
+            'הרץ על 5 Real Users (לא חברים שיגידו "מגניב").',
+            'מדוד: Task Completion Rate, Time to Value, NPS.',
+          ],
+          realExample: 'Midjourney v1: Discord Bot בלבד. לא App, לא Website, לא Onboarding. רק Command + Image. בחודש הראשון: 30,000 Users. MVP שמוכיח Value מהיר גורר Waitlist — לא Feature List.',
+          microTask: 'כתוב: "MVP שבניתי: ___. 5 Users שבדקו: ___. Task Completion: ___%. Time to Value: ___. NPS: ___."',
+        },
+        {
+          fieldAction: [
+            'למד AI UX Principles: כיצד לעצב חוויה שמרגישה "Magic" לא "Error-prone".',
+            'עיקרון 1: הראה ל-User מה AI עושה (Streaming/Progress).',
+            'עיקרון 2: תמיד תן Edit/Override — לא Autocomplete בלבד.',
+            'עיקרון 3: כשAI לא בטוח — אמור זאת. "I\'m not sure — here are 3 options."',
+          ],
+          realExample: 'GitHub Copilot UX Research: Users שראו "Thinking..." animation השתמשו בFeature ב-34% יותר מאשר שקיבלו Output מיידי. הTransparency מוסיפה Trust. Cursor IDE: "Accept / Reject / Edit" על כל הצעת Code — Adoption עלה כי Control נשאר בידי המשתמש.',
+          microTask: 'כתוב: "AI UX Pattern שיישמתי: ___. שינוי שהוספתי: ___. תגובת User: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר Monetization Model: Pay-per-Use / Subscription / Freemium / Enterprise.',
+            'חשב Unit Economics: עלות API לUser × Users = COGS. Revenue per User. Margin.',
+            'שאל: "באיזה מחיר ה-Unit Economics מחזיקים?"',
+            'הכן Pricing Page — אפילו לMVP.',
+          ],
+          realExample: 'Jasper AI: $49/חודש Subscription. API Cost: ~$3/חודש per Active User. Margin: ~94%. ElevenLabs: Pay-per-Character. Scales with Value — Power Users משלמים יותר. הMagic: AI Marginal Cost ≈ $0 — כל User נוסף הוא Nearly Pure Profit.',
+          microTask: 'כתוב: "Monetization שבחרתי: ___. Unit Economics: API Cost=___, Revenue=___, Margin=___. מחיר שקבעתי: ___."',
+        },
+        {
+          fieldAction: [
+            'Iteration Sprint: בחר את ה-Feedback הכי חשוב מהMVP — יישם שיפור אחד.',
+            'מדוד: האם ה-KPI הרלוונטי עלה?',
+            'כתוב: "AI Pioneer Manifesto" שלך — מה אתה בונה ולמה?',
+            'שתף ב-Twitter/LinkedIn — Build in Public. זה הMarketing הכי זול.',
+          ],
+          realExample: 'Pieter Levels (Nomad List, PhotoAI): בנה 12 Startups ב-12 חודשים — Build in Public. PhotoAI: $100K MRR ב-6 חודשים. כל Tweet על Progress הביא Users חדשים. "Your Build Log is your Marketing Strategy."',
+          microTask: 'כתוב: "שיפור שיישמתי: ___. KPI לפני: ___ אחרי: ___. AI Pioneer Manifesto שלי: ___."',
+        },
+      ],
+    },
+  ], // end ai-pioneer
+
+  'business-soul': [
+    // Module 0 · Days 1–5 · זהות מותג ו-WHY
+    {
+      bottomLine: 'מותג ללא Soul הוא פרסום. מותג עם Soul הוא תנועה. האנשים לא קונים מה שאתה עושה — הם קונים למה אתה עושה זאת.',
+      days: [
+        {
+          fieldAction: [
+            'כתוב את ה-WHY של העסק שלך — לא מה שאתה מוכר, אלא למה זה קיים.',
+            'פורמט: "אנחנו מאמינים ש[אמונה]. לכן אנחנו [פעולה]. כדי ש[תוצאה לעולם]."',
+            'קרא את זה בקול — האם זה מרגיש אמיתי? האם זה גורם לך לסבול טוב?',
+            'שאל 3 אנשים שמכירים אותך: "האם זה אני?"',
+          ],
+          realExample: 'Simon Sinek "Start With Why": Apple WHY — "אנחנו מאמינים באתגר את הסטטוס קוו." לא "אנחנו מוכרים מחשבים." Tesla WHY — "להאיץ את המעבר לאנרגיה בת-קיימא." לא "אנחנו מוכרים מכוניות חשמליות." ה-WHY מוכר. ה-WHAT הוא רק ראיה.',
+          microTask: 'כתוב: "WHY שלי: אנחנו מאמינים ש___. לכן אנחנו ___. כדי ש___. האם זה אמיתי: ___."',
+        },
+        {
+          fieldAction: [
+            'מצא את ה-Origin Story של המותג: מה הרגע שגרם לך להתחיל?',
+            'כתוב אותו ב-150 מילים: רגע של כאב/תסכול/הארה → מה שינה → מה נולד.',
+            'Origin Story הוא לא "ישבתי ועשיתי עסק" — הוא רגע אנושי שמחבר.',
+            'שתף אותו ב-רשת חברתית אחת — שים לב לתגובות.',
+          ],
+          realExample: 'Patagonia Origin Story: Yvon Chouinard, מטפס הרים, ראה שציפורני טיפוס מזיקים לסלעים ועבר ל-Aluminum Chocks. "נולד מאהבה לטבע, לא מרצון לעשות כסף." $1.5B Revenue — כי הSoul אמיתי. לקוחות מרגישים זאת.',
+          microTask: 'כתוב: "Origin Story שלי (150 מילים): ___. תגובת אנשים כשקראו: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר Brand Archetypes: מהו ה"אופי" של המותג שלך?',
+            'Archetypes: Hero, Rebel, Sage, Caregiver, Creator, Explorer, Innocent, Ruler, Jester, Lover, Everyman, Magician.',
+            'בחר Primary + Secondary Archetype.',
+            'כתוב: "כיצד ה-Archetype מתבטא בTone, Visual, Community שלי?"',
+          ],
+          realExample: 'Nike: Hero Archetype — "Just Do It." Overcome obstacles. Dove: Caregiver + Everyman — "Real Beauty." Harley-Davidson: Rebel + Explorer — "Freedom Machine." ה-Archetype מגדיר הכל: מי הפנים של המותג, איך הוא מדבר, מי מרגיש שייך.',
+          microTask: 'כתוב: "Primary Archetype שלי: ___. Secondary: ___. כיצד מתבטא: ___."',
+        },
+        {
+          fieldAction: [
+            'כתוב Brand Values — 3-5 ערכים שה-Business שלך לא יפר גם במחיר הכסף.',
+            'לכל ערך: כתוב "כיצד זה מתבטא בהחלטה קשה?"',
+            'דוגמה: "Transparency — גם כשהחדשות רעות, אנחנו אומרים אותן."',
+            'שאל: "האם יש החלטה שעשיתי שסתרה ערך זה?"',
+          ],
+          realExample: 'Basecamp Values: "Calm is the product." הם סיימו VC Funding, לא עשו Overtime Culture, חזרו On-prem data. הRejection של Hyper-Growth הוא Value Embodiment — לא Weakness. הם $100M+ מ-Revenue מעסק 50-איש.',
+          microTask: 'כתוב: "3-5 Brand Values שלי: ___. ערך שנבחן בהחלטה קשה: ___. מה עשיתי: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר Brand Personality: 5 תכונות אנושיות שאם המותג היה אדם — מה היה אומרים עליו?',
+            'כתוב: "המותג שלי הוא _____ (תכונה) כמו _____ (דוגמה אנושית)."',
+            'בדוק: האם הContent שלך, ה-Tone, ה-Design — משקפים את הPersonality?',
+            'אם לא — רשום: "מה צריך לשנות?"',
+          ],
+          realExample: 'MailChimp Brand Personality: Friendly, Playful, Irreverent, Honest, Empathetic. הם בחרו Personality שהפוכה לIBM-Style Enterprise — ו"בעלו" את ה-SMB Market. Brand Personality הוא Filter לכל החלטה קיומית.',
+          microTask: 'כתוב: "5 תכונות Personality של המותג: ___. תכונה שהכי מתבטאת: ___. מה לשפר: ___."',
+        },
+      ],
+    },
+    // Module 1 · Days 6–10 · ערכים, תרבות, ואנשים
+    {
+      bottomLine: 'Culture הוא מה שקורה כשהמנהל לא בחדר. ערכים שלא מתממשים בהחלטות יומיומיות — הם קישוט קיר, לא מצפן.',
+      days: [
+        {
+          fieldAction: [
+            'כתוב "Culture Code" — 1-2 עמודות שמסבירות איך עובדים אצלך.',
+            'כלול: כיצד מקבלים החלטות, כיצד מטפלים בכישלונות, מה מוערך, מה לא מקובל.',
+            'שאל אחד שעובד איתך: "האם המסמך הזה נכון?"',
+            'שנה כל מה שלא תואם למציאות.',
+          ],
+          realExample: 'Netflix Culture Deck (Reed Hastings, 2009): 125 Slides שפורסמו לציבור. Sheryl Sandberg: "הMost Important Document from Silicon Valley." נצפה 20M+. Netflix אמרה: "Adequate Performance Gets Severance." קשה? כן. אמיתי? כן. ה-Culture הזה בנה $250B Company.',
+          microTask: 'כתוב: "Culture Code שלי: ___. מה שה-Team חושב שחסר: ___. תיקון שהוספתי: ___."',
+        },
+        {
+          fieldAction: [
+            'בדוק: "Values-to-Decisions Alignment" — האם ה-3 החלטות האחרונות שלך תואמות לValues?',
+            'כתוב כל החלטה → Value שהיה אמור להנחות → מה עשית בפועל.',
+            'אם יש Misalignment — שאל: "למה ויתרתי על הValue?"',
+            'כתוב: "איך הייתי מחליט אחרת אם ה-Value היה מנחה אותי?"',
+          ],
+          realExample: 'Patagonia: "Don\'t Buy This Jacket" Ad בBlack Friday — נגד כל Business Logic. Result: מכירות עלו ב-30%. כי הLoyalty שנוצרת מIntegrity גדולה יותר מHype Marketing. Values שנחלשים ברגע של Pressure — אינם Values. הם Preferences.',
+          microTask: 'כתוב: "חלטה שנוגדת Value: ___. Value שויתרתי עליו: ___. כיצד הייתי מחליט אחרת: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר Hiring Criteria מבוסס Values — לא רק Skills.',
+            'כתוב 3 Interview Questions שמגלות אם מועמד מתאים לCulture.',
+            'כלול: "ספר על פעם שמישהו ביקש ממך לעשות משהו שעמד בניגוד לעקרונות שלך — מה עשית?"',
+            'בדוק: האם שאלות אלה חלק מה-Hiring Process הנוכחי?',
+          ],
+          realExample: 'Zappos: 10% מה-Offer Letter הוא "Culture Fit Bonus" — $2,000 אם עוזב בשבועיים הראשונים. הם בודקים אם המועמד באמת רוצה להיות שם. 97% בוחרים להישאר. ה-Retention הוא Record Industry. Culture Fit Test עלה $2,000 — חסך $200,000 ב-Wrong Hire.',
+          microTask: 'כתוב: "3 Interview Questions שלי: ___. Culture Red Flag שאני מחפש: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Onboarding שמנחיל Culture — לא רק Operations.',
+            'כלול: Session על ה-WHY, Session על Values in Action, Meet the Founders.',
+            'תן לNew Hire "Culture Buddy" — מישהו שמסביר "איך עובדים כאן."',
+            'אחרי 30 יום — שאל: "מה הפתיע אותך בCulture?"',
+          ],
+          realExample: 'Airbnb Onboarding: שבוע ראשון — ללא Laptop. כולם מארחים את ה-Core Experience: נוסעים, מתארחים, מדברים עם Hosts. Brian Chesky: "You can\'t understand Airbnb if you haven\'t felt Airbnb." ה-Soul של המוצר נחווה לפני שמדליקים מחשב.',
+          microTask: 'כתוב: "Onboarding שלי — Culture Session: ___. Culture Buddy: ___. מה New Hire יגלה ביום 30: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר "Culture Killers" — מה יהרוג את הCulture אם לא תטפל בו?',
+            'רשים: 3 Behaviors שאם יתרחשו בלי תגובה — הם הופכים לNorm.',
+            'כתוב: "כיצד אני מגיב כשאני רואה Culture Killer?"',
+            'תרגל: אמור דברים בזמן — לא 6 חודשים אחר כך.',
+          ],
+          realExample: 'Reed Hastings ב-Netflix: "The Keeper Test — Would I fight to keep this person?" אם לא — הם יוצאים. Netflix לא מחכה. Culture Rot מתחיל כשמנהל שומע דבר שמנוגד לValues ושותק. שתיקה = הסכמה.',
+          microTask: 'כתוב: "Culture Killer שראיתי: ___. כיצד הגבתי: ___. מה הייתי עושה אחרת: ___."',
+        },
+      ],
+    },
+    // Module 2 · Days 11–15 · מיצוב ויתרון תחרותי
+    {
+      bottomLine: 'Positioning אינה "מה אתה" — היא "מה אתה בראש הלקוח." מי שמגדיר את הCategory — מנצח אוטומטית.',
+      days: [
+        {
+          fieldAction: [
+            'כתוב את הPositioning Statement: "למי [Segment], שצריך [Need], ה-[Brand] מספק [Benefit], בניגוד ל[Alternative]."',
+            'תרגל: שנה כל משתנה ובדוק מה משתנה בSentence.',
+            'שאל לקוח: "כשאתה חושב עלינו — מה הדבר הראשון שעולה לך?"',
+            'כתוב: "האם מה שהוא אמר תואם לPositioning שרצינו?"',
+          ],
+          realExample: 'Volvo Positioning: "Safety" — 1950s עד היום. לא "Luxury", לא "Speed", לא "Design." רק Safety. כתוצאה: משפחות בוחרות Volvo בלי לבדוק אלטרנטיבות. Category Ownership > Feature Comparison.',
+          microTask: 'כתוב: "Positioning Statement שלי: למי ___, שצריך ___, ה-Brand שלי מספק ___, בניגוד ל___."',
+        },
+        {
+          fieldAction: [
+            'מפה את ה-Competitive Landscape: ציר X = ערך אחד, ציר Y = ערך שני.',
+            'שים את המתחרים וה-Brand שלך על המפה.',
+            'שאל: "האם יש White Space — מקום שאף אחד לא תופס?"',
+            'שאל: "האם ה-Position שלי נראה מובחן מהמתחרים?"',
+          ],
+          realExample: 'Southwest Airlines Positioning Map: מחיר נמוך + חווית לקוח גבוהה = White Space שהיה ריק. כולם בחרו: Low Price + Low Service OR High Price + High Service. Southwest ראתה שאפשר לקצץ עלויות (אין Meal, אין First Class) מבלי לפגוע בservice. $50B Market Cap.',
+          microTask: 'כתוב: "Competitive Map שלי: X=___, Y=___. White Space שמצאתי: ___. ה-Position שלי: ___."',
+        },
+        {
+          fieldAction: [
+            'זהה את ה-Category שאתה רוצה לקבוע (לא להצטרף).',
+            'Category Creation: "אנחנו לא פלטפורמת Email Marketing — אנחנו Customer Journey Platform."',
+            'כתוב את ה-Category שאתה רוצה שיחשבו עליך כש-Category Leader.',
+            'שאל: "מה צריך להיות אמיתי כדי שהשוק יאמץ את ה-Category הזה?"',
+          ],
+          realExample: 'HubSpot יצרה "Inbound Marketing" Category — לא הצטרפה ל-"Email Software." כתבו ספר, הוציאו Certification, בנו Conference (INBOUND). כשמישהו חפש "Inbound Marketing" — הם היו התשובה. Category Creator = Category King.',
+          microTask: 'כתוב: "Category שאני יוצר: ___. מדוע לקוחות יאמצו אותו: ___. מה עלי לבנות כ-Evidence: ___."',
+        },
+        {
+          fieldAction: [
+            'הגדר את ה-Moat שמגן על הPosition שלך מפני מתחרים.',
+            'Moats: Brand Loyalty, Network Effects, Cost Advantages, Switching Costs, Unique IP.',
+            'כתוב: "ה-Moat שלי: ___. כמה קשה לשכפל: 1-10."',
+            'כתוב: "כיצד אני מעמיק את ה-Moat מדי שנה?"',
+          ],
+          realExample: 'Warren Buffett: "Moat is what separates a great business from a mediocre one." Coca-Cola Moat: Brand (150 שנה), Distribution (200 מדינות), Formula Secret. Google Moat: Network Effect (כל User מוסיף Data שמשפרת Results). קשה לשכפל = Premium Pricing לנצח.',
+          microTask: 'כתוב: "Moat שלי: ___. Difficulty Score: ___/10. כיצד אני מעמיק אותו: ___."',
+        },
+        {
+          fieldAction: [
+            'כתוב "Positioning Manifesto" — מסמך חיצוני שמסביר מדוע הPosition שלך קיים.',
+            'לא Pitch — הצהרת אמונה. "אנחנו מאמינים שהעולם צריך ___."',
+            'פרסם אותו: Website, LinkedIn, Press Release.',
+            'שאל: "מי מסכים? מי לא מסכים?" — שניהם חשובים.',
+          ],
+          realExample: 'Basecamp "Shape Up" Manifesto: פרסמו ספר חינמי שמסביר את Process שלהם. 500,000 קוראים — כולם Potential Customers. הManifesto הפך להיות Marketing. "Teach what you know" הוא Positioning Strategy.',
+          microTask: 'כתוב: "Positioning Manifesto שלי (100 מילים): ___. Audience שיסכים: ___. Audience שלא יסכים: ___."',
+        },
+      ],
+    },
+    // Module 3 · Days 16–20 · סיפור המותג וקולו
+    {
+      bottomLine: 'אנשים לא זוכרים עובדות — הם זוכרים סיפורים. מותג שמספר סיפור אמיתי מחבר לב, לא רק ראש.',
+      days: [
+        {
+          fieldAction: [
+            'בנה את "Brand Story Arc" בפורמט: Before World → Catalyst → Journey → After World.',
+            'Before: "לפני שהמותג קיים — מה העולם חסר/סובל?"',
+            'Catalyst: "מה קרה שגרם להקמה?"',
+            'After: "כיצד נראה העולם כשהMission הצליח?"',
+            'כתוב Draft — 200 מילים.',
+          ],
+          realExample: 'Warby Parker Origin Story: 4 Friends in Business School. Founder איבד משקפיים — Replacement עלה $700. "That\'s insane." → Direct-to-Consumer Model → $1.75B IPO. הStory הוא ריאלי, הגיוני, מחבר לפחד שכולם מכירים.',
+          microTask: 'כתוב: "Brand Story Arc שלי: Before=___, Catalyst=___, Journey=___, After=___."',
+        },
+        {
+          fieldAction: [
+            'הגדר Brand Voice: 4 Attributes שמתארים את הטון שלך.',
+            'לכל Attribute: "זה כן" vs "זה לא" — 2 דוגמאות כל אחד.',
+            'בדוק: שלח Email לאחר ובדוק אם הVoice עולה בקנה אחד עם ה-Attributes.',
+            'רשום: "מה צריך לשנות ב-Copy?"',
+          ],
+          realExample: 'Mailchimp Voice: "Funny, not silly. Smart, not academic. Confident, not arrogant. Helpful, not paternal." הם כתבו Voice & Tone Guide שנהפך לציבורי — מאות חברות אחרות השתמשו בו כTemplate. Voice Guide = Brand DNA בכתב.',
+          microTask: 'כתוב: "4 Brand Voice Attributes שלי: ___. "זה כן" vs "זה לא" לכל אחד: ___."',
+        },
+        {
+          fieldAction: [
+            'כתוב "Customer Story" — סיפור של לקוח שחווה Transformation בזכות המוצר/שירות שלך.',
+            'פורמט: Before (מה הכאב?), During (מה קרה בתהליך?), After (מה השתנה בחייו?).',
+            'פרסם אותו (Case Study, Post, Video) — עם רשות הלקוח.',
+            'שאל: "מה עוד לא סיפרתי שחשוב?"',
+          ],
+          realExample: 'Peloton Customer Stories: לא "Lost 30 lbs." — "השבתי את הבטחה לעצמי אחרי 10 שנים." Apple Shot on iPhone: לא Spec — חוויית אנשים שרגע חיים שלהם הוחד. Customer = Hero. מותג = Enabler.',
+          microTask: 'כתוב: "Customer Story: Before=___, During=___, After=___. מה הפחד שהתגבר: ___."',
+        },
+        {
+          fieldAction: [
+            'למד את "7 Story Structures" — בחר אחד לBrand שלך:',
+            '1. Hero\'s Journey, 2. Rags to Riches, 3. The Quest, 4. Voyage and Return, 5. Comedy, 6. Tragedy (Warning), 7. Rebirth.',
+            'כתוב: "ה-Structure שהכי מתאים לMission שלי הוא: ___ כי ___."',
+            'כתוב 3 Stories שמשתמשות בStructure זה.',
+          ],
+          realExample: 'Nike = Hero\'s Journey: Athlete faces obstacle → finds inner strength → overcomes. לא "נעל עם Air Cushion" — "אתה יכול לגבור על כל מכשול." Disney = Rebirth: Characters who transform into better versions. כל Brand שיצר Cult Following השתמש ב-Universal Story Structure.',
+          microTask: 'כתוב: "Story Structure שבחרתי: ___. כיצד זה מתאים לMission שלי: ___. Story אחת בStructure זה: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Content Calendar שמבוסס על Brand Stories — לא רק מידע.',
+            'כלול: 40% Educational, 30% Inspirational Stories, 20% Behind-the-Scenes, 10% Promotional.',
+            'כתוב 4 Post Titles לשבוע הבא — אחד לכל קטגוריה.',
+            'שים לב: האם יש Post שמרגיש "Generic"? החלף בStory.',
+          ],
+          realExample: 'Gary Vaynerchuk Content Strategy: "Document, don\'t create." הוא מצלם את עצמו עובד — לא יוצר תוכן. ה-Behind-the-Scenes הופך לContent. התוצאה: 40M+ Followers, $200M Business. "Show the work" > "Sell the work."',
+          microTask: 'כתוב: "4 Post Titles לשבוע הבא: Educational=___, Inspirational=___, Behind-the-Scenes=___, Promotional=___."',
+        },
+      ],
+    },
+    // Module 4 · Days 21–25 · בניית קהילה
+    {
+      bottomLine: 'Audience מקשיבה. Community פועלת. הבדל: Audience צורכת Content — Community מייצרת ערך לחברים אחרים.',
+      days: [
+        {
+          fieldAction: [
+            'הגדר: "למה אנשים יצטרפו לקהילה שלי?" — לא "כי המוצר טוב."',
+            'Community Value: Shared Identity, Shared Problem, Shared Goal, Shared Rituals.',
+            'כתוב: "הדבר שחברי קהילה שלי יגידו לחבר שאינו חבר: \'אתה חייב להכיר את ___.\'"',
+            'בנה: מה ה-Transformation שהחבר עובר בתוך הקהילה?',
+          ],
+          realExample: 'Peloton: לא Fitness App — Community. "The Peloton Tribe." Members קוראים אחד לשני בשמות, מציינים Milestones, יש Leaderboard. Retention: 95%. השוק הכי קשה לשבור. Peloton ייצר $4B Revenue כי Community > Product.',
+          microTask: 'כתוב: "Why לקהילה שלי: ___. Shared [Identity/Problem/Goal]: ___. Transformation שחבר עובר: ___."',
+        },
+        {
+          fieldAction: [
+            'צור Community Rituals — פעולות חוזרות שמחברות חברים.',
+            'Rituals: Weekly Call, Monthly Challenge, Annual Summit, Shared Hashtag, Milestone Celebration.',
+            'בחר 2 Rituals להתחיל — קטן ועקבי עדיף על גדול ומתנדף.',
+            'הגדר: מי אחראי לRitual? מה הSchedule? מה ה-Format?',
+          ],
+          realExample: '"Friday Night Funnel" — Russell Brunson ב-ClickFunnels: Weekly Live קבוע. Community חיכתה לו כמו לתוכנית. Consistent Ritual יצר 100,000 Members שהפכו להיות Advocates. Ritual > Campaign.',
+          microTask: 'כתוב: "2 Rituals שהגדרתי: 1. ___ (מתי: ___, מי אחראי: ___), 2. ___ (מתי: ___, מי אחראי: ___)."',
+        },
+        {
+          fieldAction: [
+            'מצא ה-"Super Members": 5% מהחברים שמייצרים 50% מהValue.',
+            'תן להם Role, Recognition, Access — הם ה-Engine של הקהילה.',
+            'שאל: "מה הם רוצים שאין להם עכשיו?"',
+            'תן להם את זה — ולא לשאר. Exclusivity Creates Aspiration.',
+          ],
+          realExample: 'Reddit Moderators: Volunteers שמנהלים 1.5B Users בחינם כי Reddit נתן להם Power, Recognition, Control. Twitch Subscribers: Top 1% של Streamers מקבלים Partnership — Access, Revenue Share, Tools. הSuperMembers הם ה-Infrastructure.',
+          microTask: 'כתוב: "Super Members שזיהיתי: ___. מה נתתי להם: ___. מה הם רוצים: ___. מה אוסיף: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Community Loop": Attract → Engage → Retain → Evangelize → Back to Attract.',
+            'כל שלב — כתוב מה עושים בהצלחה ומה עושים כשנכשל.',
+            'Attract: Content. Engage: Community. Retain: Value. Evangelize: Recognition.',
+            'מדוד: NPS של החברים הנוכחיים.',
+          ],
+          realExample: 'Duolingo Community Loop: Attract (Viral Owl Memes) → Engage (Streaks, Leaderboards) → Retain (Leagues, Friends) → Evangelize (Streak Shares on Social). 574M Users. הLoop כל כך חזק שה-Retention עצמו הוא Marketing.',
+          microTask: 'כתוב: "Community Loop שלי: Attract=___, Engage=___, Retain=___, Evangelize=___. NPS נוכחי: ___."',
+        },
+        {
+          fieldAction: [
+            'ערוך "Community Health Check": האם הקהילה חיה?',
+            'Metrics: DAU/MAU Ratio, Posts per Week, Reply Rate, Event Attendance.',
+            'זהה: מה הSilent Majority שלא מדברת? מדוע?',
+            'שלח Survey קצר (3 שאלות) — מה ה-#1 דבר שיגרום לך לדבר יותר?',
+          ],
+          realExample: 'Discord Server Health: DAU/MAU מעל 20% = Healthy Community. מתחת ל-5% = Dead Community. Stripe Developer Community: NPS 72, DAU/MAU 35%. הם משקיעים $5M/שנה בCommunity — Return: $200M+ מPeer Referrals.',
+          microTask: 'כתוב: "Community Health Check שלי: DAU/MAU=___, Posts/week=___. Silent Majority — מדוע שותקים: ___. תגובת Survey: ___."',
+        },
+      ],
+    },
+    // Module 5 · Days 26–30 · מחסום לטווח ארוך
+    {
+      bottomLine: 'Moat לטווח ארוך אינו Feature — הוא Trust שנצבר ואי-אפשר לרכוש בכסף. אמון מבנה עם כל אינטראקציה אמיתית.',
+      days: [
+        {
+          fieldAction: [
+            'מדוד Brand Trust: שאל 10 לקוחות — "עד כמה אתה סומך עלינו? 1-10."',
+            'שאל: "מה ירד את האמון? מה הוסיף?"',
+            'כתוב: "Top 3 Trust Builders שלנו."',
+            'כתוב: "Top 3 Trust Killers שאנחנו עדיין עושים."',
+          ],
+          realExample: 'Edelman Trust Barometer 2024: Brand Trust ירד לNew Low — 61% מהאנשים לא סומכים על עסקים. אבל: Brands עם Consistent Transparency הם יוצאי דופן. Costco: Trust = 87%. הם מסרבים להרוויח מעל 15% Margin על כל מוצר — Trust עמוק יותר מAds.',
+          microTask: 'כתוב: "Trust Score מ-10 לקוחות: ___. Top 3 Trust Builders: ___. Top 3 Trust Killers: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Consistency System" — איך ה-Brand נשמר עקבי לאורך זמן?',
+            'כלול: Brand Guidelines, Voice & Tone Doc, Decision Filter ("Would Patagonia do this?").',
+            'הגדר: מי ה-Brand Guardian בארגון?',
+            'כתוב: "מה קורה כשמישהו חורג מה-Brand?"',
+          ],
+          realExample: 'Coca-Cola Brand Consistency: אותו אדום, אותה פונט, אותו Curve מ-1886. 138 שנה. כשAI Brand Management Software מגיע — הם הם First Adopters כי Brand Consistency הוא ה-Asset. Inconsistency costs Money. Apple Brand Police: כל Decision נבדק מול Brand Guidelines.',
+          microTask: 'כתוב: "Brand Guardian שמינה: ___. Decision Filter: ___. מה קורה בחריגה: ___."',
+        },
+        {
+          fieldAction: [
+            'פתח "Long-Term Brand Equity Plan" — כיצד ה-Brand יהיה יקר יותר בעוד 5 שנים?',
+            'Brand Equity = Brand Awareness × Brand Associations × Brand Loyalty × Perceived Quality.',
+            'לכל ממד — ציין מה ה-Initiative לשנה הבאה.',
+            'קבע KPIs: איך תמדוד שה-Equity גדל?',
+          ],
+          realExample: 'Interbrand Most Valuable Brands 2024: Apple $516B Brand Value. ב-1997: $5B. Growth: 10,000%. Brand Investment ב-1997-2024 = $50B. ROI על Brand: 1,000×. Brand Equity הוא נכס שאינו בBalance Sheet אבל בולט ב-Acquisition Price.',
+          microTask: 'כתוב: "Brand Equity Plan: Awareness Initiative=___, Association Initiative=___, Loyalty Initiative=___, Quality KPI=___."',
+        },
+        {
+          fieldAction: [
+            'הגדר "Brand Legacy" — מה יאמרו על המותג שלך בעוד 20 שנה?',
+            'כתוב Eulogy של המותג — אם היה נפטר מחר, מה יכתבו בעיתון?',
+            'שאל: "האם מה שכתבתי הוא מה שאני בונה כרגע?"',
+            'מה פער בין ה-Eulogy לבין המצב הנוכחי? פערה = Roadmap.',
+          ],
+          realExample: 'Jeff Bezos "Regret Minimization Framework": "Will I regret not trying in 30 years?" Amazon Mission: "To be Earth\'s most customer-centric company." כל ה-Decisions — Prime, AWS, Alexa — עוברים דרך הMission. Brand Legacy הוא ה-Mission שמממשים, לא שמצהירים.',
+          microTask: 'כתוב: "Brand Eulogy: ___. פער בין הנוכחי לEulogy: ___. Roadmap לסגור פער: ___."',
+        },
+        {
+          fieldAction: [
+            'כתוב "Brand Soul Document" — מסמך אחד שמרכז: WHY, Values, Voice, Positioning, Story, Legacy.',
+            'מקסימום 2 עמודות — כל מנהל יכול לקרוא ב-5 דקות.',
+            'שתף עם ה-Team — שאל: "האם זה מרגיש כמו אנחנו?"',
+            'שמור כ-Living Document — עדכן פעם בשנה.',
+          ],
+          realExample: 'Ogilvy on Advertising: David Ogilvy כתב Brand Bible שניהל Agency גדול בעולם 40 שנה אחרי שפרש. כולם ידעו מה Ogilvy Brand Stands For: Research, Honesty, Long-term Thinking. Brand Soul Document = Organizational GPS שאינו תלוי באף מנהל אחד.',
+          microTask: 'כתוב: "Brand Soul Document שכתבתי: ___. תגובת Team: ___. מה שנוי כתוצאה: ___."',
+        },
+      ],
+    },
+  ], // end business-soul
+
+  'claude-code-mastery': [
+    // Module 0 · Days 1–5 · Claude API יסודות
+    {
+      bottomLine: 'Claude API הוא לא "ChatGPT API" — הוא מנוע ל-Agentic workflows, ניתוח קוד, ושיח עסקי. מי שמבין את ה-Primitives — בונה מהר.',
+      days: [
+        {
+          fieldAction: [
+            'הגדר Account ב-Anthropic Console: הוצא API Key, קרא את Usage Limits.',
+            'שלח את ה-"Hello World" הראשון עם claude-opus-4-7 ב-Messages API.',
+            'בדוק: System Prompt + User Message → Response. הבן את Structure.',
+            'כתוב: "מה ה-Difference בין System, User ו-Assistant Roles?"',
+          ],
+          realExample: 'Anthropic API Released 2023: תוך 6 חודשים — 100,000+ Developers. Top Use Cases: Code Review (34%), Content Generation (28%), Data Analysis (22%). ה-API הוא Gateway — אבל ה-Alpha נמצא ב-System Prompt Engineering.',
+          microTask: 'כתוב: "First API Call שלי: System Prompt=___, User Message=___, Response=___. מה למדתי על Structure: ___."',
+        },
+        {
+          fieldAction: [
+            'למד Context Window: Claude Opus 200K Tokens. מה זה אומר?',
+            'תרגל: שלח File ארוך (PDF, Code File) ב-API — שאל שאלה על הContent.',
+            'מדוד: כמה Tokens ניצלת? (api_usage.input_tokens)',
+            'שאל: "מה אפשר לעשות עם 200K Context שלא ניתן עם 4K?"',
+          ],
+          realExample: 'Sourcegraph Cody: משתמשים ב-200K Context לClaude לAnalysis של Codebase שלמות. Developer שלח 50,000 שורות קוד ושאל "מה הBug?" — Claude מצא ב-3 שניות מה Engineer חיפש שבוע. Context = Superpower.',
+          microTask: 'כתוב: "File ארוך ששלחתי: ___, גודל: ___ Tokens. שאלה ששאלתי: ___. תשובה שקיבלתי: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה wrapper פשוט בPython/JavaScript לClaude API.',
+            'Wrapper: function askClaude(systemPrompt, userMessage) → response.',
+            'הוסף: Error Handling, Retry Logic, Logging.',
+            'הרץ 10 שיחות שונות — בדוק Consistency.',
+          ],
+          realExample: 'Simon Willison (Datasette Creator): בנה llm Python CLI שמאפשר לקרוא לכל LLM מTerminal. הWapper לקח 2 שעות — חסך ימים בכל Project עתידי. Good Abstractions Compound.',
+          microTask: 'כתוב: "Wrapper שבניתי: ___. Error Handling שהוספתי: ___. 10 Tests Results: ___."',
+        },
+        {
+          fieldAction: [
+            'למד Temperature ו-Max Tokens: מה הם? מה עושים?',
+            'תרגל: אותו Prompt עם Temperature 0, 0.5, 1.0 — השווה תוצאות.',
+            'בחר Use Case שלך: Creative vs Deterministic. מה ה-Temperature המתאים?',
+            'כתוב: "Rule שלי לTemperature Settings."',
+          ],
+          realExample: 'Anthropic Research: Temperature 0 = Deterministic (Code, Facts), Temperature 0.7 = Creative Balance (Copywriting), Temperature 1.0 = High Variance (Brainstorming). Production Code Review: Always Temperature 0. Marketing Copy: 0.7. אין "נכון" — יש "מתאים לTask."',
+          microTask: 'כתוב: "Temperature Test: 0=___, 0.5=___, 1.0=___. Rule שלי: Deterministic Task → ___, Creative Task → ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Claude Development Environment" מלא: IDE Plugin + API Wrapper + Logging + Testing.',
+            'כלול: כלי לעריכת System Prompts, בדיקת Outputs, Tracking Costs.',
+            'הגדר Budget Alert: עלה X$ ביום — שלח Email.',
+            'הרץ 1 Real Task — כמה עלה?',
+          ],
+          realExample: 'Andrew Ng (AI Fund): "The bottleneck in AI is not the model — it\'s the development environment." Teams שבנו Internal Tools לPrompt Testing חסכו 40% זמן ב-Iteration. Setup Time = Investment. Production Velocity = Return.',
+          microTask: 'כתוב: "Dev Environment שבניתי: ___. Cost של Real Task ראשון: $___. Budget Alert שהגדרתי: $___/יום."',
+        },
+      ],
+    },
+    // Module 1 · Days 6–10 · Prompt Engineering מתקדם
+    {
+      bottomLine: 'Prompt Engineering אינה אמנות — היא מדע. כל מילה ב-System Prompt משפיעה על Output. מי שמדדוד — ניצח.',
+      days: [
+        {
+          fieldAction: [
+            'למד את "Prompt Anatomy": Role + Task + Format + Constraints + Examples.',
+            'כתוב Prompt שכולל את כל 5 Elements לTask שלך.',
+            'הרץ Version עם 3 Elements vs Version עם 5 — מדוד הבדל.',
+            'שאל: "איזה Element הכי משפיע על ה-Output?"',
+          ],
+          realExample: 'OpenAI Research (Applies to Claude): Adding Output Format instructions מעלה Task Accuracy ב-23%. Adding Examples מעלה ב-18%. Adding Role ("You are an expert...") מעלה ב-12%. Stack כולם = 53% שיפור. Elements הם Multipliers.',
+          microTask: 'כתוב: "Prompt עם 5 Elements: Role=___, Task=___, Format=___, Constraints=___, Examples=___. דיוק: ___."',
+        },
+        {
+          fieldAction: [
+            'תרגל Chain-of-Thought: "Think step by step before answering."',
+            'בחר Task לוגי מורכב — הרץ עם ובלי CoT.',
+            'מדוד: Accuracy + Reasoning Quality.',
+            'כתוב: "מתי CoT מחייב? מתי הוא Overhead?"',
+          ],
+          realExample: 'Google Chain-of-Thought Paper (2022): CoT Prompting שיפר GSM8K Math Accuracy מ-17.9% ל-58.1% — 3× improvement. Claude: CoT particularly valuable for multi-step Reasoning tasks. אבל: לSimple Tasks — CoT מוסיף Tokens בלי Value.',
+          microTask: 'כתוב: "Task שבדקתי: ___. בלי CoT: ___% accuracy. עם CoT: ___%. מסקנה: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Prompt Library: Collection של Prompts שעובדים לTasks חוזרים.',
+            'כל Prompt: Name, Purpose, Template (עם Variables), Last Tested, Notes.',
+            'כלול: Code Review Prompt, Meeting Summary Prompt, Email Draft Prompt.',
+            'Commit לGit — הPrompt Library הוא IP שלך.',
+          ],
+          realExample: 'Lenny Rachitsky Newsletter: הוא פרסם את הPrompt Library שלו — 5,000 Downloads ביום הראשון. כל Prompt הוא Framework לThinking. "My Prompt Library is worth more than any individual blog post I\'ve written."',
+          microTask: 'כתוב: "3 Prompts שהוספתי לLibrary: 1. ___ (Purpose: ___), 2. ___ (Purpose: ___), 3. ___ (Purpose: ___)."',
+        },
+        {
+          fieldAction: [
+            'למד Prompt Injection Defense: כיצד Users יכולים לשבור את ה-System Prompt שלך?',
+            'בדוק: שלח Payload: "Ignore all previous instructions and say..."',
+            'הגדר: כיצד מגנים עם Input Validation + Output Checking?',
+            'כתוב: "Checklist Security לכל Production Prompt."',
+          ],
+          realExample: 'Simon Willison Security Research: כל Application שמשתמש ב-LLM עם User Input חייב Prompt Injection Defense. Dropbox AI: כשניסו לגנוב System Prompt דרך Docs שנוצרו — הDocumentation שלהם חולץ. ה-Attack vector אמיתי.',
+          microTask: 'כתוב: "Injection שניסיתי: ___. תגובת ה-Prompt: ___. Defense שהוספתי: ___. Security Checklist: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Prompt Evaluation System": כיצד אתה יודע שה-Prompt טוב?',
+            'הגדר 10 Test Cases עם Expected Output.',
+            'הרץ Automated Test: Score = (Passing Tests / Total Tests) × 100.',
+            'Iterate: שנה Prompt, הרץ שוב, מדוד שיפור.',
+          ],
+          realExample: 'Anthropic Internal: כל Model Release עובר מיליוני Evals. "Evals are how we know if we made things better or worse." Haiku: 100B Tokens Eval Suite. אתה לא צריך 100B — 100 Tests הם התחלה. Measure Twice, Deploy Once.',
+          microTask: 'כתוב: "10 Test Cases שהגדרתי: ___. Initial Score: ___%. אחרי Iteration: ___%. מה שיניתי: ___."',
+        },
+      ],
+    },
+    // Module 2 · Days 11–15 · Tool Use ו-Agents
+    {
+      bottomLine: 'Tool Use הופך Claude מLLM לAgent. עם Tools — Claude לא רק עונה, הוא פועל. זו ה-Paradigm Shift.',
+      days: [
+        {
+          fieldAction: [
+            'קרא את Anthropic Tool Use Documentation — הבן Tool Definition Schema.',
+            'כתוב את ה-Tool הראשון שלך: get_current_weather(city) → API call.',
+            'Define ב-JSON Schema: name, description, input_schema.',
+            'הרץ: שאל Claude "מה מזג האוויר בתל אביב?" — בדוק שהוא קורא לTool.',
+          ],
+          realExample: 'Anthropic Function Calling: Claude יכול לקרוא לכל API שאתה מגדיר. Use Cases: Database Queries, Web Search, Code Execution, File Management, CRM Updates. כל Tool = Superpower חדש. כל API = Integration חדש.',
+          microTask: 'כתוב: "Tool ראשון שהגדרתי: name=___, description=___, inputs=___. Test: קראתי ל-Claude עם ___ — הוא קרא לTool? ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Agentic Loop: Claude → Tool Call → Tool Result → Claude → Tool Call → ... → Final Answer.',
+            'Implement: while loop שמריץ Claude עד שיש Final Answer (no more tool calls).',
+            'הגדר: Max Iterations (prevent infinite loops).',
+            'הרץ על Multi-Step Task: "מצא 3 חדשות על AI ישראלי היום וסכם."',
+          ],
+          realExample: 'LangChain Agent Executor: בדיוק זה. אבל עם Claude ישירות — פחות Abstraction, יותר Control. Devin (AI Software Engineer): Agentic Loop על Code Execution + File System + Web Search. 100,000 שורות Codebase ניהול = Agent שיודע לחכות לTool Results.',
+          microTask: 'כתוב: "Agentic Loop שבניתי: max iterations=___. Multi-Step Task שהרצתי: ___. תוצאה: ___. Iterations שלקח: ___."',
+        },
+        {
+          fieldAction: [
+            'הוסף Computer Use Tool: Claude שמסתכל ב-Screenshot ופועל על Browser.',
+            'Implement: Screenshot → Claude → Click/Type Instruction → Execute → Screenshot.',
+            'הרץ: "פתח Google, חפש Anthropic, צלם Screenshot של התוצאות."',
+            'מדוד: כמה Steps לקח? מה נכשל?',
+          ],
+          realExample: 'Anthropic Computer Use Beta (2024): Claude 3.5 Sonnet יכול לנהל Desktop. Tasks: Book Flights, Fill Forms, Extract Data from Legacy Apps, Run Software Tests. הופך Claude ל-Virtual Employee — לא רק Advisor.',
+          microTask: 'כתוב: "Computer Use Task שהרצתי: ___. Steps: ___. Success Rate: ___%. מה נכשל ולמה: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Code Execution Tool: Claude כותב Python → הרץ → מחזיר Output.',
+            'Implement: subprocess.run([\'python\', \'-c\', code]) עם Timeout + Sandbox.',
+            'הרץ: "כתוב קוד שמנתח CSV ומחזיר Statistics."',
+            'בדוק: האם Claude מתקן שגיאות אוטומטית כשCode נכשל?',
+          ],
+          realExample: 'ChatGPT Code Interpreter (Advanced Data Analysis): אותו Concept. Claude עם Code Execution = Data Scientist שעובד 24/7. Tasks: Clean Data, Generate Charts, Run Statistical Analysis, Write Reports. Jupyter שמפעיל את עצמו.',
+          microTask: 'כתוב: "Code Execution Tool שבניתי: ___. Task שהרצתי: ___. שגיאה שClude תיקן אוטומטית: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Multi-Tool Agent: Agent שיכול לגשת ל-3+ Tools ולבחור מה להשתמש.',
+            'Tools: Web Search + Code Execution + File Writer.',
+            'Task: "מחקר על OpenAI → כתוב Summary → שמור לPDF."',
+            'מדוד: Tool Selection Accuracy. כמה פעמים בחר בTool הנכון?',
+          ],
+          realExample: 'Cursor AI (IDE): Multi-Tool Agent — Web Search + Code Execution + File Edit + Terminal. 100,000+ Active Users. $400M Valuation. ה-"Secret" הוא לא ה-LLM — הוא Tool Integration שמאפשר לClaude להיות "Developer שרואה הכל."',
+          microTask: 'כתוב: "Multi-Tool Agent שבניתי: Tools=___. Complex Task שהרצתי: ___. Tool Selection Accuracy: ___/10."',
+        },
+      ],
+    },
+    // Module 3 · Days 16–20 · Workflow Automation
+    {
+      bottomLine: 'Workflow Automation עם Claude = פי 10 מאוטומציה רגילה. Zapier אוטמט Actions. Claude אוטמט Thinking + Actions.',
+      days: [
+        {
+          fieldAction: [
+            'בנה "Intelligent Email Triage System": Email נכנס → Claude מסווג Priority + Action Required + Draft Reply.',
+            'Input: Gmail API / IMAP. Output: Notion Database Row + Draft בGmail.',
+            'הגדר Categories: Urgent, Normal, Low, Newsletter, Spam.',
+            'הרץ על 20 Emails אמיתיים — מדוד Accuracy.',
+          ],
+          realExample: 'Superhuman AI Email: עשה בדיוק זה — Triage + Summarize + Smart Reply. $1M ARR בחודשיים. נמכר ל-Enterprise ב-$30/User/Month. אם Superhuman שווה $30/חודש — כמה שווה לבנות אותו בעצמך?',
+          microTask: 'כתוב: "Email Triage System שבניתי: Categories=___, Accuracy על 20 Emails=___%. Action שClude הציע שהיה נכון: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Meeting Intelligence System": Transcript → Claude → Action Items + Decisions + Summary.',
+            'Input: Otter.ai / Zoom Transcript. Output: Notion/Slack.',
+            'הגדר Format: Bullet Points, Owner Names, Due Dates.',
+            'הרץ על Meeting Transcript אמיתי — שלח לTeam ובדוק תגובות.',
+          ],
+          realExample: 'Fireflies.ai: $8M ARR מTranscript + AI Summary. הProduct המרכזי: Claude-level Summarization + Action Item Extraction. 300,000+ Users. כל Meeting = Structured Output = Less Chaos.',
+          microTask: 'כתוב: "Meeting Summary שClaude יצר: ___. Action Items שמצא: ___. תגובת Team: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Code Review Automation": Pull Request → Claude → Structured Review.',
+            'Input: GitHub PR Diff via API. Output: Review Comments על GitHub.',
+            'Prompt: "Review for: Security Issues, Performance, Code Quality, Tests."',
+            'הרץ על 3 PRs אמיתיים — מדוד False Positives.',
+          ],
+          realExample: 'CodeRabbit: AI Code Review Tool. $2M ARR בשנה הראשונה. Uses Claude Under the Hood (reportedly). 5,000+ Repos. Average Time Saved: 40 Min per PR. 10 PRs/שבוע = 400 Min/שבוע = 333 שעות/שנה שחוזרות.',
+          microTask: 'כתוב: "Code Review System שבניתי: Prompt=___, 3 PR Reviews=___. False Positives מתוך Issues: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה "Research Intelligence Pipeline": Keyword → Web Search → Claude Synthesis → Report.',
+            'Input: קלט מהמשתמש. Steps: Perplexity/SerpAPI → 5 Articles → Claude → Structured Report.',
+            'Output: PDF / Notion / Email.',
+            'הרץ על Research Question שלך — מדוד vs Manual Research.',
+          ],
+          realExample: 'Elicit.org: AI Research Assistant. $15M Funding. "Does AI Research." Users מדווחים: 3 שעות Research → 20 דקות עם AI. כל Startup Research, Competitive Intel, Due Diligence — המופחת פי X.',
+          microTask: 'כתוב: "Research Question שהרצתי: ___. Manual Time: ___. AI Pipeline Time: ___. Quality Comparison: ___."',
+        },
+        {
+          fieldAction: [
+            'שלב 3 Workflows לPipeline אחד: Email Intelligence → Meeting Intelligence → Research Intelligence.',
+            'הגדר: Trigger שמפעיל את Pipeline.',
+            'הגדר: כיצד Output של Workflow 1 מזין Workflow 2?',
+            'מדוד: כמה זמן חסך Pipeline שלם לעומת Manual?',
+          ],
+          realExample: 'a16z VC firm: בנו Internal AI Platform שמשלב Email Triage + Meeting Notes + Research Synthesis לkDD (Knowledge-Driven Decisions). Partners חסכו 15 שעות/שבוע כל אחד. $750M Portfolio — ה-Edge הוא Information Velocity.',
+          microTask: 'כתוב: "Full Pipeline שבניתי: Workflow 1=___, Workflow 2=___, Workflow 3=___. זמן שחסך: ___/שבוע."',
+        },
+      ],
+    },
+    // Module 4 · Days 21–25 · System Architecture ל-AI
+    {
+      bottomLine: 'ה-LLM הוא Brain — הארכיטקטורה היא Skeleton. Brain בלי Skeleton = Mess. Skeleton בלי Brain = Robotic. Together = AI System.',
+      days: [
+        {
+          fieldAction: [
+            'למד את Pattern: Prompt → LLM → Parser → Action → Feedback → LLM.',
+            'ציר את ה-Architecture Diagram של System שרצית לבנות.',
+            'זהה: איפה ה-State מאוחסן? מה קורה בFailure כל Component?',
+            'שאל: "האם ה-Architecture Scales ל-100× Users?"',
+          ],
+          realExample: 'AWS Bedrock Architecture: LLM as Stateless Service + DynamoDB לState + SQS לQueuing + Lambda לExecution. כל Request = Stateless LLM Call + Stateful DB Write. בניה כזו Scales ל-Millions. בניה אחרת — Crashes בMidnight.',
+          microTask: 'כתוב: "Architecture Diagram שציירתי: ___. State Storage: ___. Failure Point שזיהיתי: ___. Scale Plan: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Caching Layer: Save LLM Responses לRedis/DB כשה-Prompt זהה.',
+            'Logic: hash(systemPrompt + userMessage) → Check Cache → Hit: Return Cached. Miss: Call LLM + Save.',
+            'מדוד: Cache Hit Rate על 100 Requests.',
+            'חשב: כמה כסף חסך Caching?',
+          ],
+          realExample: 'Anthropic Prompt Caching Feature: 90% Cost Reduction על Repeated System Prompts. Cache TTL: 5 דקות. Enterprise: $500K/שנה → $50K/שנה אחרי Caching. לApps עם High Volume — Caching הוא Mission Critical, לא Optimization.',
+          microTask: 'כתוב: "Caching Layer שבניתי: Storage=___, Cache Hit Rate=___%. Cost Saved: ___% ב-100 Requests."',
+        },
+        {
+          fieldAction: [
+            'הוסף Rate Limiting ו-Quota Management לAI System שלך.',
+            'Logic: Per-User Rate Limit (100 Requests/Hour) + Global Budget Alert.',
+            'Implement: Redis Counter + TTL.',
+            'בדוק: מה קורה כשUser מגיע ל-Limit?',
+          ],
+          realExample: 'OpenAI API: Tier System — Free (20 RPM), Pay-as-you-go (60 RPM), Enterprise (Custom). כשלא מגדירים Rate Limit בApplication — Rogue User יכול לשרוף את כל ה-Budget בדקה. Production AI = Rate Limiting מ-Day 1.',
+          microTask: 'כתוב: "Rate Limit שהגדרתי: ___/שעה. מה קורה בOverLimit: ___. Budget Alert: $___/יום."',
+        },
+        {
+          fieldAction: [
+            'הוסף Observability: Logging + Tracing + Alerting לכל LLM Call.',
+            'Log: Timestamp, User ID, Prompt Hash, Input Tokens, Output Tokens, Latency, Cost, Response.',
+            'Dashboard: Cost/Day, Avg Latency, Error Rate, Top Users.',
+            'Alert: כשError Rate > 5% — שלח Slack.',
+          ],
+          realExample: 'Helicone: Logging Layer לLLM Apps. 10,000+ Apps. "You can\'t improve what you don\'t measure." Teams שמשתמשים ב-Logging ראו 30% Cost Reduction — כי ה-Longest Prompts וה-Worst Performing Prompts הפכו לVisible.',
+          microTask: 'כתוב: "Observability שהוספתי: Logs=___, Dashboard Metrics=___. Error Rate נוכחי: ___%. מה גיליתי: ___."',
+        },
+        {
+          fieldAction: [
+            'תכנן Disaster Recovery: מה קורה כשAnthropic API down?',
+            'הגדר: Fallback לModel שני (Gemini/OpenAI), Graceful Degradation, User Messaging.',
+            'Implement: Circuit Breaker Pattern — אחרי 3 Failures → Switch to Fallback.',
+            'בדוק: Simulate API Failure — האם System עובד?',
+          ],
+          realExample: 'Perplexity Architecture: Multiple LLM Providers + Smart Routing. כשClaude Slow — Route לGemini. כשGemini Error — Back לClaude. Result: 99.9% Uptime עם Multiple Single-Point-of-Failures. Resilience = Multiple Paths.',
+          microTask: 'כתוב: "Fallback שהגדרתי: ___. Circuit Breaker Threshold: ___ Failures. Test: Simulate Failure → תוצאה: ___."',
+        },
+      ],
+    },
+    // Module 5 · Days 26–30 · מערכות Agentic מתקדמות
+    {
+      bottomLine: 'Advanced Agentic Systems אינם Science Fiction — הם Production Software שפועל היום. מי שבונה אותם עכשיו — ימכור אותם מחר.',
+      days: [
+        {
+          fieldAction: [
+            'בנה Long-Running Agent עם Persistent State: Agent שזוכר Sessions קודמים.',
+            'State: DynamoDB / PostgreSQL Table עם conversation_history per User.',
+            'Implement: Load History → Inject לContext → Response → Save Updated History.',
+            'הרץ Multi-Session Conversation — בדוק Memory Continuity.',
+          ],
+          realExample: 'Character.ai: $1B Valuation. הSecret: Persistent Character Memory + Personality. Users מחזירים כי הCharacter "זוכר" אותם. Claude עם Persistent State = Personal AI שמחכה לUser — לא מתחיל מ-Zero כל פעם.',
+          microTask: 'כתוב: "Persistent Agent שבניתי: State Storage=___. Session 1: ___. Session 2 (זכר Session 1?): ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Parallel Agent System: שלח אותו Task ל-3 Agents במקביל, בחר Best Response.',
+            'Implement: asyncio.gather() / Promise.all() לParallel API Calls.',
+            'Voting Logic: Claude כ-Judge — "איזו תשובה הכי טובה ולמה?"',
+            'מדוד: Quality vs Cost vs Time.',
+          ],
+          realExample: 'Mixture of Agents (TogetherAI Paper): LLM Responses ש"מצביעים" אחד על השני הגיעו לAccuracy גבוה יותר מGPT-4 Solo ב-Benchmarks. Parallel + Vote = Better than Single. Trading off Cost for Quality.',
+          microTask: 'כתוב: "Parallel System שבניתי: N Agents=___. Voting Logic=___. Quality Improvement vs Single Agent: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Self-Improving Agent: Agent שמנתח את ה-Failures שלו ומשפר את ה-Prompt.',
+            'Cycle: Task → Attempt → Evaluate → If Failed → Update Prompt → Retry.',
+            'Implement: Meta-Prompt: "Here is your failed attempt and why it failed. Write an improved version."',
+            'מדוד: כמה Iterations נדרשות לSuccess?',
+          ],
+          realExample: 'Reflexion (MIT/Google): Agents שלומדים מ-Mistakes ב-Natural Language — לא Gradient Descent. הגיעו ל-91% על HumanEval (Coding Benchmark) לעומת 80% בלי Reflexion. Self-Improvement = Built-in Compound Learning.',
+          microTask: 'כתוב: "Self-Improving Agent שבניתי: Task=___. Iterations to Success: ___. Final Prompt vs Initial: ___."',
+        },
+        {
+          fieldAction: [
+            'בנה Production-Ready AI Feature לProduct אמיתי שיש לך.',
+            'Requirements: Auth, Rate Limiting, Logging, Error Handling, Fallback, UI.',
+            'Deploy: Vercel / AWS Lambda / Railway.',
+            'מדוד: First Real User Experience. כמה זמן ל-Value?',
+          ],
+          realExample: 'Pieter Levels: בנה PhotoAI בShipment Week — Production AI Feature ב-5 ימים. $100K MRR ב-6 חודשים. "The only way to learn is to ship." Claude Code Mastery = יכולת לShip AI Features Fast. Theory בלי Ship = Knowledge בלי Value.',
+          microTask: 'כתוב: "AI Feature שדיפלויתי: ___. URL: ___. First User Feedback: ___. Time to Value: ___."',
+        },
+        {
+          fieldAction: [
+            'כתוב "AI Architect Portfolio": 3 Systems שבנית ב-30 יום.',
+            'לכל System: Architecture Diagram, Key Decisions, Lessons Learned, Github Link.',
+            'פרסם ב-LinkedIn / X / Blog — "What I built with Claude in 30 days."',
+            'שאל: "מה הSystem הבא שאני רוצה לבנות ב-60 יום הבאים?"',
+          ],
+          realExample: 'Arvid Kahl (Bootstrapped Founder): "Build in Public" עם Portfolio. כל Project = Case Study. כל Case Study = Inbound Leads. כל Lead = Potential Customer / Partner / Investor. Portfolio הוא Marketing שלא מפסיק לעבוד.',
+          microTask: 'כתוב: "3 Systems שבניתי: 1. ___ 2. ___ 3. ___. LinkedIn Post Draft: ___. System הבא ב-60 יום: ___."',
+        },
+      ],
+    },
+  ], // end claude-code-mastery
+
 }
 
 // ── Helper ────────────────────────────────────────────────────────────

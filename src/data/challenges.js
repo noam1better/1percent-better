@@ -1,11 +1,13 @@
 export const CHALLENGES = [
-  { id: 'ai-beginners',    emoji: '🤖', title: 'AI for Beginners',       subtitle: 'שלוט בכלי AI ב-30 יום',                     days: 30, xpPerDay: 50, color: '#6366f1', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
-  { id: 'business-mind',   emoji: '💼', title: 'Business Mind',           subtitle: 'חשיבה של יזם ב-30 יום',                     days: 30, xpPerDay: 60, color: '#8b5cf6', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
-  { id: 'product-builder', emoji: '🏗️', title: 'Product Builder',         subtitle: 'שגר את המוצר הראשון שלך ב-30 יום',          days: 30, xpPerDay: 65, color: '#10b981', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
-  { id: 'deal-closer',     emoji: '🤝', title: 'Deal Closer',             subtitle: 'שליטה במכירות ומשא ומתן ב-30 יום',          days: 30, xpPerDay: 55, color: '#f59e0b', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
-  { id: 'ai-pioneer',      emoji: '🚀', title: 'AI Pioneer',              subtitle: 'בנה מוצרי AI מאפס ב-30 יום',                days: 30, xpPerDay: 75, color: '#ec4899', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'ai-beginners',    emoji: '🤖', title: 'AI למתחילים',            subtitle: 'שלוט בכלי AI ב-30 יום',                     days: 30, xpPerDay: 50, color: '#6366f1', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'business-mind',   emoji: '💼', title: 'חשיבת עסקים',            subtitle: 'חשיבה של יזם ב-30 יום',                     days: 30, xpPerDay: 60, color: '#8b5cf6', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'product-builder', emoji: '🏗️', title: 'בוני מוצרים',            subtitle: 'שגר את המוצר הראשון שלך ב-30 יום',          days: 30, xpPerDay: 65, color: '#10b981', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'deal-closer',     emoji: '🤝', title: 'סוגר עסקאות',            subtitle: 'שליטה במכירות ומשא ומתן ב-30 יום',          days: 30, xpPerDay: 55, color: '#f59e0b', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'ai-pioneer',      emoji: '🚀', title: 'חלוץ AI',                 subtitle: 'בנה מוצרי AI מאפס ב-30 יום',                days: 30, xpPerDay: 75, color: '#ec4899', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
   { id: 'business-soul',   emoji: '🌟', title: 'בניית נשמת העסק',         subtitle: 'בנה את הזהות העמוקה של העסק שלך ב-30 יום',  days: 30, xpPerDay: 70, color: '#f59e0b', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
   { id: 'self-discipline',  emoji: '🧠', title: 'בניית משמעת עצמית',       subtitle: 'בנה משמעת עצמית ברזל ב-30 יום',             days: 30, xpPerDay: 65, color: '#3b82f6', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'claude-code-mastery', emoji: '⌨️', title: 'שליטה ב-Claude Code', subtitle: 'שלוט בפיתוח אוטומטי עם Claude Code ב-30 יום', days: 30, xpPerDay: 80, color: '#06b6d4', expert: true, whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
+  { id: 'capital-markets',    emoji: '📈', title: 'מסחר בשוק ההון',      subtitle: 'בנה בסיס אמיתי למסחר ב-30 יום',                days: 30, xpPerDay: 70, color: '#16a34a', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
 ]
 
 export const CHALLENGE_WEEKS = {
@@ -16,6 +18,22 @@ export const CHALLENGE_WEEKS = {
   'ai-pioneer':      ['הגדר את מוצר ה-AI שתבנה החודש — היה ספציפי.','הגדר את סביבת הפיתוח שלך והרץ את ה-API call הראשון.','בנה את הפיצ\'ר החשוב ביותר של המוצר שלך.','בדוק את ה-UX עם אדם לא טכני — תקן מה שמבלבל אותם.','כתוב את תוכן עמוד הנחיתה והגדר רשימת המתנה.','פרסם גרסה ציבורית וקבל את המשתמשים הראשונים האמיתיים שלך.'],
   'business-soul':   ['כתוב 3 משפטים שמתארים את הסיבה האמיתית שאתה בונה את העסק הזה.','הגדר 3 ערכי ליבה שלא תתפשר עליהם, לא משנה מה.','תאר את הלקוח האידיאלי — לא רק דמוגרפיה, אלא מה הוא חולם.','כתוב את הסיפור האישי שהוביל אותך ליצור את העסק הזה.','נסח הבטחה אחת ברורה שהעסק שלך נותן ללקוחותיו.','דמיין את העסק שלך בעוד 5 שנים — איזו השפעה הוא יצר בעולם?'],
   'self-discipline': ['זהה את הסיבה העמוקה שאתה רוצה לבנות משמעת עצמית — מה תרוויח?','הגדר שגרת בוקר של 15 דקות ובצע אותה היום בדיוק.','עבוד 25 דקות ללא הסחות דעת על משימה אחת חשובה.','זהה משימה שדחית והשלם אותה היום בלי תירוצים.','בצע 10 דקות פעילות גופנית + 5 דקות שתיקה מכוונת.','כתוב 3 דברים שעשית היטב השבוע ו-1 שתשפר הבא.'],
+  'claude-code-mastery': [
+    'התקן את Claude Code, הכר את הפקודות הבסיסיות (/help, /clear, /status) ובנה את הפרויקט הראשון שלך מאפס — scaffold אפליקצית React בטרמינל.',
+    'שרשר פקודות מורכבות: למד לכתוב פרומפטים רב-שלביים שמבצעים refactor, מוסיפים פיצ\'רים ומריצים בדיקות בפקודה אחת.',
+    'בנה זרימת עבודה אג\'נטית מלאה — תן ל-Claude Code לתכנן, לכתוב ולבדוק component שלם ללא התערבות ידנית.',
+    'Debug עמוק: העלה שגיאה מורכבת מפרויקט אמיתי ותן ל-Claude לזהות root cause, להציע תיקון ולבצע אותו.',
+    'בנה ופרוס אפליקציית Full-Stack שלמה (Frontend + Backend + DB) עם Claude Code — מאפס עד Hosting בסשן אחד.',
+    'אופטימיזציה ואבטחה: בצע code review, זיהוי security vulnerabilities ו-performance audit על קוד קיים עם Claude Code.',
+  ],
+  'capital-markets': [
+    'הכר את מבנה השוק: מניות, אגרות חוב, ETFs ונגזרים — איך כל אחד עובד, מי המשתתפים ולמה המחיר זז.',
+    'קרא גרף נרות: זיהוי דוג\'י, פטיש, מעטפת בולעת — ואיך לזהות היפוך מגמה לפני שכולם רואים אותו.',
+    'הבן דו"חות כספיים: P/E, EPS, EBITDA ומכפיל הון — למד לאבחן חברה בעלת ערך אמיתי מחברה מנופחת.',
+    'יישם את ה-1% Rule: לעולם אל תסכן יותר מ-1% מהתיק בעסקה אחת. הגדר Stop-Loss לפני כניסה — לא אחריה.',
+    'זהה את האויבים הפנימיים: FOMO, Revenge Trading ו-Overconfidence — כתוב יומן מסחר ותעד כל החלטה ואת הסיבה שלה.',
+    'בנה את מערכת המסחר שלך: הגדר כלל כניסה, כלל יציאה, גודל פוזיציה מקסימלי, ובצע backtest על 10 עסקאות עבר.',
+  ],
 }
 
 // Day position within a 5-day module (0-indexed)
