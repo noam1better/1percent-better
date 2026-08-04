@@ -2,11 +2,11 @@ const t = {
   en: {
     welcome: {
       title: 'PRIME',
-      subtitle: 'Your daily discipline course.',
+      subtitle: 'High-performance execution. Discipline built one day at a time.',
       features: [
-        ['🎯', 'Set your daily Focus Triggers'],
-        ['⚡', 'Stack micro-habits onto existing cues'],
-        ['📝', 'Add personal notes for each trigger'],
+        ['🎯', '30-day execution tracks — real skills, not theory'],
+        ['🔒', 'Strict 1-course focus rule — finish what you start'],
+        ['⚡', 'XP compounding system — every day of action counts'],
       ],
       signIn: 'Continue with Google',
       signingIn: 'Signing in…',
@@ -75,11 +75,11 @@ const t = {
   he: {
     welcome: {
       title: 'PRIME',
-      subtitle: 'קורס המשמעת היומי שלך.',
+      subtitle: 'ביצועים גבוהים. משמעת שנבנית יום אחר יום.',
       features: [
-        ['🎯', 'הגדר טריגרים יומיים'],
-        ['⚡', 'צרף הרגלים קטנים לרמזים קיימים'],
-        ['📝', 'הוסף הערות אישיות לכל טריגר'],
+        ['🎯', 'מסלולי ביצוע 30 יום — מיומנויות אמיתיות, לא תיאוריה'],
+        ['🔒', 'כלל קורס אחד בלבד — תסיים מה שהתחלת'],
+        ['⚡', 'מערכת XP מצטברת — כל יום פעולה נספר'],
       ],
       signIn: 'המשך עם Google',
       signingIn: 'מתחבר…',

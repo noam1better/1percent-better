@@ -3,6 +3,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 const genAI   = new GoogleGenerativeAI(API_KEY)
 
+function withTimeout(promise, ms = 15000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ])
+}
+
 export function coachConfigured() {
   return !!API_KEY && API_KEY !== 'YOUR_KEY_HERE'
 }
@@ -25,7 +32,7 @@ const GOAL_CONTEXT = {
 }
 
 const EXERCISE_NAMES_HE = {
-  pushups: 'שכיבות שמיכה',
+  pushups: 'שכיבות סמיכה',
   pullups: 'מתח',
   dips:    'מקבילים',
   squats:  'סקוואטים',
@@ -43,14 +50,14 @@ export async function analyzeForm(base64Image, exercise, focusGoal) {
     `Be encouraging but precise. Keep your response to 2–4 sentences. Plain text only, no markdown.`
 
   const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-  const result = await model.generateContent({
+  const result = await withTimeout(model.generateContent({
     contents: [{
       parts: [
         { text: prompt },
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
       ],
     }],
-  })
+  }))
   return result.response.text()
 }
 
@@ -73,13 +80,17 @@ export async function verifyDayCompletion(challengeTitle, dayNum, taskDesc, user
     `Reply ONLY with valid JSON (no markdown): {"approved": true/false, "feedback": "one short sentence"}`
 
   try {
-    const result = await model.generateContent(prompt)
-    const raw    = result.response.text().trim().replace(/```json|```/g, '')
-    const match  = raw.match(/\{[\s\S]*\}/)
-    if (!match) throw new Error('no json')
-    return JSON.parse(match[0])
-  } catch {
-    const ok = userText.trim().length >= 20
+    const result  = await withTimeout(model.generateContent(prompt))
+    const raw     = result.response.text().trim().replace(/```json|```/g, '').trim()
+    const start   = raw.indexOf('{')
+    const end     = raw.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('no json')
+    const parsed  = JSON.parse(raw.slice(start, end + 1))
+    if (typeof parsed.approved !== 'boolean') throw new Error('bad schema')
+    return parsed
+  } catch (err) {
+    console.error('[verifyDayCompletion] fallback:', err?.message)
+    const ok = userText.trim().length >= 25
     return { approved: ok, feedback: ok ? 'Good effort — keep going!' : 'Add more detail about what you actually did today.' }
   }
 }

@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
-import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard } from '../services/focusTriggerService'
+import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard, joinWaitlist } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
-import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, LESSON_WHY, DAILY_QUOTES } from '../data/challenges'
+import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, LESSON_WHY } from '../data/challenges'
+import { MANTRAS } from '../data/mantras'
 import TracksPage from './TracksPage'
 import AnalyticsTab from './AnalyticsTab'
 import InitiationFlow from './InitiationFlow'
 import AddToHomeScreen from '../components/AddToHomeScreen'
 import DisciplineGoalCard from '../components/DisciplineGoalCard'
 import TrackSelector from '../components/TrackSelector'
-import MissionBriefing from '../components/MissionBriefing'
 import DailyBrief from '../components/DailyBrief'
 import ContractLock from '../components/ContractLock'
 import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboarding'
@@ -22,6 +22,7 @@ import CustomPathCard from '../components/CustomPathCard'
 import MirrorCard from '../components/MirrorCard'
 import SquadLeaderboard from '../components/SquadLeaderboard'
 import Settings from '../components/Settings'
+import TrainingMode from '../components/TrainingMode'
 import { loadCustomPath } from '../services/pathBuilderService'
 import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
 
@@ -42,11 +43,6 @@ const MIN_PROOF_LEN  = 20
 const getLevel   = xp => Math.floor((xp || 0) / XP_PER_LEVEL) + 1
 const getLevelXP = xp => (xp || 0) % XP_PER_LEVEL
 const getToNext  = xp => XP_PER_LEVEL - getLevelXP(xp)
-
-function fmtCountdown(s) {
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
-}
 
 // ── Confetti ───────────────────────────────────────────────────────
 
@@ -96,9 +92,10 @@ function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', onConfir
       } else {
         setStatus('rejected')
       }
-    } catch {
-      setStatus('approved')
-      setTimeout(onConfirm, 1400)
+    } catch (err) {
+      console.error('[ProofModal] verifyDayCompletion error:', err?.message || err)
+      setStatus('rejected')
+      setFeedback('שגיאת תקשורת — נסה שוב.')
     }
   }
 
@@ -196,7 +193,7 @@ function AddTriggerModal({ onSave, onClose, td, to }) {
         <input type="time" className="glow-input" style={{ ...sx, colorScheme: 'dark' }} value={time} onChange={e => setTime(e.target.value)} />
         <label style={lx}>{to.note} <span style={{ color: 'rgba(241,245,249,0.25)', textTransform: 'none', fontSize: '0.68rem' }}>{to.optional}</span></label>
         <textarea className="glow-input" style={{ width: '100%', padding: '0.875rem 1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#f1f5f9', fontSize: '0.875rem', boxSizing: 'border-box', resize: 'none', height: 72, fontFamily: 'inherit', marginBottom: '1.25rem' }} placeholder={to.notePh} value={note} onChange={e => setNote(e.target.value)} />
-        <button onClick={() => canSave && onSave({ cue: cue.trim(), habit: habit.trim(), time: time || null, note: note.trim() })} disabled={!canSave} style={{ width: '100%', padding: '0.875rem', borderRadius: 12, border: 'none', background: canSave ? 'linear-gradient(135deg,#c4795a,#d4956e)' : 'rgba(255,255,255,0.06)', color: canSave ? '#fff' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 700, cursor: canSave ? 'pointer' : 'not-allowed' }}>{td.save}</button>
+        <button onClick={() => canSave && onSave({ cue: cue.trim(), habit: habit.trim(), time: time || null, note: note.trim() })} disabled={!canSave} className={canSave ? 'btn-tactile' : ''} style={{ width: '100%', padding: '0.95rem', borderRadius: 12, border: 'none', background: canSave ? 'linear-gradient(135deg,#e8b800,#facc15)' : 'rgba(255,255,255,0.06)', color: canSave ? '#111' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 900, cursor: canSave ? 'pointer' : 'not-allowed', boxShadow: canSave ? '0 6px 20px rgba(250,204,21,0.35)' : 'none', transition: 'all 0.15s' }}>{td.save}</button>
       </div>
     </div>
   )
@@ -229,7 +226,7 @@ function HabitCard({ trigger, index, done, onRequestComplete, onUncomplete, td }
       {trigger.note && <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '0.45rem 0.7rem', marginBottom: '0.7rem' }}><p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.74rem', fontStyle: 'italic', margin: 0 }}>"{trigger.note}"</p></div>}
       <button
         onClick={done ? onUncomplete : handleComplete}
-        style={{ width: '100%', padding: '0.6rem', borderRadius: 9, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', border: done ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(196,121,90,0.3)', background: done ? 'rgba(16,185,129,0.08)' : 'rgba(196,121,90,0.08)', color: done ? '#10b981' : '#d4956e' }}
+        style={{ width: '100%', padding: '0.65rem', borderRadius: 9, fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.15s', border: done ? '1px solid rgba(16,185,129,0.3)' : 'none', background: done ? 'rgba(16,185,129,0.1)' : 'linear-gradient(135deg,#e8b800,#facc15)', color: done ? '#34d399' : '#111', boxShadow: done ? 'none' : '0 4px 14px rgba(250,204,21,0.3)' }}
       >
         {done ? td.completed : td.markDone}
       </button>
@@ -359,12 +356,16 @@ function ChallengeCard({ challenge, progress, onOpenModal, level, isRecommended 
             הצטרף לפייט קלאב 💪
           </a>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.8rem', borderRadius: 11, background: 'rgba(255,255,255,0.02)' }}>
-            <span style={{ fontSize: '0.82rem' }}>🔒</span>
-            <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.71rem', fontWeight: 600 }}>
-              Reach Level {fightClubLevel} to unlock Fight Club
-              <span style={{ marginLeft: '0.3rem', color: 'rgba(241,245,249,0.15)', fontWeight: 400 }}>(lv.{level})</span>
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0.85rem', borderRadius: 11, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>🔒</span>
+            <div>
+              <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.71rem', fontWeight: 700 }}>
+                פייט קלאב — יפתח ברמה {fightClubLevel}
+              </div>
+              <div style={{ color: 'rgba(241,245,249,0.15)', fontSize: '0.62rem', marginTop: '0.1rem' }}>
+                רמה נוכחית: {level} · עוד {Math.max(0, fightClubLevel - level)} רמות
+              </div>
+            </div>
           </div>
         )
       )}
@@ -384,14 +385,14 @@ function LeaderboardTab({ entries, currentUid, td }) {
         <span style={{ marginInlineStart: 'auto', color: 'rgba(165,180,252,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>{td.topXP}</span>
       </div>
       {entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, animation: 'fadeIn 0.3s ease' }}>
-          <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>🏅</div>
-          <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.97rem', marginBottom: '0.35rem' }}>היה הראשון בלוח</div>
-          <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.8rem', lineHeight: 1.55, marginBottom: '1.1rem' }}>
-            השלם מסלולים ומשימות יומיות<br/>כדי לצבור XP ולעלות בדירוג
+        <div style={{ textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 16, animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>🏅</div>
+          <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.3rem' }}>הדירוג יפתח בקרוב</div>
+          <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.75rem', lineHeight: 1.65, marginBottom: '1rem' }}>
+            השלם מסלולים ומשימות יומיות<br/>כדי לצבור XP ולהופיע בדירוג.
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
-            <span style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700 }}>⚡ השלם משימה ראשונה לפתיחת הדירוג</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
+            <span style={{ color: 'rgba(165,180,252,0.8)', fontSize: '0.72rem', fontWeight: 700 }}>⚡ פוקוס על המסלול שלך קודם</span>
           </div>
         </div>
       ) : (
@@ -415,7 +416,7 @@ function LeaderboardTab({ entries, currentUid, td }) {
 // ── Workout Library ────────────────────────────────────────────────
 
 const WORKOUT_EXERCISES = [
-  { id: 'pushups',  emoji: '💪', name: 'שכיבות שמיכה', desc: 'כוח פלג גוף עליון',    trackId: 'self-discipline', available: true  },
+  { id: 'pushups',  emoji: '💪', name: 'שכיבות סמיכה', desc: 'כוח פלג גוף עליון',    trackId: 'self-discipline', available: true  },
   { id: 'pullups',  emoji: '🔝', name: 'מתח',           desc: 'גב, כתפיים וזרועות',   trackId: 'self-discipline', available: true  },
   { id: 'dips',     emoji: '⬇️', name: 'מקבילים',       desc: 'טריצפס וחזה',           trackId: 'self-discipline', available: true  },
   { id: 'squats',   emoji: '🦵', name: 'סקווטים',       desc: 'כוח פלג גוף תחתון',    trackId: 'self-discipline', available: true  },
@@ -607,7 +608,7 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="btn-tactile"
-                  style={{ background: 'none', border: '1px solid rgba(196,121,90,0.28)', borderRadius: 20, color: '#d4956e', fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  style={{ background: 'rgba(196,121,90,0.08)', border: '1px solid rgba(196,121,90,0.3)', borderRadius: 20, color: '#d4956e', fontSize: '0.72rem', fontWeight: 700, padding: '0 0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', minHeight: 44 }}
                 >
                   📹 הקלט טופס
                 </button>
@@ -616,7 +617,7 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
                 <button
                   onClick={deleteVideo}
                   className="btn-tactile"
-                  style={{ background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 20, color: '#f87171', fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.6rem', cursor: 'pointer' }}
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: 20, color: '#f87171', fontSize: '0.72rem', fontWeight: 700, padding: '0 0.85rem', cursor: 'pointer', minHeight: 44 }}
                 >
                   🗑 מחק וידאו
                 </button>
@@ -660,7 +661,7 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
             {aiState === 'analyzing' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.7rem 0.85rem', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 11, marginBottom: '1rem' }}>
                 <div className="anim-spin" style={{ width: 16, height: 16, border: '2px solid rgba(99,102,241,0.25)', borderTopColor: '#818cf8', borderRadius: '50%', flexShrink: 0 }} />
-                <span style={{ color: 'rgba(165,180,252,0.8)', fontSize: '0.78rem', fontWeight: 600 }}>Loading Analysis…</span>
+                <span style={{ color: 'rgba(165,180,252,0.8)', fontSize: '0.78rem', fontWeight: 600 }}>מנתח טופס...</span>
               </div>
             )}
 
@@ -703,6 +704,206 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
   )
 }
 
+// ── Goal Tracker ───────────────────────────────────────────────────
+
+function GoalTracker({ goal, onEdit }) {
+  const today    = new Date()
+  const target   = new Date(goal.targetDate)
+  const created  = new Date(goal.createdAt)
+  const total    = Math.max(1, Math.round((target - created) / 86400000))
+  const remaining = Math.max(0, Math.ceil((target - today) / 86400000))
+  const elapsed  = total - remaining
+  const pct      = Math.min(100, Math.round((elapsed / total) * 100))
+  const done     = remaining === 0
+  const fmtDate  = target.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  return (
+    <div style={{ background: 'rgba(99,102,241,0.055)', border: '1px solid rgba(99,102,241,0.14)', borderRadius: 18, padding: '1.15rem 1.25rem 1.05rem', marginBottom: '1.25rem', position: 'relative' }}>
+      <button
+        onClick={onEdit}
+        className="btn-tactile"
+        style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'none', border: 'none', color: 'rgba(241,245,249,0.28)', fontSize: '0.8rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, fontWeight: 700 }}
+      >✎</button>
+      <div style={{ color: 'rgba(99,102,241,0.65)', fontSize: '0.53rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.3rem' }}>🎯 מטרה אישית</div>
+      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.7rem', paddingLeft: '0.5rem' }}>{goal.title}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.55rem' }}>
+        <span style={{ color: done ? '#34d399' : '#a5b4fc', fontSize: '2.2rem', fontWeight: 900, fontFamily: "'SF Mono','Fira Code',monospace", lineHeight: 1 }}>
+          {done ? '✓' : remaining}
+        </span>
+        <span style={{ color: done ? 'rgba(52,211,153,0.7)' : 'rgba(165,180,252,0.65)', fontSize: '0.95rem', fontWeight: 700 }}>
+          {done ? 'הגעת ליעד!' : 'ימים נותרו'}
+        </span>
+      </div>
+      <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 99, overflow: 'hidden', marginBottom: '0.4rem' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#6366f180,#a5b4fc)', borderRadius: 99, transition: 'width 0.7s ease' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.6rem' }}>{elapsed} / {total} ימים</span>
+        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>{fmtDate}</span>
+      </div>
+    </div>
+  )
+}
+
+function GoalEditModal({ goal, onSave, onClear, onClose }) {
+  const [title,      setTitle]      = useState(goal?.title || '')
+  const [targetDate, setTargetDate] = useState(goal?.targetDate || '')
+  const canSave = title.trim().length > 0 && targetDate.length > 0
+  const minDate = new Date().toISOString().slice(0, 10)
+
+  function setDaysFromNow(d) {
+    const date = new Date()
+    date.setDate(date.getDate() + d)
+    setTargetDate(date.toISOString().slice(0, 10))
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 5200, background: 'rgba(5,5,12,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(99,102,241,0.4)', padding: '1.5rem 1.4rem 2.6rem', animation: 'slide-up 0.28s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.4rem' }}>
+          <span style={{ color: 'rgba(99,102,241,0.7)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>🎯 מטרה אישית</span>
+          <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.55)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}>✕</button>
+        </div>
+        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.4rem' }}>שם המטרה</div>
+        <input
+          autoFocus
+          className="glow-input"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="לדוגמה: מוכנות לגיוס, השקת האפליקציה..."
+          style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem 0.95rem', borderRadius: 11, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', marginBottom: '1.1rem', outline: 'none' }}
+        />
+        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.5rem' }}>תאריך יעד</div>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.7rem', flexWrap: 'wrap' }}>
+          {[{l:'14 יום',d:14},{l:'30 יום',d:30},{l:'60 יום',d:60},{l:'16 יולי',date:'2026-07-16'}].map(q => (
+            <button
+              key={q.l}
+              onClick={() => q.date ? setTargetDate(q.date) : setDaysFromNow(q.d)}
+              className="btn-tactile"
+              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 20, color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, padding: '0 0.85rem', cursor: 'pointer', minHeight: 44, minWidth: 0 }}
+            >{q.l}</button>
+          ))}
+        </div>
+        <input
+          type="date"
+          className="glow-input"
+          value={targetDate}
+          min={minDate}
+          onChange={e => setTargetDate(e.target.value)}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem 0.95rem', borderRadius: 11, border: `1px solid ${targetDate ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.1)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', marginBottom: '1.4rem', outline: 'none', colorScheme: 'dark' }}
+        />
+        <button
+          onClick={() => canSave && onSave(title.trim(), targetDate)}
+          disabled={!canSave}
+          className="btn-tactile"
+          style={{ width: '100%', padding: '0.95rem', borderRadius: 14, border: 'none', background: canSave ? 'linear-gradient(135deg,#e8b800,#facc15)' : 'rgba(255,255,255,0.06)', color: canSave ? '#111' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 900, cursor: canSave ? 'pointer' : 'not-allowed', marginBottom: '0.6rem', boxShadow: canSave ? '0 6px 20px rgba(250,204,21,0.35)' : 'none', transition: 'all 0.15s' }}
+        >שמור מטרה</button>
+        {goal && (
+          <button
+            onClick={onClear}
+            className="btn-tactile"
+            style={{ width: '100%', padding: '0.7rem', borderRadius: 14, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: 'rgba(248,113,113,0.6)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+          >מחק מטרה</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EditHabitModal({ trigger, onSave, onDelete, onClose }) {
+  const [cue,        setCue]        = useState(trigger.cue)
+  const [habit,      setHabit]      = useState(trigger.habit)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const canSave = cue.trim().length > 0 && habit.trim().length > 0
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 5100, background: 'rgba(5,5,12,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(245,197,24,0.3)', padding: '1.5rem 1.4rem 2.6rem', animation: 'slide-up 0.28s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.4rem' }}>
+          <span style={{ color: 'rgba(245,197,24,0.6)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>✎ עריכת הרגל</span>
+          <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.55)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}>✕</button>
+        </div>
+
+        {confirmDel ? (
+          <div style={{ animation: 'fadeIn 0.18s ease' }}>
+            <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 14, padding: '1.1rem 1.2rem', marginBottom: '1.1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>🗑</div>
+              <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.35rem' }}>למחוק את ההרגל?</div>
+              <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.78rem', lineHeight: 1.5 }}>"{trigger.cue} → {trigger.habit}"</div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button
+                onClick={() => setConfirmDel(false)}
+                className="btn-tactile"
+                style={{ flex: 1, padding: '0.85rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(241,245,249,0.6)', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}
+              >ביטול</button>
+              <button
+                onClick={onDelete}
+                className="btn-tactile"
+                style={{ flex: 1, padding: '0.85rem', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' }}
+              >מחק סופית</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.4rem' }}>כשאני... (הטריגר)</div>
+            <input
+              autoFocus
+              className="glow-input"
+              value={cue}
+              onChange={e => setCue(e.target.value)}
+              placeholder="לדוגמה: אחרי שאני מתעורר"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem 0.95rem', borderRadius: 11, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', marginBottom: '1rem', outline: 'none' }}
+            />
+            <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.4rem' }}>אני אבצע... (ההרגל)</div>
+            <input
+              className="glow-input"
+              value={habit}
+              onChange={e => setHabit(e.target.value)}
+              placeholder="לדוגמה: 10 שכיבות סמיכה"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '0.8rem 0.95rem', borderRadius: 11, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', marginBottom: '1.25rem', outline: 'none' }}
+            />
+            <button
+              onClick={() => canSave && onSave(cue.trim(), habit.trim())}
+              disabled={!canSave}
+              className="btn-tactile"
+              style={{ width: '100%', padding: '0.95rem', borderRadius: 14, border: 'none', background: canSave ? 'linear-gradient(135deg,#D4A017,#F5C518)' : 'rgba(255,255,255,0.06)', color: canSave ? '#050505' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 800, cursor: canSave ? 'pointer' : 'not-allowed', marginBottom: '0.6rem' }}
+            >
+              שמור שינויים
+            </button>
+            <button
+              onClick={() => setConfirmDel(true)}
+              className="btn-tactile"
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 12, background: 'none', border: '1px solid rgba(239,68,68,0.18)', color: 'rgba(248,113,113,0.55)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              🗑 מחק הרגל
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MantraCard({ idx, onCycle }) {
+  const mantra = MANTRAS[idx % MANTRAS.length]
+  return (
+    <div style={{ textAlign: 'center', padding: '1.5rem 1.25rem', marginTop: '0.75rem', marginBottom: '0.25rem' }}>
+      <p style={{ color: 'rgba(241,245,249,0.82)', fontSize: '1.08rem', fontWeight: 700, lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 1rem', letterSpacing: '0.01em' }}>
+        "{mantra}"
+      </p>
+      <button
+        onClick={onCycle}
+        className="btn-tactile"
+        style={{ background: 'none', border: 'none', color: 'rgba(245,197,24,0.35)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem 0.5rem', minHeight: 'unset', minWidth: 'unset', letterSpacing: '0.06em', fontFamily: "'SF Mono','Fira Code',monospace" }}
+        aria-label="מנטרה הבאה"
+      >
+        ↻ הבא
+      </button>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { user, logout, isGuest }  = useAuth()
   const { lang, setLang, t: tAll } = useLang()
@@ -723,11 +924,14 @@ export default function Dashboard() {
   const [isDayStarted, setIsDayStarted] = useState(false)
   const [showWhy,        setShowWhy]        = useState(false)
   const [btnBurst,       setBtnBurst]       = useState(false)
-  const [showWorkoutLib, setShowWorkoutLib] = useState(false)
-  const [workoutSession, setWorkoutSession] = useState(null)
-  const [showDetails,    setShowDetails]    = useState(false)
+  const [showWorkoutLib,    setShowWorkoutLib]    = useState(false)
+  const [workoutSession,    setWorkoutSession]    = useState(null)
+  const [showCombatTraining,setShowCombatTraining]= useState(false)
+  const [showProModal,      setShowProModal]      = useState(false)
+  const [waitlistEmail,     setWaitlistEmail]     = useState('')
+  const [waitlistStatus,    setWaitlistStatus]    = useState('idle') // idle | loading | done | error
+  const [showDetails,       setShowDetails]       = useState(false)
   const [contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
-  const [secsLeft,       setSecsLeft]       = useState(() => { const n = new Date(); return (23 - n.getHours()) * 3600 + (59 - n.getMinutes()) * 60 + (59 - n.getSeconds()) })
   const [headerScore,    setHeaderScore]    = useState(getScore)
   const [customPath,     setCustomPath]     = useState(null)
   const [showPathBuilder,setShowPathBuilder]= useState(false)
@@ -736,6 +940,12 @@ export default function Dashboard() {
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
+  const [quickTask,    setQuickTask]    = useState(null)
+  const [editHabit,    setEditHabit]    = useState(null)
+  const [showGoalEdit, setShowGoalEdit] = useState(false)
+  const [levelUpModal, setLevelUpModal] = useState(null)
+  const [mantraIdx,        setMantraIdx]        = useState(() => new Date().getDate() % MANTRAS.length)
+  const [showUnlockBanner, setShowUnlockBanner] = useState(false)
 
   const reflTimers = useRef({})
 
@@ -766,8 +976,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      const n = new Date()
-      setSecsLeft((23 - n.getHours()) * 3600 + (59 - n.getMinutes()) * 60 + (59 - n.getSeconds()))
       setHeaderScore(getScore())
     }, 1000)
     return () => clearInterval(id)
@@ -779,16 +987,45 @@ export default function Dashboard() {
     return () => window.removeEventListener('prime:redeemed', onRedeemed)
   }, [])
 
+  const streak             = profile?.streak?.count || 0
+  const winnerGlow         = streak >= 7
+  const isAdvancedUnlocked = streak >= 3
+  const daysToUnlock       = Math.max(0, 3 - streak)
+
+  useEffect(() => {
+    if (isAdvancedUnlocked && !localStorage.getItem('ft_advanced_seen')) {
+      setShowUnlockBanner(true)
+      setShowDetails(true)
+    }
+  }, [isAdvancedUnlocked])
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key !== 'Escape') return
+      if (quickTask)      setQuickTask(null)
+      else if (proofModal) setProofModal(null)
+      else if (editHabit)  setEditHabit(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [quickTask, proofModal, editHabit])
+
   // ── XP helpers ────────────────────────────────────────────────
 
   async function awardXP(amount) {
     if (isGuest) { setXPToast('signin'); return }
-    const newXP  = (profile?.xp || 0) + amount
-    const today  = todayKey()
-    const log    = [...new Set([...(profile?.activityLog || []), today])]
-    const updated = { ...profile, xp: newXP, activityLog: log }
+    const oldLevel = getLevel(profile?.xp || 0)
+    const newXP    = (profile?.xp || 0) + amount
+    const newLevel = getLevel(newXP)
+    const today    = todayKey()
+    const log      = [...new Set([...(profile?.activityLog || []), today])]
+    const updated  = { ...profile, xp: newXP, activityLog: log }
     setProfile(updated)
     setXPToast(amount)
+    if (newLevel > oldLevel) {
+      setLevelUpModal(newLevel)
+      setTimeout(() => setLevelUpModal(null), 3800)
+    }
     await saveProfile(user.uid, { xp: newXP, activityLog: log })
     await syncLeaderboard(user.uid, profile?.name || 'Anonymous', newXP).catch(() => {})
     loadLeaderboard().then(setLeaderboard)
@@ -809,7 +1046,10 @@ export default function Dashboard() {
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
     const s         = profile?.streak || {}
     if (s.lastDate === today) return
-    const count = s.lastDate === yesterday ? (s.count || 0) + 1 : 1
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+    const count = (s.lastDate === yesterday || s.lastDate === twoDaysAgo)
+      ? (s.count || 0) + 1
+      : 1
     setProfile(p => ({ ...p, streak: { count, lastDate: today } }))
     saveProfile(user.uid, { streak: { count, lastDate: today } }).catch(() => {})
   }
@@ -844,6 +1084,16 @@ export default function Dashboard() {
     updateStreak(next, profile?.triggers || [])
   }
 
+  function confirmQuickTask(trigger) {
+    if (checkins[trigger.id]) return
+    const next = { ...checkins, [trigger.id]: true }
+    saveCheckins(next)
+    setCheckinsS(next)
+    setQuickTask(null)
+    awardXP(XP_PER_TRIGGER)
+    updateStreak(next, profile?.triggers || [])
+  }
+
   async function handleAddTrigger(data) {
     if (isGuest) { setShowModal(false); return }
     setSaving(true)
@@ -852,6 +1102,37 @@ export default function Dashboard() {
     const updated    = { ...(profile || {}), triggers: [...existing, newTrigger], onboardingDone: true }
     try { await saveProfile(user.uid, updated); setProfile(updated); setShowModal(false) } catch {}
     setSaving(false)
+  }
+
+  async function handleEditHabit(id, newCue, newHabit) {
+    const newTriggers = (profile?.triggers || []).map(t => t.id === id ? { ...t, cue: newCue, habit: newHabit } : t)
+    const updated = { ...profile, triggers: newTriggers }
+    setProfile(updated)
+    setEditHabit(null)
+    if (!isGuest) await saveProfile(user.uid, { triggers: newTriggers }).catch(() => {})
+  }
+
+  async function handleDeleteHabit(id) {
+    const newTriggers = (profile?.triggers || []).filter(t => t.id !== id)
+    const updated = { ...profile, triggers: newTriggers }
+    setProfile(updated)
+    setEditHabit(null)
+    if (!isGuest) await saveProfile(user.uid, { triggers: newTriggers }).catch(() => {})
+  }
+
+  async function handleSaveGoal(title, targetDate) {
+    const goal    = { title, targetDate, createdAt: todayKey() }
+    const updated = { ...profile, goal }
+    setProfile(updated)
+    setShowGoalEdit(false)
+    if (!isGuest) await saveProfile(user.uid, { goal }).catch(() => {})
+  }
+
+  async function handleClearGoal() {
+    const updated = { ...profile, goal: null }
+    setProfile(updated)
+    setShowGoalEdit(false)
+    if (!isGuest) await saveProfile(user.uid, { goal: null }).catch(() => {})
   }
 
   // ── Challenge actions ─────────────────────────────────────────
@@ -891,7 +1172,6 @@ export default function Dashboard() {
   const level     = getLevel(xp)
   const levelXP   = getLevelXP(xp)
   const toNext    = getToNext(xp)
-  const streak    = profile?.streak?.count || 0
   const isHe      = lang === 'he'
   const hour      = new Date().getHours()
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
@@ -939,12 +1219,9 @@ export default function Dashboard() {
     return 'כל פעולה היום היא הצבעה עבור האדם שאתה הופך להיות. תצביע.'
   }, [profile?.challenges, profile?.activityLog, streak, yesterday])
 
-  const winnerGlow = streak >= 7
-
   const activitySet     = new Set(profile?.activityLog || [])
-  const missedYesterday = activitySet.size > 0 && !activitySet.has(yesterday)
-  const dailyQuote      = DAILY_QUOTES[new Date().getDate() % DAILY_QUOTES.length]
-
+  const isFirstTimer    = activitySet.size === 0
+  const missedYesterday = !isFirstTimer && !activitySet.has(yesterday)
   // ── Single primary action ──────────────────────────────────────
   const trackDoneToday   = activeTrack ? profile?.challenges?.[activeTrack.id]?.lastCompletedDate === todayKey() : true
   const firstUndoneHabit = triggers.find(tr => !checkins[tr.id]) ?? null
@@ -962,11 +1239,18 @@ export default function Dashboard() {
     primaryAction = { type: 'all-done' }
   }
 
-  if (!hasSeenOnboarding()) return (
+  // Skip all onboarding flows if user already has meaningful progress in Firestore
+  const profileHasProgress = !loading && (
+    (profile?.xp || 0) > 0
+    || Object.keys(profile?.challenges || {}).some(k => (profile.challenges[k]?.daysCompleted || 0) > 0)
+    || (profile?.triggers || []).length > 0
+  )
+
+  if (!profileHasProgress && !hasSeenOnboarding()) return (
     <PrimeOnboarding onDone={() => setInitiationDone(true)} />
   )
 
-  if (!initiationDone) return (
+  if (!profileHasProgress && !initiationDone) return (
     <InitiationFlow onComplete={() => {
       localStorage.setItem('onboardingCompleted', 'true')
       setInitiationDone(true)
@@ -1014,7 +1298,10 @@ export default function Dashboard() {
       {/* ── Sticky Header ── */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, background: winnerGlow ? 'rgba(14,14,22,0.97)' : '#0e0e16', borderBottom: `1px solid ${winnerGlow ? 'rgba(251,191,36,0.18)' : 'rgba(255,255,255,0.07)'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 1.25rem' }}>
-          <img src="/prime-logo.svg" alt="PRIME" style={{ height: 26, width: 'auto', display: 'block' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+            <img src="/prime-logo.svg" alt="PRIME" style={{ height: 26, width: 'auto', display: 'block' }} />
+            <span style={{ color: '#b8966a', fontSize: '0.47rem', fontWeight: 800, letterSpacing: '0.17em', textTransform: 'uppercase' }}>Daily Discipline System</span>
+          </div>
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             {(() => {
               const rank = getRank(headerScore)
@@ -1027,9 +1314,6 @@ export default function Dashboard() {
                 </div>
               )
             })()}
-            <div style={{ fontFamily: "'SF Mono','Fira Code',monospace", color: secsLeft < 3600 ? '#ef4444' : secsLeft < 10800 ? '#f59e0b' : 'rgba(245,197,24,0.65)', fontSize: '0.67rem', fontWeight: 700, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 8, padding: '0.2rem 0.5rem', letterSpacing: '0.04em' }}>
-              {fmtCountdown(secsLeft)}
-            </div>
           </div>
         </div>
       </div>
@@ -1038,7 +1322,7 @@ export default function Dashboard() {
       {isGuest && (
         <div style={{ background: 'rgba(245,158,11,0.1)', borderBottom: '1px solid rgba(245,158,11,0.2)', padding: '0.55rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
           <span style={{ color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600 }}>👁 מצב אורח — ההתקדמות לא תישמר</span>
-          <a href="/welcome" style={{ color: '#f59e0b', fontSize: '0.72rem', fontWeight: 800, textDecoration: 'none', background: 'rgba(245,158,11,0.15)', borderRadius: 20, padding: '0.2rem 0.6rem', whiteSpace: 'nowrap' }}>התחבר →</a>
+          <a href="/welcome" className="btn-tactile" style={{ color: '#f59e0b', fontSize: '0.76rem', fontWeight: 800, textDecoration: 'none', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '0.45rem 0.85rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', minHeight: 36 }}>התחבר ←</a>
         </div>
       )}
 
@@ -1047,7 +1331,7 @@ export default function Dashboard() {
 
         {/* ── HOME TAB — Command Center ── */}
         {activeTab === 'home' && (
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
 
             {/* ── MIRROR ── */}
             {mirrorData && (
@@ -1061,83 +1345,133 @@ export default function Dashboard() {
               />
             )}
 
-            {/* ── ZONE 1 ── */}
             <ContractLock onRedeemed={() => setContractLocked(false)} />
-            <DailyBrief />
 
-            {/* ── ZONE 2: PRIMARY ACTION ── */}
-            {!pathLoading && !isGuest && (
-              <CustomPathCard
-                user={user}
-                pathRecord={customPath}
-                onPathUpdate={setCustomPath}
-                onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
-              />
+            {/* ── Personal Goal Tracker (Advanced) ── */}
+            {isAdvancedUnlocked && profile?.goal && (
+              <GoalTracker goal={profile.goal} onEdit={() => setShowGoalEdit(true)} />
             )}
-            {!isGuest && (
-              <SquadLeaderboard uid={user?.uid} userName={profile?.name || 'PRIME User'} />
+
+            {/* ── First-timer welcome ── */}
+            {isFirstTimer && primaryAction.type !== 'all-done' && (
+              <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🎯</span>
+                <div>
+                  <div style={{ color: '#a5b4fc', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>ברוכים הבאים למערכת</div>
+                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>השג את הניצחון הראשון שלך היום — כל מסע מתחיל בצעד אחד.</div>
+                </div>
+              </div>
             )}
+
+            {/* ── Missed-day warning ── */}
+            {missedYesterday && primaryAction.type !== 'all-done' && (
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{ color: '#f87171', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>פספסת אתמול</div>
+                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>הרצף שלך בסכנה. השלם את המשימה היום כדי לשמור עליו.</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Quick Habits Panel ── */}
+            {triggers.length > 0 && (
+              <div style={{
+                background: 'rgba(255,255,255,0.025)',
+                border: '1px solid rgba(255,255,255,0.055)',
+                borderRadius: 18,
+                marginBottom: '1.25rem',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.75rem 1rem 0.6rem',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem', fontWeight: 700 }}>
+                    ⚡ הרגלים יומיים
+                  </span>
+                  <span style={{ color: allDone ? '#34d399' : 'rgba(241,245,249,0.35)', fontSize: '0.78rem', fontWeight: 700 }}>
+                    {doneCount}/{triggers.length}
+                  </span>
+                </div>
+                {triggers.map((tr, i) => {
+                  const done = !!checkins[tr.id]
+                  return (
+                    <div
+                      key={tr.id}
+                      onClick={() => setQuickTask(tr)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '1rem 1.1rem',
+                        borderBottom: i < triggers.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        cursor: 'pointer',
+                        minHeight: 58,
+                        background: done ? 'rgba(16,185,129,0.04)' : 'rgba(99,102,241,0.03)',
+                      }}
+                    >
+                      <div style={{
+                        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${done ? '#34d399' : 'rgba(99,102,241,0.45)'}`,
+                        background: done ? 'rgba(16,185,129,0.18)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#34d399', fontSize: '0.82rem', fontWeight: 900,
+                      }}>
+                        {done ? '✓' : ''}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          color: done ? 'rgba(241,245,249,0.4)' : '#f1f5f9',
+                          fontSize: '0.9rem', fontWeight: 700,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          textDecoration: done ? 'line-through' : 'none',
+                          lineHeight: 1.35,
+                        }}>
+                          {tr.cue}
+                        </div>
+                        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.74rem', marginTop: '0.15rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                          ← {tr.habit}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                        {!done
+                          ? <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>התחל ←</div>
+                          : <span style={{ color: 'rgba(52,211,153,0.7)', fontSize: '1.05rem' }}>✅</span>
+                        }
+                        <button
+                          onClick={e => { e.stopPropagation(); setEditHabit(tr) }}
+                          className="btn-tactile"
+                          title="ערוך הרגל"
+                          aria-label="ערוך הרגל"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(241,245,249,0.45)', fontSize: '0.88rem', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, fontWeight: 700 }}
+                        >✎</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />
 
-            {/* ── ZONE 3: STATUS (collapsible) ── */}
-            <button
-              onClick={() => setShowDetails(v => !v)}
-              className="btn-tactile"
-              style={{
-                width: '100%', marginTop: '0.35rem', marginBottom: showDetails ? '0.85rem' : 0,
-                padding: '0.6rem', background: 'none',
-                border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
-                color: 'rgba(241,245,249,0.25)', fontSize: '0.6rem', fontWeight: 700,
-                letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
-                fontFamily: "'SF Mono','Fira Code',monospace",
-              }}
-            >
-              <span style={{ display: 'inline-block', transform: showDetails ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
-              {showDetails ? 'סגור' : 'מסלולים · אתגרים · סטטוס'}
-            </button>
-
-            {showDetails && (
-              <div style={{ animation: 'fadeIn 0.22s ease' }}>
-
-                {/* Discipline goal */}
-                <DisciplineGoalCard />
-
-                {/* Missed-day warning */}
-                {missedYesterday && primaryAction.type !== 'all-done' && (
-                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
-                    <div>
-                      <div style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.15rem' }}>פספסת אתמול</div>
-                      <div style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.72rem', lineHeight: 1.4 }}>הרצף שלך בסכנה. השלם את המשימה היום כדי לשמור עליו.</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Greeting */}
-                <div style={{ marginBottom: '1.1rem' }}>
-                  <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.4, letterSpacing: '-0.01em', margin: 0, ...(winnerGlow ? { textShadow: '0 0 32px rgba(251,191,36,0.25)' } : {}) }}>
-                    {dynamicGreeting}
-                  </h2>
-                  <p style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
-                    {new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
-                  </p>
-                </div>
-
-                {/* Daily quote */}
-                <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.1)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '1.1rem' }}>
-                  <div style={{ color: 'rgba(245,197,24,0.4)', fontSize: '0.54rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ INTEL</div>
-                  <p style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.55, margin: 0 }}>"{dailyQuote}"</p>
-                </div>
+            {/* ── Habits-only primary action ── */}
+            {primaryAction.type === 'habit' && (
+              <div style={{ textAlign: 'center', padding: '0.75rem 0 0.5rem', animation: 'fadeIn 0.3s ease' }}>
+                <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.78rem', margin: 0 }}>סמן הרגלים כמושלמים כדי להמשיך</p>
+              </div>
+            )}
 
             {/* ── All done ── */}
             {primaryAction.type === 'all-done' && (
-              <div style={{ textAlign: 'center', animation: 'slide-up 0.35s ease both', paddingTop: '2rem' }}>
-                <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>✅</div>
-                <h2 style={{ color: '#10b981', fontWeight: 900, fontSize: '1.4rem', marginBottom: '0.5rem' }}>הכל הושלם היום!</h2>
-                <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.9rem', lineHeight: 1.6 }}>חזור מחר כדי לשמור על הרצף.</p>
+              <div style={{ textAlign: 'center', animation: 'slide-up 0.35s ease both', padding: '1.5rem 0' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>✅</div>
+                <h2 style={{ color: '#10b981', fontWeight: 900, fontSize: '1.3rem', marginBottom: '0.4rem' }}>הכל הושלם היום!</h2>
+                <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.85rem', lineHeight: 1.6, margin: 0 }}>חזור מחר כדי לשמור על הרצף.</p>
                 {streak > 0 && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '1.25rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 20, padding: '0.4rem 1rem' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '1rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 20, padding: '0.4rem 1rem' }}>
                     <span>🔥</span>
                     <span style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.88rem' }}>{streak} ימים ברצף — כל הכבוד!</span>
                   </div>
@@ -1147,16 +1481,16 @@ export default function Dashboard() {
 
             {/* ── No tasks ── */}
             {primaryAction.type === 'no-tasks' && (
-              <div style={{ textAlign: 'center', animation: 'slide-up 0.35s ease both', paddingTop: '2rem' }}>
-                <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎯</div>
-                <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.2rem', marginBottom: '0.6rem' }}>בחר מסלול להתחיל</h2>
-                <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.88rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+              <div style={{ textAlign: 'center', animation: 'slide-up 0.35s ease both', padding: '1.5rem 0' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎯</div>
+                <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.5rem' }}>בחר מסלול להתחיל</h2>
+                <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
                   לא הגדרת מסלול עדיין.<br/>בחר אחד ותתחיל לצבור XP היום.
                 </p>
                 <button
                   className="btn-primary btn-tactile"
                   onClick={() => setActiveTab('tracks')}
-                  style={{ padding: '1.3rem 2.5rem', borderRadius: 20, fontSize: '1.05rem', fontWeight: 900 }}
+                  style={{ padding: '1.1rem 2rem', borderRadius: 18, fontSize: '1rem', fontWeight: 900 }}
                 >
                   📚 המסלולים שלי ←
                 </button>
@@ -1177,7 +1511,7 @@ export default function Dashboard() {
                 <div style={{ animation: 'slide-up 0.35s ease both' }}>
 
                   {/* Lesson card */}
-                  <div style={{ background: `linear-gradient(145deg,${col}14,${col}05)`, border: `1px solid ${col}30`, borderRadius: '20px 16px 22px 18px', padding: '1.2rem 1.3rem', marginBottom: '0.9rem' }}>
+                  <div style={{ background: `linear-gradient(145deg,${col}12,${col}04)`, border: `1px solid ${col}20`, borderRadius: 20, padding: '1.4rem 1.5rem', marginBottom: '1.1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.75rem' }}>
                       <span style={{ fontSize: '1rem' }}>{lesson.icon}</span>
                       <span style={{ color: col, fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{lesson.label} · {primaryAction.track.title} יום {primaryAction.dayNum}</span>
@@ -1192,7 +1526,7 @@ export default function Dashboard() {
 
                   {/* Commitment card with Why toggle */}
                   {!isLocked ? (
-                    <div style={{ background: 'rgba(196,121,90,0.07)', border: '1px solid rgba(196,121,90,0.2)', borderRadius: '14px 18px 16px 20px', padding: '1.1rem 1.3rem', marginBottom: '1rem' }}>
+                    <div style={{ background: 'rgba(196,121,90,0.06)', border: '1px solid rgba(196,121,90,0.14)', borderRadius: 16, padding: '1.2rem 1.4rem', marginBottom: '1.1rem' }}>
                       <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.55rem' }}>
                         ✍️ ההתחייבות היומית שלי
                       </div>
@@ -1229,8 +1563,8 @@ export default function Dashboard() {
                   {!isLocked && (() => {
                     const pct = Math.round(((primaryAction.dayNum - 1) / primaryAction.track.days) * 100)
                     return (
-                      <div style={{ marginBottom: '1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                           <span style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.65rem', fontWeight: 700 }}>התקדמות במסלול</span>
                           <span style={{ color: col, fontSize: '0.65rem', fontWeight: 800 }}>{pct}% · יום {primaryAction.dayNum} מתוך {primaryAction.track.days}</span>
                         </div>
@@ -1245,8 +1579,8 @@ export default function Dashboard() {
                   {!isLocked ? (
                     <>
                       {streak > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.22)', borderRadius: 20, padding: '0.3rem 0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.18)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
                             <span style={{ fontSize: '0.9rem' }}>🔥</span>
                             <span style={{ color: '#fbbf24', fontSize: '0.8rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
                           </div>
@@ -1261,7 +1595,7 @@ export default function Dashboard() {
                             openChallengeModal(primaryAction.track, primaryAction.dayNum, primaryAction.taskDesc)
                           }, 350)
                         }}
-                        style={{ width: '100%', padding: '1.6rem', borderRadius: 22, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.01em', marginBottom: '0.75rem' }}
+                        style={{ width: '100%', padding: '1.6rem', borderRadius: 22, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.01em', marginBottom: '1rem' }}
                       >
                         ✅ ביצעתי היום · +{primaryAction.xp} XP
                       </button>
@@ -1269,92 +1603,152 @@ export default function Dashboard() {
                         onClick={() => setActiveTab('tracks')}
                         style={{ background: 'none', border: 'none', color: 'rgba(241,245,249,0.25)', fontSize: '0.78rem', cursor: 'pointer', width: '100%', textAlign: 'center', padding: '0.4rem' }}
                       >
-                        ראה את כל המסלולים →
+                        ← ראה את כל המסלולים
                       </button>
                     </>
                   ) : (
                     <button
                       className="btn-tactile"
                       onClick={() => setActiveTab('tracks')}
-                      style={{ width: '100%', padding: '1rem', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(241,245,249,0.5)', cursor: 'pointer' }}
+                      style={{ width: '100%', padding: '1rem', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(241,245,249,0.75)', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s, background 0.15s' }}
                     >
-                      עבור למסלולים →
+                      עבור למסלולים ←
                     </button>
                   )}
                 </div>
               )
             })()}
 
-            {/* ── Habit course experience ── */}
-            {primaryAction.type === 'habit' && (
-              <div style={{ animation: 'slide-up 0.35s ease both' }}>
-                <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: '14px 18px 16px 20px', padding: '1.25rem', marginBottom: '1.4rem' }}>
-                  <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.55rem' }}>
-                    ✍️ ההתחייבות היומית שלי
+            {/* ── Combat Training (PRO gated) ── */}
+            <div style={{ position: 'relative', marginTop: '1.25rem' }}>
+              <button
+                className="btn-tactile"
+                onClick={() => (isGuest || profile?.tier !== 'pro') ? setShowProModal(true) : setShowCombatTraining(true)}
+                style={{ width: '100%', padding: '1.05rem', borderRadius: 14, border: '1.5px solid rgba(239,68,68,0.4)', background: 'linear-gradient(135deg, rgba(239,68,68,0.14), rgba(239,68,68,0.06))', color: '#f87171', fontSize: '0.92rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 2px 16px rgba(239,68,68,0.12)', whiteSpace: 'nowrap' }}
+              >
+                <span>🥊</span> אימון לחימה ←
+              </button>
+              <div
+                style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 20, padding: '0.18rem 0.55rem', color: '#fff', fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.09em', lineHeight: 1.4, boxShadow: '0 2px 8px rgba(99,102,241,0.5)', zIndex: 2, pointerEvents: 'none' }}
+              >
+                PRO ✦
+              </div>
+            </div>
+
+            {/* ── Mantra ── */}
+            <MantraCard idx={mantraIdx} onCycle={() => setMantraIdx(i => (i + 1) % MANTRAS.length)} />
+
+            {/* ── Advanced Features (Feature Gated) ── */}
+            {!isAdvancedUnlocked ? (
+              <div style={{ marginTop: '1.5rem', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18, padding: '1.25rem 1.35rem', background: 'rgba(255,255,255,0.01)' }}>
+
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.95rem' }}>🔓</span>
+                    <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.8rem', fontWeight: 800 }}>כלים מתקדמים</span>
                   </div>
-                  <p style={{ color: 'rgba(241,245,249,0.78)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 0.7rem' }}>
-                    <span style={{ color: '#d4956e', fontWeight: 800 }}>היום אני מתחייב ל: </span>
-                    {primaryAction.trigger.cue} → {primaryAction.trigger.habit}
-                  </p>
-                  <button
-                    onClick={() => setShowWhy(w => !w)}
-                    style={{ background: 'none', border: 'none', color: 'rgba(99,102,241,0.6)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                  >
-                    <span style={{ display: 'inline-block', transform: showWhy ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
-                    למה זה חשוב?
-                  </button>
-                  {showWhy && (
-                    <p style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.77rem', lineHeight: 1.65, margin: '0.6rem 0 0', animation: 'fadeIn 0.2s ease' }}>
-                      {LESSON_WHY[0]}
-                    </p>
-                  )}
+                  <span style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 20, padding: '0.18rem 0.65rem', color: '#a5b4fc', fontSize: '0.62rem', fontWeight: 800 }}>
+                    {daysToUnlock === 1 ? 'יום אחד לפתיחה' : `${daysToUnlock} ימים לפתיחה`}
+                  </span>
                 </div>
-                {streak > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.22)', borderRadius: 20, padding: '0.3rem 0.85rem' }}>
-                      <span style={{ fontSize: '0.9rem' }}>🔥</span>
-                      <span style={{ color: '#fbbf24', fontSize: '0.8rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
+
+                {/* 3-step progress */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  {[1, 2, 3].map((d, i) => {
+                    const done = streak >= d
+                    return (
+                      <div key={d} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: d < 3 ? 1 : undefined }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: done ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)', border: `1.5px solid ${done ? '#6366f1' : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: done ? '#a5b4fc' : 'rgba(241,245,249,0.18)', fontWeight: 900, flexShrink: 0, transition: 'all 0.4s ease' }}>
+                          {done ? '✓' : d}
+                        </div>
+                        {d < 3 && <div style={{ flex: 1, height: 2, borderRadius: 99, background: done ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.07)', transition: 'background 0.4s ease' }} />}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* What unlocks */}
+                <p style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.72rem', lineHeight: 1.6, margin: '0 0 0.8rem' }}>
+                  {daysToUnlock === 0 ? 'בוא מחר ותפתח כלים מתקדמים!' : `עוד ${daysToUnlock === 1 ? 'יום אחד' : `${daysToUnlock} ימים`} ברצף כדי לפתוח:`}
+                </p>
+                {[
+                  { icon: '🤖', label: 'מסלול AI אישי — תוכנית מותאמת לך' },
+                  { icon: '👥', label: 'צוות ולוח שיאים' },
+                  { icon: '🎯', label: 'מטרה אישית עם מעקב' },
+                  { icon: '📊', label: 'ניתוח ביצועים מתקדם' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.4rem', opacity: 0.4 }}>
+                    <span style={{ fontSize: '0.82rem', flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.74rem' }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Unlock celebration banner */}
+                {showUnlockBanner && (
+                  <div style={{ marginTop: '1.5rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.16), rgba(139,92,246,0.1))', border: '1px solid rgba(99,102,241,0.32)', borderRadius: 18, padding: '1.1rem 1.3rem', animation: 'fadeIn 0.35s ease' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🎉</span>
+                        <div>
+                          <div style={{ color: '#a5b4fc', fontWeight: 900, fontSize: '0.95rem', marginBottom: '0.18rem' }}>כלים מתקדמים נפתחו!</div>
+                          <div style={{ color: 'rgba(165,180,252,0.5)', fontSize: '0.71rem', lineHeight: 1.5 }}>3 ימים ברצף — הגעת לרמה הבאה. כל הכבוד.</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { localStorage.setItem('ft_advanced_seen', '1'); setShowUnlockBanner(false) }}
+                        style={{ background: 'none', border: 'none', color: 'rgba(241,245,249,0.25)', fontSize: '0.9rem', cursor: 'pointer', padding: '0.1rem 0.2rem', lineHeight: 1, flexShrink: 0 }}
+                      >✕</button>
                     </div>
                   </div>
                 )}
-                <button
-                  className={`btn-primary btn-tactile${btnBurst ? ' btn-burst' : ''}`}
-                  onClick={() => {
-                    setBtnBurst(true)
-                    setTimeout(() => {
-                      setBtnBurst(false)
-                      requestHabitComplete(primaryAction.trigger)
-                    }, 350)
-                  }}
-                  style={{ width: '100%', padding: '1.6rem', borderRadius: 22, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.01em' }}
-                >
-                  ✅ ביצעתי היום · +{primaryAction.xp} XP
-                </button>
-              </div>
-            )}
-                {/* Settings shortcut */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                  <button onClick={() => setActiveTab('settings')} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: 'rgba(241,245,249,0.3)', fontSize: '0.68rem', fontWeight: 700, padding: '0.3rem 0.8rem', cursor: 'pointer' }}>⚙ הגדרות</button>
-                </div>
 
-                {/* Training Library secondary access */}
-                <div style={{ paddingTop: '0', paddingBottom: TAB_H - 20 }}>
-                  {contractLocked ? (
-                    <div style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.9rem' }}>🔒</span>
-                      <span style={{ color: 'rgba(248,113,113,0.7)', fontSize: '0.82rem', fontWeight: 700 }}>ספריית האימונים נעולה — השלם גאולה</span>
+                {/* Toggle button */}
+                <button
+                  onClick={() => setShowDetails(v => !v)}
+                  className="btn-tactile"
+                  style={{ width: '100%', marginTop: '1.5rem', marginBottom: showDetails ? '1rem' : 0, padding: '0.65rem', background: 'none', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, color: 'rgba(165,180,252,0.4)', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+                >
+                  {showDetails ? '▲ סגור' : '▼ כלים מתקדמים · AI · צוות'}
+                </button>
+
+                {showDetails && (
+                  <div style={{ animation: 'fadeIn 0.22s ease' }}>
+                    <DailyBrief />
+                    {!pathLoading && !isGuest && (
+                      <CustomPathCard
+                        user={user}
+                        pathRecord={customPath}
+                        onPathUpdate={setCustomPath}
+                        onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
+                      />
+                    )}
+                    {!isGuest && (
+                      <SquadLeaderboard uid={user?.uid} userName={profile?.name || 'PRIME User'} />
+                    )}
+                    {!profile?.goal && !isGuest && (
+                      <button
+                        onClick={() => setShowGoalEdit(true)}
+                        className="btn-tactile"
+                        style={{ width: '100%', marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 14, border: '1px dashed rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: 'rgba(165,180,252,0.7)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+                      >
+                        🎯 הגדר מטרה אישית
+                      </button>
+                    )}
+                    <DisciplineGoalCard />
+                    <div style={{ marginBottom: '1.1rem' }}>
+                      <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.4, letterSpacing: '-0.01em', margin: 0, ...(winnerGlow ? { textShadow: '0 0 32px rgba(251,191,36,0.25)' } : {}) }}>
+                        {dynamicGreeting}
+                      </h2>
+                      <p style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                        {new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </p>
                     </div>
-                  ) : (
-                    <button
-                      className="btn-tactile"
-                      onClick={() => setShowWorkoutLib(true)}
-                      style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px solid rgba(196,121,90,0.25)', background: 'rgba(196,121,90,0.05)', color: '#d4956e', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-                    >
-                      <span>🏋️</span> לכל האימונים ←
-                    </button>
-                  )}
-                </div>
-              </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div style={{ height: TAB_H + 16 }} />
@@ -1391,7 +1785,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Tab Bar ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: TAB_H, background: '#111118', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', zIndex: 200 }}>
+      <div className="prime-tab-bar" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: TAB_H, background: 'rgba(14,14,22,0.97)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(255,255,255,0.055)', display: 'flex', alignItems: 'center', zIndex: 200 }}>
         {[{ id: 'home', icon: '🏠', label: 'היום שלי' }, { id: 'tracks', icon: '📚', label: 'מסלולים' }, { id: 'stats', icon: '📊', label: 'סטטס' }, { id: 'settings', icon: '⚙️', label: 'הגדרות' }].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0' }}>
             <span style={{ fontSize: '1.2rem', filter: activeTab === tab.id ? 'none' : 'grayscale(0.8) opacity(0.45)' }}>{tab.icon}</span>
@@ -1402,6 +1796,12 @@ export default function Dashboard() {
       </div>
 
       {/* ── Overlays ── */}
+      {showCombatTraining && (
+        <TrainingMode
+          onClose={() => setShowCombatTraining(false)}
+          onAwardXP={amount => { setShowCombatTraining(false); awardXP(amount) }}
+        />
+      )}
       {showWorkoutLib && (
         <WorkoutLibraryModal
           onSelect={ex => { setShowWorkoutLib(false); setWorkoutSession(ex) }}
@@ -1416,6 +1816,22 @@ export default function Dashboard() {
         />
       )}
       {showModal && <AddTriggerModal onSave={handleAddTrigger} onClose={() => setShowModal(false)} td={td} to={to} />}
+      {showGoalEdit && (
+        <GoalEditModal
+          goal={profile?.goal || null}
+          onSave={handleSaveGoal}
+          onClear={handleClearGoal}
+          onClose={() => setShowGoalEdit(false)}
+        />
+      )}
+      {editHabit && (
+        <EditHabitModal
+          trigger={editHabit}
+          onSave={(newCue, newHabit) => handleEditHabit(editHabit.id, newCue, newHabit)}
+          onDelete={() => handleDeleteHabit(editHabit.id)}
+          onClose={() => setEditHabit(null)}
+        />
+      )}
       {proofModal && (
         <ProofModal
           title={proofModal.title}
@@ -1427,6 +1843,174 @@ export default function Dashboard() {
         />
       )}
       {xpToast && <XPToast xp={xpToast} onDone={() => setXPToast(null)} />}
+
+      {/* ── Level Up Modal ── */}
+      {levelUpModal && (
+        <div
+          onClick={() => setLevelUpModal(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 6000, background: 'rgba(5,5,12,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s ease' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', textAlign: 'center', padding: '2rem 2.5rem' }}>
+            <ConfettiBurst />
+            <div style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '1.2rem' }}>⬆ LEVEL UP</div>
+            <div style={{ color: '#F5C518', fontSize: '7rem', fontWeight: 900, fontFamily: "'SF Mono','Fira Code',monospace", lineHeight: 1, textShadow: '0 0 60px rgba(245,197,24,0.55)', animation: 'level-up-burst 0.55s cubic-bezier(.34,1.56,.64,1) both' }}>
+              {levelUpModal}
+            </div>
+            <div style={{ color: '#f1f5f9', fontSize: '1.4rem', fontWeight: 900, marginTop: '0.7rem', marginBottom: '1.8rem' }}>
+              רמה {levelUpModal}
+            </div>
+            <div style={{ width: 200, margin: '0 auto 0.6rem', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.round((getLevelXP(xp) / XP_PER_LEVEL) * 100)}%`, background: 'linear-gradient(90deg,#D4A017,#F5C518)', borderRadius: 99, animation: 'xp-fill 0.9s 0.4s ease both' }} />
+            </div>
+            <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.74rem' }}>{toNext} XP לרמה הבאה</div>
+            <div style={{ marginTop: '2.5rem', color: 'rgba(241,245,249,0.18)', fontSize: '0.65rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>לחץ בכל מקום להמשך</div>
+          </div>
+        </div>
+      )}
+
+      {quickTask && (
+        <div
+          onClick={() => setQuickTask(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 7000, background: 'rgba(5,5,12,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', animation: 'fadeIn 0.18s ease both' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 440, background: '#161626', borderRadius: 24, border: '1px solid rgba(99,102,241,0.28)', boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)', padding: '1.5rem 1.4rem 1.75rem', animation: 'slide-up 0.25s ease both' }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.9rem' }}>⚡</span>
+                <span style={{ color: 'rgba(99,102,241,0.7)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>הרגל יומי</span>
+              </div>
+              <button onClick={() => setQuickTask(null)} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.55)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}>✕</button>
+            </div>
+
+            {/* Cue → Habit */}
+            <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.85rem' }}>
+              <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.45rem' }}>כשאני...</div>
+              <div style={{ color: '#f1f5f9', fontSize: '1rem', fontWeight: 800, marginBottom: '0.55rem' }}>{quickTask.cue}</div>
+              <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.3rem' }}>אני אבצע →</div>
+              <div style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.88rem', lineHeight: 1.55 }}>{quickTask.habit}</div>
+            </div>
+
+            {/* Why */}
+            <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.1)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
+              <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ למה זה עובד</div>
+              <p style={{ color: 'rgba(241,245,249,0.48)', fontSize: '0.78rem', lineHeight: 1.6, margin: 0 }}>
+                {LESSON_WHY[triggers.indexOf(quickTask) % LESSON_WHY.length]}
+              </p>
+            </div>
+
+            {/* CTA */}
+            {checkins[quickTask.id] ? (
+              <div style={{ width: '100%', padding: '1rem', borderRadius: 14, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', textAlign: 'center', color: '#34d399', fontSize: '0.97rem', fontWeight: 800 }}>
+                ✅ הושלם היום!
+              </div>
+            ) : (
+              <button
+                onClick={() => confirmQuickTask(quickTask)}
+                className="btn-primary btn-tactile"
+                style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 900 }}
+              >
+                ✅ ביצעתי · +{XP_PER_TRIGGER} XP
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ── Pro Coming Soon Modal ── */}
+      {showProModal && (
+        <div
+          onClick={() => { setShowProModal(false); setWaitlistEmail(''); setWaitlistStatus('idle') }}
+          style={{ position: 'fixed', inset: 0, zIndex: 6100, background: 'rgba(5,5,12,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 480, background: '#161626', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(99,102,241,0.45)', padding: '1.6rem 1.5rem 2.6rem', animation: 'slide-up 0.25s ease both' }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 20, padding: '0.2rem 0.65rem', color: '#fff', fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.1em' }}>PRO ✦</span>
+                <span style={{ color: '#a5b4fc', fontWeight: 900, fontSize: '1rem' }}>בקרוב</span>
+              </div>
+              <button
+                onClick={() => { setShowProModal(false); setWaitlistEmail(''); setWaitlistStatus('idle') }}
+                className="btn-tactile"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.5)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}
+              >✕</button>
+            </div>
+
+            {/* Tagline */}
+            <p style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.82rem', lineHeight: 1.65, marginBottom: '1.4rem' }}>
+              אנחנו בונים רמה חדשה לחלוטין של אימון. מצב Pro יכלול:
+            </p>
+
+            {/* Feature list */}
+            {[
+              { icon: '🤖', title: 'סימולציית יריב',      desc: 'AI שמדמה יריב אמיתי — זרוק ג׳אב, החלק, תגובה, קאונטר' },
+              { icon: '📊', title: 'דו"ח חולשות',         desc: 'ניתוח AI של הביצועים שלך אחרי כל אימון' },
+              { icon: '📷', title: 'ניתוח תנועה בזמן אמת', desc: 'המצלמה מזהה האם ביצעת את הפעולה הנכונה' },
+            ].map(f => (
+              <div key={f.title} style={{ display: 'flex', gap: '0.85rem', marginBottom: '1rem', padding: '0.85rem 1rem', borderRadius: 14, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0, marginTop: '0.05rem' }}>{f.icon}</span>
+                <div>
+                  <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.2rem' }}>{f.title}</div>
+                  <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.74rem', lineHeight: 1.5 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
+
+            {/* Waitlist form */}
+            {waitlistStatus === 'done' ? (
+              <div style={{ marginTop: '0.5rem', padding: '1rem', borderRadius: 14, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', marginBottom: '0.3rem' }}>✅</div>
+                <div style={{ color: '#34d399', fontSize: '0.82rem', fontWeight: 700 }}>נרשמת לרשימת המתנה!</div>
+                <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem', marginTop: '0.25rem' }}>נעדכן אותך כשPro יעלה לאוויר</div>
+              </div>
+            ) : (
+              <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ color: 'rgba(165,180,252,0.65)', fontSize: '0.77rem', fontWeight: 600, marginBottom: '0.6rem', textAlign: 'center' }}>
+                  השאר אימייל — נעדכן אותך ראשון כשPro יוצא
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={waitlistEmail}
+                    onChange={e => { setWaitlistEmail(e.target.value); setWaitlistStatus('idle') }}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, color: '#f1f5f9', fontSize: '0.82rem', padding: '0.65rem 0.9rem', outline: 'none', direction: 'ltr' }}
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!user?.uid || !waitlistEmail.trim()) return
+                      setWaitlistStatus('loading')
+                      try {
+                        await joinWaitlist(user.uid, waitlistEmail.trim())
+                        setWaitlistStatus('done')
+                      } catch {
+                        setWaitlistStatus('error')
+                      }
+                    }}
+                    disabled={waitlistStatus === 'loading' || !waitlistEmail.trim()}
+                    className="btn-tactile"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 800, padding: '0 1.1rem', minHeight: 44, opacity: (!waitlistEmail.trim() || waitlistStatus === 'loading') ? 0.5 : 1 }}
+                  >
+                    {waitlistStatus === 'loading' ? '...' : 'הצטרף'}
+                  </button>
+                </div>
+                {waitlistStatus === 'error' && (
+                  <div style={{ color: '#f87171', fontSize: '0.73rem', marginTop: '0.4rem', textAlign: 'center' }}>
+                    משהו השתבש — בדוק את האימייל ונסה שוב
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {saving && <div style={{ position: 'fixed', bottom: TAB_H + 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(196,121,90,0.92)', color: '#fff', borderRadius: 20, padding: '0.45rem 1.1rem', fontSize: '0.78rem', fontWeight: 600, zIndex: 300 }}>{td.saving}</div>}
       <AddToHomeScreen />
 

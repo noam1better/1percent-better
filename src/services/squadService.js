@@ -30,7 +30,7 @@ export async function createSquad(uid, userName, squadName) {
     createdBy:     uid,
     inviteCode,
     memberUids:    [uid],
-    members:       { [uid]: { name: userName.slice(0, 30), joinedAt: TODAY() } },
+    members:       { [uid]: { name: userName.trim().slice(0, 30), joinedAt: TODAY() } },
     telegramChatId: null,
     createdAt:     TODAY(),
   })
@@ -44,7 +44,7 @@ export async function joinSquadByCode(uid, userName, code) {
   const squadDoc = snap.docs[0]
   await updateDoc(doc(db, 'squads', squadDoc.id), {
     memberUids:              arrayUnion(uid),
-    [`members.${uid}`]:      { name: userName.slice(0, 30), joinedAt: TODAY() },
+    [`members.${uid}`]:      { name: userName.trim().slice(0, 30), joinedAt: TODAY() },
   })
   return { squadId: squadDoc.id, squadName: squadDoc.data().name }
 }

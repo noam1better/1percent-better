@@ -146,30 +146,68 @@ body::before {
 /* ── btn-tactile — press feedback for any button ─────────────────── */
 
 .btn-tactile {
-  transition: transform 0.12s ease;
+  transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
 }
 .btn-tactile:active {
-  transform: scale(0.95) !important;
+  transform: scale(0.94) !important;
+  filter: brightness(1.18) !important;
+}
+
+/* ── btn-wide — full-width buttons don't need min-width ─────────── */
+.btn-wide {
+  min-width: unset !important;
+  width: 100%;
 }
 
 /* ── btn-primary — gold CTA ──────────────────────────────────────── */
 
 .btn-primary {
-  background: linear-gradient(135deg, #D4A017, #F5C518);
+  background: linear-gradient(135deg, #e8b800, #facc15);
   border: none;
-  color: #050505;
-  font-weight: 800;
+  color: #111;
+  font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 8px 32px rgba(245,197,24,0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 6px 24px rgba(250,204,21,0.38);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
 }
 .btn-primary:hover {
-  transform: scale(1.04);
-  box-shadow: 0 12px 40px rgba(245,197,24,0.50);
+  filter: brightness(1.08);
+  box-shadow: 0 10px 36px rgba(250,204,21,0.55);
+  transform: translateY(-1px);
 }
 .btn-primary:active {
   transform: scale(0.97);
+  filter: brightness(0.96);
+}
+.btn-primary:disabled {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.22);
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+/* ── btn-secondary — gold border CTA ────────────────────────────── */
+
+.btn-secondary {
+  background: transparent;
+  border: 1.5px solid rgba(250,204,21,0.55);
+  color: #facc15;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.btn-secondary:hover {
+  background: rgba(250,204,21,0.08);
+  border-color: rgba(250,204,21,0.85);
+  box-shadow: 0 0 0 3px rgba(250,204,21,0.1);
+}
+.btn-secondary:active {
+  background: rgba(250,204,21,0.14);
 }
 
 /* ── btn-ghost — dashed add button ──────────────────────────────── */
@@ -194,6 +232,19 @@ body::before {
 }
 .track-card:hover {
   transform: translateY(-2px);
+}
+
+/* ── Level Up ────────────────────────────────────────────────────── */
+
+@keyframes level-up-burst {
+  0%   { transform: scale(0.3); opacity: 0; }
+  55%  { transform: scale(1.18); opacity: 1; }
+  75%  { transform: scale(0.94); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes xp-fill {
+  from { width: 0 !important; }
 }
 
 /* ── glow-input — textarea/input focus glow ─────────────────────── */

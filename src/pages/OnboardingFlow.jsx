@@ -48,9 +48,9 @@ const S = {
   input:      { width: '100%', padding: '0.875rem 1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#f1f5f9', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem', fontFamily: 'inherit' },
   textarea:   { width: '100%', padding: '0.875rem 1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#f1f5f9', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: 72, fontFamily: 'inherit' },
   timeInput:  { width: '100%', padding: '0.875rem 1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#f1f5f9', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem', fontFamily: 'inherit', colorScheme: 'dark' },
-  btnPrimary: (on) => ({ flex: 1, padding: '0.85rem', borderRadius: 12, border: 'none', background: on ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)', color: on ? '#fff' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 700, cursor: on ? 'pointer' : 'not-allowed' }),
-  btnBack:    { flex: '0 0 auto', padding: '0.85rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', cursor: 'pointer' },
-  btnSkip:    { flex: '0 0 auto', padding: '0.85rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', cursor: 'pointer' },
+  btnPrimary: (on) => ({ flex: 1, padding: '0.85rem', borderRadius: 12, border: 'none', background: on ? 'linear-gradient(135deg,#e8b800,#facc15)' : 'rgba(255,255,255,0.06)', color: on ? '#111' : 'rgba(255,255,255,0.25)', fontSize: '0.9rem', fontWeight: 900, cursor: on ? 'pointer' : 'not-allowed', boxShadow: on ? '0 6px 20px rgba(250,204,21,0.35)' : 'none', transition: 'all 0.15s ease' }),
+  btnBack:    { flex: '0 0 auto', padding: '0.85rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' },
+  btnSkip:    { flex: '0 0 auto', padding: '0.85rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' },
 }
 
 function ProgressBar({ step, to }) {
@@ -60,7 +60,7 @@ function ProgressBar({ step, to }) {
   return (
     <div style={{ marginBottom: '1.75rem' }}>
       <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: 99, transition: 'width 0.3s' }} />
+        <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#e8b800,#facc15)', borderRadius: 99, transition: 'width 0.3s' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem' }}>
         <span>{label}</span>
@@ -79,17 +79,17 @@ function OptionGrid({ options, selected, onSelect }) {
           onClick={() => onSelect(opt.id)}
           style={{
             padding: '0.9rem 1rem', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-            border: selected === opt.id ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
-            background: selected === opt.id ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)',
+            border: selected === opt.id ? '2px solid #facc15' : '1px solid rgba(255,255,255,0.08)',
+            background: selected === opt.id ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
             transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '0.75rem',
           }}
         >
           <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{opt.emoji}</span>
           <div>
-            <div style={{ color: selected === opt.id ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: 700 }}>{opt.label}</div>
-            <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.75rem', marginTop: '0.1rem' }}>{opt.sub}</div>
+            <div style={{ color: selected === opt.id ? '#facc15' : '#f1f5f9', fontSize: '0.9rem', fontWeight: 700 }}>{opt.label}</div>
+            <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.75rem', marginTop: '0.1rem' }}>{opt.sub}</div>
           </div>
-          {selected === opt.id && <span style={{ marginLeft: 'auto', color: '#6366f1', fontSize: '1rem' }}>✓</span>}
+          {selected === opt.id && <span style={{ marginLeft: 'auto', color: '#facc15', fontSize: '1rem' }}>✓</span>}
         </button>
       ))}
     </div>
@@ -250,13 +250,13 @@ export default function OnboardingFlow() {
                   onClick={() => setGoal(g.id)}
                   style={{
                     padding: '0.85rem 0.5rem', borderRadius: 14, cursor: 'pointer', textAlign: 'center',
-                    border: goal === g.id ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
-                    background: goal === g.id ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: goal === g.id ? '2px solid #facc15' : '1px solid rgba(255,255,255,0.08)',
+                    background: goal === g.id ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
                     transition: 'all 0.15s',
                   }}
                 >
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{g.emoji}</div>
-                  <div style={{ color: goal === g.id ? '#a5b4fc' : 'rgba(241,245,249,0.65)', fontSize: '0.78rem', fontWeight: 600 }}>
+                  <div style={{ color: goal === g.id ? '#facc15' : 'rgba(241,245,249,0.75)', fontSize: '0.78rem', fontWeight: 600 }}>
                     {to.goals[g.id]}
                   </div>
                 </button>
@@ -354,21 +354,22 @@ export default function OnboardingFlow() {
                 </div>
               </div>
             )}
-            <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 14, padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+            <div style={{ background: 'rgba(250,204,21,0.05)', border: '1px solid rgba(250,204,21,0.18)', borderRadius: 14, padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
               {[t1, t2].map((tr, i) => (
                 <div key={i} style={{ marginBottom: i === 0 ? '0.75rem' : 0 }}>
-                  <div style={{ color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.2rem' }}>
+                  <div style={{ color: '#facc15', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.2rem' }}>
                     {to.triggerLabel} {i + 1}{tr.time ? ` · ${tr.time}` : ''}
                   </div>
                   <div style={{ color: '#f1f5f9', fontSize: '0.875rem' }}>{tr.cue}</div>
-                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.8rem' }}>→ {tr.habit}</div>
+                  <div style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem' }}>→ {tr.habit}</div>
                 </div>
               ))}
             </div>
             <button
               onClick={finish}
               disabled={saving}
-              style={{ width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
+              className="btn-tactile"
+              style={{ width: '100%', padding: '0.95rem', borderRadius: 12, border: 'none', background: saving ? 'rgba(255,255,255,0.07)' : 'linear-gradient(135deg,#e8b800,#facc15)', color: saving ? 'rgba(255,255,255,0.3)' : '#111', fontSize: '0.95rem', fontWeight: 900, cursor: saving ? 'not-allowed' : 'pointer', boxShadow: saving ? 'none' : '0 6px 20px rgba(250,204,21,0.38)' }}
             >
               {saving ? to.done.saving : to.done.btn}
             </button>
