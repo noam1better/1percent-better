@@ -6,7 +6,7 @@ import { checkContractStatus, getRank, getScore } from '../services/disciplineSc
 import { requestPermission, checkNotifications } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm, getFutureSelfReminder } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
-import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, LESSON_WHY } from '../data/challenges'
+import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, LESSON_WHY } from '../data/challenges'
 import { MANTRAS } from '../data/mantras'
 import TracksPage from './TracksPage'
 import AnalyticsTab from './AnalyticsTab'
@@ -922,8 +922,6 @@ export default function Dashboard() {
   const [leaderboard,  setLeaderboard]  = useState([])
   const [activeTab,    setActiveTab]    = useState('home')
   const [isDayStarted, setIsDayStarted] = useState(false)
-  const [showWhy,        setShowWhy]        = useState(false)
-  const [btnBurst,       setBtnBurst]       = useState(false)
   const [showWorkoutLib,    setShowWorkoutLib]    = useState(false)
   const [workoutSession,    setWorkoutSession]    = useState(null)
   const [showCombatTraining,setShowCombatTraining]= useState(false)
@@ -1587,124 +1585,68 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Track course experience ── */}
+            {/* ── Active Course Card (compact — full lesson lives in Tracks tab) ── */}
             {primaryAction.type === 'track' && (() => {
-              const lesson   = getLessonType(primaryAction.dayNum)
-              const quote    = LESSON_QUOTES[(primaryAction.dayNum - 1) % LESSON_QUOTES.length]
+              const col      = primaryAction.track.color
               const trackPrg = profile?.challenges?.[primaryAction.track.id]
               const isLocked = (trackPrg?.daysCompleted || 0) > 0
                 && trackPrg?.lastCompletedDate !== yesterday
                 && trackPrg?.lastCompletedDate !== todayKey()
-              const col = primaryAction.track.color
+              const pct = Math.round(((primaryAction.dayNum - 1) / primaryAction.track.days) * 100)
 
               return (
-                <div style={{ animation: 'slide-up 0.35s ease both' }}>
-
-                  {/* Lesson card */}
-                  <div style={{ background: `linear-gradient(145deg,${col}12,${col}04)`, border: `1px solid ${col}20`, borderRadius: 20, padding: '1.4rem 1.5rem', marginBottom: '1.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '1rem' }}>{lesson.icon}</span>
-                      <span style={{ color: col, fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>{lesson.label} · {primaryAction.track.title} יום {primaryAction.dayNum}</span>
+                <div
+                  style={{ background: `linear-gradient(145deg,${col}10,${col}04)`, border: `1px solid ${col}22`, borderRadius: 18, padding: '1.1rem 1.25rem', marginBottom: '1.25rem', animation: 'slide-up 0.3s ease both' }}
+                >
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.8rem' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${col}1e`, border: `1px solid ${col}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
+                      {isLocked ? '🔒' : primaryAction.track.emoji}
                     </div>
-                    <p style={{ color: '#f1f5f9', fontSize: '1rem', fontWeight: 700, lineHeight: 1.55, margin: '0 0 0.65rem', letterSpacing: '-0.01em' }}>
-                      {quote}
-                    </p>
-                    <p style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.76rem', margin: 0, lineHeight: 1.5 }}>
-                      {lesson.insight}
-                    </p>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: col, fontSize: '0.57rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.11em', marginBottom: '0.1rem' }}>
+                        {isLocked ? 'מסלול נעול' : 'מסלול פעיל · היום שלך'}
+                      </div>
+                      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>{primaryAction.track.title}</div>
+                      <div style={{ color: 'rgba(241,245,249,0.33)', fontSize: '0.68rem', marginTop: '0.08rem' }}>
+                        {isLocked ? 'פספסת יום — המשך מהמסלולים' : `יום ${primaryAction.dayNum} מתוך ${primaryAction.track.days}`}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      <div style={{ color: col, fontSize: '0.7rem', fontWeight: 800 }}>+{primaryAction.xp} XP</div>
+                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.6rem' }}>/ יום</div>
+                    </div>
                   </div>
 
-                  {/* Commitment card with Why toggle */}
-                  {!isLocked ? (
-                    <div style={{ background: 'rgba(196,121,90,0.06)', border: '1px solid rgba(196,121,90,0.14)', borderRadius: 16, padding: '1.2rem 1.4rem', marginBottom: '1.1rem' }}>
-                      <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.55rem' }}>
-                        ✍️ ההתחייבות היומית שלי
-                      </div>
-                      <p style={{ color: 'rgba(241,245,249,0.78)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 0.7rem' }}>
-                        <span style={{ color: '#d4956e', fontWeight: 800 }}>היום אני מתחייב ל: </span>
-                        {primaryAction.taskDesc}
-                      </p>
-                      <button
-                        onClick={() => setShowWhy(w => !w)}
-                        style={{ background: 'none', border: 'none', color: 'rgba(196,121,90,0.6)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                      >
-                        <span style={{ display: 'inline-block', transform: showWhy ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
-                        למה זה חשוב?
-                      </button>
-                      {showWhy && (
-                        <p style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.77rem', lineHeight: 1.65, margin: '0.6rem 0 0', animation: 'fadeIn 0.2s ease' }}>
-                          {LESSON_WHY[(primaryAction.dayNum - 1) % LESSON_WHY.length]}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '1.1rem 1.3rem', marginBottom: '1.4rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <span style={{ fontSize: '1.5rem', opacity: 0.5 }}>🔒</span>
-                      <div>
-                        <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.2rem' }}>יום {primaryAction.dayNum} נעול</div>
-                        <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                          פספסת יום. חזור למסלולים והשלם את היום הנוכחי כדי להמשיך.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Progress bar */}
-                  {!isLocked && (() => {
-                    const pct = Math.round(((primaryAction.dayNum - 1) / primaryAction.track.days) * 100)
-                    return (
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                          <span style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.65rem', fontWeight: 700 }}>התקדמות במסלול</span>
-                          <span style={{ color: col, fontSize: '0.65rem', fontWeight: 800 }}>{pct}% · יום {primaryAction.dayNum} מתוך {primaryAction.track.days}</span>
-                        </div>
-                        <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 99, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${col}99, ${col})`, borderRadius: 99, transition: 'width 0.8s ease' }} />
-                        </div>
-                      </div>
-                    )
-                  })()}
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${col}80,${col})`, width: `${pct}%`, transition: 'width 0.7s ease' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.22rem' }}>
+                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{pct}% הושלם</span>
+                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{primaryAction.dayNum - 1}/{primaryAction.track.days} ימים</span>
+                    </div>
+                  </div>
 
-                  {/* Streak + CTA */}
-                  {!isLocked ? (
-                    <>
-                      {streak > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.18)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
-                            <span style={{ fontSize: '0.9rem' }}>🔥</span>
-                            <span style={{ color: '#fbbf24', fontSize: '0.8rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
-                          </div>
-                        </div>
-                      )}
-                      <button
-                        className={`btn-primary btn-tactile${btnBurst ? ' btn-burst' : ''}`}
-                        onClick={() => {
-                          setBtnBurst(true)
-                          setTimeout(() => {
-                            setBtnBurst(false)
-                            openChallengeModal(primaryAction.track, primaryAction.dayNum, primaryAction.taskDesc)
-                          }, 350)
-                        }}
-                        style={{ width: '100%', padding: '1.6rem', borderRadius: 22, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.01em', marginBottom: '1rem' }}
-                      >
-                        ✅ ביצעתי היום · +{primaryAction.xp} XP
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('tracks')}
-                        style={{ background: 'none', border: 'none', color: 'rgba(241,245,249,0.25)', fontSize: '0.78rem', cursor: 'pointer', width: '100%', textAlign: 'center', padding: '0.4rem' }}
-                      >
-                        ← ראה את כל המסלולים
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className="btn-tactile"
-                      onClick={() => setActiveTab('tracks')}
-                      style={{ width: '100%', padding: '1rem', borderRadius: 16, fontSize: '0.95rem', fontWeight: 800, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(241,245,249,0.75)', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s, background 0.15s' }}
-                    >
-                      עבור למסלולים ←
-                    </button>
+                  {/* Streak pill */}
+                  {streak > 0 && !isLocked && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.16)', borderRadius: 20, padding: '0.28rem 0.8rem' }}>
+                        <span style={{ fontSize: '0.82rem' }}>🔥</span>
+                        <span style={{ color: '#fbbf24', fontSize: '0.76rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
+                      </div>
+                    </div>
                   )}
+
+                  {/* CTA → Tracks tab */}
+                  <button
+                    className="btn-primary btn-tactile"
+                    onClick={() => setActiveTab('tracks')}
+                    style={{ width: '100%', padding: '0.95rem', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900 }}
+                  >
+                    {isLocked ? 'עבור למסלולים ←' : `המשך יום ${primaryAction.dayNum} ←`}
+                  </button>
                 </div>
               )
             })()}
