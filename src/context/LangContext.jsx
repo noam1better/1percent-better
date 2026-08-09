@@ -16,7 +16,7 @@ export function LangProvider({ children }) {
   useEffect(() => {
     document.documentElement.dir  = lang === 'he' ? 'rtl' : 'ltr'
     document.documentElement.lang = lang
-  }, [])
+  }, [lang])
 
   return (
     <LangCtx.Provider value={{ lang, setLang, t: t[lang] }}>

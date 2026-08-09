@@ -72,9 +72,30 @@ html {
 
 /* Keyframes are in src/styles/animations.css */
 
-/* ── High contrast mode ─────────────────────────────────────────── */
-/* Applied via body.hc class from Settings toggle. #root fills the
-   full viewport so position:fixed children still cover the screen. */
-body.hc #root {
+/* ── Desktop centering — phone-frame layout ─────────────────────── */
+@media (min-width: 600px) {
+  body {
+    background: #07070f;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  #root {
+    max-width: 480px;
+    width: 100%;
+    min-height: 100svh;
+    box-shadow: 0 0 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.035);
+  }
+  .prime-tab-bar {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: 480px;
+    max-width: 100vw;
+  }
+}
+
+/* ── High contrast (always on) ──────────────────────────────────── */
+#root {
   filter: contrast(1.18) brightness(1.1);
 }

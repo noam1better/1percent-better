@@ -153,7 +153,7 @@ function Slide3() {
       {/* Two track cards visual */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem', animation: 'fadeIn 0.5s ease both' }}>
         {[
-          { emoji: '💪', name: 'שכיבות שמיכה', goal: '10 חז\'', color: '#a78bfa' },
+          { emoji: '💪', name: 'שכיבות סמיכה', goal: '10 חז\'', color: '#a78bfa' },
           { emoji: '🏃', name: 'ריצה', goal: '15 דק\'', color: '#F5C518' },
         ].map((t, i) => (
           <div key={i} style={{

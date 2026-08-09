@@ -7,19 +7,44 @@ import { notifyChallenge } from '../services/telegramService'
 
 const RANK_MEDAL = n => n === 1 ? '🥇' : n === 2 ? '🥈' : n === 3 ? '🥉' : null
 
+// ── Invite code row with clipboard copy ──────────────────────────────
+function InviteCodeBox({ inviteCode }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    navigator.clipboard?.writeText(inviteCode).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.75rem', background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 12 }}>
+      <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.62rem', fontWeight: 700, flexShrink: 0 }}>קוד הזמנה:</span>
+      <span style={{ color: '#F5C518', fontFamily: "'SF Mono','Fira Code',monospace", fontSize: '0.88rem', fontWeight: 900, letterSpacing: '0.15em', flex: 1 }}>{inviteCode}</span>
+      <button
+        onClick={copy}
+        className="btn-tactile"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#10b981' : 'rgba(241,245,249,0.35)', fontSize: '0.82rem', padding: '0.1rem 0.25rem', flexShrink: 0, transition: 'color 0.2s ease' }}
+      >
+        {copied ? '✓' : '📋'}
+      </button>
+    </div>
+  )
+}
+
 // ── Join / Create flow ────────────────────────────────────────────────
 function SquadSetup({ uid, userName, onJoined }) {
-  const [mode,   setMode]   = useState(null)   // null | 'create' | 'join'
-  const [input,  setInput]  = useState('')
-  const [busy,   setBusy]   = useState(false)
-  const [error,  setError]  = useState(null)
+  const [mode,  setMode]  = useState(null)
+  const [input, setInput] = useState('')
+  const [busy,  setBusy]  = useState(false)
+  const [error, setError] = useState(null)
 
   async function handleCreate() {
     if (!input.trim()) return
     setBusy(true); setError(null)
     try {
-      const { squadId, inviteCode } = await createSquad(uid, userName, input.trim())
-      onJoined({ squadId, inviteCode })
+      await createSquad(uid, userName, input.trim())
+      const squad = await getMySquad(uid)
+      onJoined(squad)
     } catch { setError('יצירה נכשלה — נסה שוב') }
     finally { setBusy(false) }
   }
@@ -30,7 +55,7 @@ function SquadSetup({ uid, userName, onJoined }) {
     try {
       await joinSquadByCode(uid, userName, input.trim())
       const squad = await getMySquad(uid)
-      onJoined({ squadId: squad.squadId })
+      onJoined(squad)
     } catch (e) {
       setError(e.message === 'invite_not_found' ? 'קוד לא נמצא' : 'הצטרפות נכשלה')
     }
@@ -38,28 +63,23 @@ function SquadSetup({ uid, userName, onJoined }) {
   }
 
   if (!mode) return (
-    <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 18, padding: '1.25rem', marginBottom: '1.1rem' }}>
-      <div style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.5rem' }}>◈ סקווד תחרותי</div>
-      <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.95rem', marginBottom: '0.3rem' }}>הצטרף לסקווד</div>
-      <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.78rem', marginBottom: '1rem', lineHeight: 1.55 }}>התחרה עם חברים — לוח שיאים שבועי, אתגרים 24 שעות.</div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button onClick={() => setMode('create')} className="btn-tactile"
-          style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>
-          + צור סקווד
-        </button>
-        <button onClick={() => setMode('join')} className="btn-tactile"
-          style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(241,245,249,0.7)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-          הכנס קוד
-        </button>
-      </div>
+    <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <button onClick={() => setMode('create')} className="btn-tactile"
+        style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>
+        + צור סקווד
+      </button>
+      <button onClick={() => setMode('join')} className="btn-tactile"
+        style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(241,245,249,0.7)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+        הכנס קוד
+      </button>
     </div>
   )
 
   const isCreate = mode === 'create'
   return (
-    <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 18, padding: '1.25rem', marginBottom: '1.1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
-        <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.92rem' }}>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem' }}>
           {isCreate ? '+ צור סקווד' : 'הצטרף לסקווד'}
         </span>
         <button onClick={() => { setMode(null); setInput(''); setError(null) }} className="btn-tactile"
@@ -73,7 +93,7 @@ function SquadSetup({ uid, userName, onJoined }) {
         placeholder={isCreate ? 'שם הסקווד...' : 'קוד הזמנה (6 תווים)'}
         maxLength={isCreate ? 40 : 8}
         className="glow-input"
-        style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem', borderRadius: 11, border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.09)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.9rem', fontFamily: 'inherit', marginBottom: '0.6rem' }}
+        style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem', borderRadius: 11, border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.09)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.9rem', fontFamily: 'inherit', marginBottom: '0.55rem' }}
       />
       {error && <div style={{ color: '#f87171', fontSize: '0.75rem', marginBottom: '0.5rem' }}>{error}</div>}
       <button
@@ -90,11 +110,11 @@ function SquadSetup({ uid, userName, onJoined }) {
 
 // ── Main leaderboard ──────────────────────────────────────────────────
 export default function SquadLeaderboard({ uid, userName }) {
-  const [squad,      setSquad]      = useState(undefined)   // undefined=loading, null=none
-  const [entries,    setEntries]    = useState([])
-  const [loading,    setLoading]    = useState(false)
-  const [toastMsg,   setToastMsg]   = useState(null)
-  const [challenging, setChallenging] = useState(null)       // uid being challenged
+  const [squad,       setSquad]       = useState(undefined)
+  const [entries,     setEntries]     = useState([])
+  const [loading,     setLoading]     = useState(false)
+  const [toastMsg,    setToastMsg]    = useState(null)
+  const [challenging, setChallenging] = useState(null)
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -133,19 +153,53 @@ export default function SquadLeaderboard({ uid, userName }) {
     } finally { setChallenging(null) }
   }
 
-  if (squad === undefined) return null   // still loading
+  // ── Still loading ──
+  if (squad === undefined) return null
 
+  // ── No squad: arena waiting CTA ──
   if (!squad) return (
-    <SquadSetup uid={uid} userName={userName} onJoined={loadSquad} />
+    <div style={{ marginBottom: '1.1rem' }}>
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18, padding: '1.4rem 1.25rem 1.1rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🏟️</div>
+        <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.92rem', marginBottom: '0.3rem' }}>הזירה מחכה לך</div>
+        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.75rem', lineHeight: 1.65 }}>
+          הזמן חבר למסלול כדי לפתוח את לוח השיאים ולהתחרות.<br/>
+          הלוח נפתח ברגע שיצטרף מתחרה נוסף.
+        </div>
+      </div>
+      <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 16, padding: '1.1rem 1.15rem' }}>
+        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.52rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.75rem' }}>◈ צור או הצטרף לסקווד</div>
+        <SquadSetup uid={uid} userName={userName} onJoined={loadSquad} />
+      </div>
+    </div>
   )
 
+  // ── Solo squad: invite friend ──
+  if (!loading && entries.length <= 1) return (
+    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '1.15rem', marginBottom: '1.1rem' }}>
+      <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.52rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.85rem' }}>
+        ◈ סקווד · {squad.name}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.9rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '1.6rem', flexShrink: 0, marginTop: '0.1rem' }}>🔒</div>
+        <div>
+          <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.25rem' }}>הלוח נעול — אין עדיין מתחרה</div>
+          <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.73rem', lineHeight: 1.6 }}>
+            שתף את קוד ההזמנה עם חבר כדי לפתוח את לוח השיאים השבועי ולהתחיל להתחרות.
+          </div>
+        </div>
+      </div>
+      <InviteCodeBox inviteCode={squad.inviteCode} />
+    </div>
+  )
+
+  // ── Full leaderboard ──
   const myRank = entries.findIndex(e => e.uid === uid) + 1
 
   return (
     <>
       <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.16)', borderRadius: 18, padding: '1.1rem 1.15rem', marginBottom: '1.1rem' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
           <div>
             <div style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>
@@ -169,21 +223,18 @@ export default function SquadLeaderboard({ uid, userName }) {
           </div>
         </div>
 
-        {/* Invite code */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem', padding: '0.4rem 0.7rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
-          <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.62rem', fontWeight: 700 }}>קוד הזמנה:</span>
-          <span style={{ color: '#F5C518', fontFamily: "'SF Mono','Fira Code',monospace", fontSize: '0.85rem', fontWeight: 900, letterSpacing: '0.15em' }}>{squad.inviteCode}</span>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <InviteCodeBox inviteCode={squad.inviteCode} />
         </div>
 
-        {/* Entries */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '1rem', color: 'rgba(241,245,249,0.3)', fontSize: '0.78rem' }}>טוען...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {entries.map((entry, i) => {
-              const rank   = i + 1
-              const isMe   = entry.uid === uid
-              const medal  = RANK_MEDAL(rank)
+              const rank  = i + 1
+              const isMe  = entry.uid === uid
+              const medal = RANK_MEDAL(rank)
               return (
                 <div key={entry.uid} style={{
                   display: 'flex', alignItems: 'center', gap: '0.65rem',
@@ -192,22 +243,17 @@ export default function SquadLeaderboard({ uid, userName }) {
                   border: `1px solid ${isMe ? 'rgba(245,197,24,0.25)' : 'rgba(255,255,255,0.06)'}`,
                   borderRadius: 12,
                 }}>
-                  {/* Rank */}
                   <div style={{ width: 24, textAlign: 'center', flexShrink: 0 }}>
                     {medal
                       ? <span style={{ fontSize: '1rem' }}>{medal}</span>
                       : <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.72rem', fontWeight: 700 }}>#{rank}</span>
                     }
                   </div>
-
-                  {/* Avatar */}
                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: isMe ? 'rgba(245,197,24,0.2)' : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: isMe ? '#F5C518' : 'rgba(241,245,249,0.5)', fontWeight: 900, fontSize: '0.75rem' }}>
                       {entry.name.slice(0, 1).toUpperCase()}
                     </span>
                   </div>
-
-                  {/* Name */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: isMe ? '#F5C518' : '#f1f5f9', fontWeight: isMe ? 800 : 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {entry.name}{isMe && ' (אתה)'}
@@ -218,14 +264,10 @@ export default function SquadLeaderboard({ uid, userName }) {
                       </div>
                     )}
                   </div>
-
-                  {/* Reps */}
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
                     <div style={{ color: isMe ? '#F5C518' : '#f1f5f9', fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{entry.reps}</div>
                     <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.5rem', fontWeight: 700 }}>חזרות</div>
                   </div>
-
-                  {/* Challenge button */}
                   {!isMe && (
                     <button
                       onClick={() => handleChallenge(entry)}

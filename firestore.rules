@@ -66,7 +66,8 @@ service cloud.firestore {
       allow write: if isOwner(uid)
                   && (!('xp'       in request.resource.data) || (request.resource.data.xp is number       && request.resource.data.xp >= 0))
                   && (!('name'     in request.resource.data) || (request.resource.data.name is string     && request.resource.data.name.size() <= 50))
-                  && (!('triggers' in request.resource.data) || request.resource.data.triggers is list);
+                  && (!('triggers' in request.resource.data) || request.resource.data.triggers is list)
+                  && (!('tier'     in request.resource.data) || request.resource.data.tier == 'free');
     }
 
     // ── LEADERBOARD (public XP + name only) ───────────
@@ -120,6 +121,16 @@ service cloud.firestore {
       allow update: if isSignedIn()
                    && (resource.data.challenger == request.auth.uid
                        || resource.data.challenged == request.auth.uid);
+    }
+
+    // ── PRO WAITLIST ───────────────────────────────────
+    // Owner can read their own entry; write requires valid email string ≤254 chars.
+    match /waitlist/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if isOwner(uid)
+                  && request.resource.data.email is string
+                  && request.resource.data.email.size() > 0
+                  && request.resource.data.email.size() <= 254;
     }
 
     // ── DENY EVERYTHING ELSE ───────────────────────────

@@ -200,6 +200,31 @@ export async function getDisciplineCoachMessage({ goalMinutes, activity, streak,
   }
 }
 
+export async function getFutureSelfReminder(currentXP, projectedXP, streak) {
+  const MESSAGES = [
+    `ה-XP שלך יהיה ${projectedXP.toLocaleString()} בעוד 30 יום. הגרסה העתידית שלך בונה את הבסיס עכשיו — מה אתה עושה בשבילה היום?`,
+    `רצף של ${streak} ימים. בעוד 30 יום, האדם שאתה הופך אליו יסתכל אחורה על היום הזה. תבחר נכון.`,
+    `מ-${currentXP} XP ל-${projectedXP.toLocaleString()} XP — זה מה שנראה עכשיו אם תמשיך. כל יום שאתה מחמיץ הוא XP שלך שנשאר על השולחן.`,
+    `העצמי העתידי שלך מסתכל עלייך עכשיו. הוא לא מחכה לתנאים מושלמים — הוא מסתכל אם אתה פועל בלעדיהם.`,
+    `30 ימים מהיום: ${projectedXP.toLocaleString()} XP, רמה ${Math.floor(projectedXP / 100) + 1}. זה לא חלום — זו מתמטיקה. הצעד הבא שלך קובע.`,
+  ]
+  const idx = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % MESSAGES.length
+  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return MESSAGES[idx]
+
+  try {
+    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const prompt =
+      `You are a psychological performance coach speaking directly to the user in Hebrew.\n` +
+      `Current XP: ${currentXP}, Projected XP in 30 days: ${projectedXP}, Streak: ${streak} days.\n` +
+      `Write ONE punchy, direct Hebrew sentence (max 25 words) that makes them feel the gap between their current self and future self.\n` +
+      `Be motivating but visceral — not fluffy. Plain text only.`
+    const result = await model.generateContent(prompt)
+    return result.response.text().trim()
+  } catch {
+    return MESSAGES[idx]
+  }
+}
+
 export async function analyzeSession(exercise, { reps, duration, formScore }) {
   const name     = EXERCISE_NAMES_HE[exercise] || exercise
   const repLabel = exercise === 'boxing' ? 'אגרופים' : 'חזרות'

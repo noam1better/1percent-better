@@ -4,7 +4,7 @@ import { useLang } from '../context/LangContext'
 import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard, joinWaitlist } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
-import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
+import { verifyDayCompletion, analyzeVideoForm, getFutureSelfReminder } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
 import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, getLessonType, LESSON_QUOTES, LESSON_WHY } from '../data/challenges'
 import { MANTRAS } from '../data/mantras'
@@ -299,7 +299,7 @@ function ChallengeCard({ challenge, progress, onOpenModal, level, isRecommended 
 
       {/* Progress bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: finished || doneToday ? (hasMilestone ? '0.7rem' : '0.3rem') : '0.7rem' }}>
-        <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
+        <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', direction: 'ltr' }}>
           <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${challenge.color}aa,${challenge.color})`, width: `${pct}%`, transition: 'width 0.5s cubic-bezier(.4,0,.2,1)' }} />
         </div>
         <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -946,6 +946,8 @@ export default function Dashboard() {
   const [levelUpModal, setLevelUpModal] = useState(null)
   const [mantraIdx,        setMantraIdx]        = useState(() => new Date().getDate() % MANTRAS.length)
   const [showUnlockBanner, setShowUnlockBanner] = useState(false)
+  const [showAntiChurn,    setShowAntiChurn]    = useState(false)
+  const [futureSelfMsg,    setFutureSelfMsg]    = useState('')
 
   const reflTimers = useRef({})
 
@@ -991,6 +993,33 @@ export default function Dashboard() {
   const winnerGlow         = streak >= 7
   const isAdvancedUnlocked = streak >= 3
   const daysToUnlock       = Math.max(0, 3 - streak)
+
+  // Anti-churn: show late-evening reminder when habits incomplete
+  useEffect(() => {
+    if (loading || !profile) return
+    const h = new Date().getHours()
+    const dismissKey = `prime_anti_churn_${todayKey()}`
+    const trig = profile?.triggers || []
+    const done = trig.filter(tr => checkins[tr.id]).length
+    if (h >= 19 && trig.length > 0 && done < trig.length && !localStorage.getItem(dismissKey)) {
+      setShowAntiChurn(true)
+    }
+  }, [loading, profile])
+
+  // Future Self message — fetch once when profile loads
+  useEffect(() => {
+    const currentXP = profile?.xp || 0
+    if (loading || !profile || currentXP === 0) return
+    const activeChallenge = CHALLENGES.filter(
+      ch => (profile?.challenges?.[ch.id]?.daysCompleted || 0) > 0 &&
+            (profile?.challenges?.[ch.id]?.daysCompleted || 0) < ch.days
+    )[0]
+    const dailyXP = activeChallenge?.xpPerDay || 50
+    const xp30    = currentXP + dailyXP * 30
+    getFutureSelfReminder(currentXP, xp30, profile?.streak?.count || 0)
+      .then(msg => setFutureSelfMsg(msg))
+      .catch(() => {})
+  }, [loading, profile?.xp])
 
   useEffect(() => {
     if (isAdvancedUnlocked && !localStorage.getItem('ft_advanced_seen')) {
@@ -1304,13 +1333,13 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             {(() => {
-              const rank = getRank(headerScore)
+              const rank = getRank(xp)
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: `${rank.color}15`, border: `1px solid ${rank.color}40`, borderRadius: 20, padding: '0.22rem 0.6rem' }}>
                   <span style={{ fontSize: '0.72rem' }}>{rank.icon}</span>
                   <span style={{ color: rank.color, fontSize: '0.68rem', fontWeight: 900, letterSpacing: '0.05em' }}>{rank.label}</span>
                   <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.58rem' }}>·</span>
-                  <span style={{ color: rank.color, fontSize: '0.72rem', fontWeight: 800 }}>{headerScore}</span>
+                  <span style={{ color: rank.color, fontSize: '0.72rem', fontWeight: 800 }}>{xp}</span>
                 </div>
               )
             })()}
@@ -1442,7 +1471,7 @@ export default function Dashboard() {
                           : <span style={{ color: 'rgba(52,211,153,0.7)', fontSize: '1.05rem' }}>✅</span>
                         }
                         <button
-                          onClick={e => { e.stopPropagation(); setEditHabit(tr) }}
+                          onClick={e => { e.stopPropagation(); e.preventDefault(); setQuickTask(null); setEditHabit(tr) }}
                           className="btn-tactile"
                           title="ערוך הרגל"
                           aria-label="ערוך הרגל"
@@ -1454,6 +1483,67 @@ export default function Dashboard() {
                 })}
               </div>
             )}
+
+            {/* ── Future Self Widget ── */}
+            {!loading && xp > 0 && (() => {
+              const activeChallenge = CHALLENGES.filter(
+                ch => (profile?.challenges?.[ch.id]?.daysCompleted || 0) > 0 &&
+                      (profile?.challenges?.[ch.id]?.daysCompleted || 0) < ch.days
+              )[0]
+              const dailyXP  = activeChallenge?.xpPerDay || 50
+              const xp30     = xp + dailyXP * 30
+              const lvl30    = getLevel(xp30)
+              const pctNow   = Math.round((xp / xp30) * 100)
+              return (
+                <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 18, padding: '1.1rem 1.3rem', marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 40%,rgba(99,102,241,0.06) 50%,transparent 60%)', animation: 'shimmer 3.5s ease-in-out infinite', pointerEvents: 'none' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                    <span style={{ fontSize: '1rem' }}>⚡</span>
+                    <span style={{ color: '#a5b4fc', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>אתה vs. העצמי העתידי</span>
+                  </div>
+
+                  {/* Side-by-side comparison */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
+                    {/* Now */}
+                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '0.7rem 0.8rem', textAlign: 'center' }}>
+                      <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>עכשיו</div>
+                      <div style={{ color: '#f1f5f9', fontSize: '1.35rem', fontWeight: 900, lineHeight: 1 }}>{xp.toLocaleString()}</div>
+                      <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', marginTop: '0.15rem' }}>XP · רמה {level}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                      <div style={{ color: 'rgba(99,102,241,0.6)', fontSize: '0.8rem' }}>→</div>
+                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.55rem', fontWeight: 600 }}>30 יום</div>
+                    </div>
+
+                    {/* Future */}
+                    <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 12, padding: '0.7rem 0.8rem', textAlign: 'center' }}>
+                      <div style={{ color: '#a5b4fc', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>עתידי</div>
+                      <div style={{ color: '#a5b4fc', fontSize: '1.35rem', fontWeight: 900, lineHeight: 1 }}>{xp30.toLocaleString()}</div>
+                      <div style={{ color: 'rgba(165,180,252,0.55)', fontSize: '0.6rem', marginTop: '0.15rem' }}>XP · רמה {lvl30}</div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar toward future self */}
+                  <div style={{ marginBottom: futureSelfMsg ? '0.75rem' : 0 }}>
+                    <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#6366f1,#a5b4fc)', width: `${pctNow}%`, transition: 'width 1s ease' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem' }}>
+                      <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>היום · {pctNow}%</span>
+                      <span style={{ color: 'rgba(165,180,252,0.4)', fontSize: '0.6rem' }}>+{dailyXP} XP/יום</span>
+                    </div>
+                  </div>
+
+                  {/* AI message */}
+                  {futureSelfMsg && (
+                    <div style={{ borderTop: '1px solid rgba(99,102,241,0.15)', paddingTop: '0.65rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.75rem', lineHeight: 1.55, fontStyle: 'italic' }}>
+                      {futureSelfMsg}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />
 
@@ -1843,6 +1933,51 @@ export default function Dashboard() {
         />
       )}
       {xpToast && <XPToast xp={xpToast} onDone={() => setXPToast(null)} />}
+
+      {/* ── Anti-Churn Prompt ── */}
+      {showAntiChurn && (
+        <div
+          onClick={() => { localStorage.setItem(`prime_anti_churn_${todayKey()}`, '1'); setShowAntiChurn(false) }}
+          style={{ position: 'fixed', inset: 0, zIndex: 8500, background: 'rgba(5,5,12,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1.5rem', animation: 'fadeIn 0.25s ease' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 440, background: 'linear-gradient(160deg,#0f172a,#0a0f1e)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '20px 20px 0 0', padding: '1.75rem 1.5rem 2.4rem', animation: 'slide-up 0.3s cubic-bezier(.34,1.26,.64,1)' }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
+              <div style={{ fontSize: '2.2rem', marginBottom: '0.6rem' }}>⚔️</div>
+              <h3 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.05rem', margin: '0 0 0.5rem' }}>
+                העצמי הנוכחי שלך מחליט עכשיו
+              </h3>
+              <p style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>
+                היום עדיין לא הסתיים — ועדיין יש לך הרגלים לא שהושלמו.<br />
+                העצמי העתידי שלך נבנה בדיוק בנקודות כאלה.
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 12, padding: '0.9rem 1rem', marginBottom: '1.2rem', display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.9rem', flexShrink: 0, marginTop: '0.05rem' }}>💬</span>
+              <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.78rem', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+                "הפרש בין מי שאתה היום למי שתהיה בעוד 30 יום נמדד בהחלטות קטנות כמו זו."
+              </p>
+            </div>
+
+            <button
+              onClick={() => { setShowAntiChurn(false); setActiveTab('home') }}
+              className="btn-tactile"
+              style={{ width: '100%', padding: '0.95rem', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', marginBottom: '0.6rem', boxShadow: '0 6px 24px rgba(99,102,241,0.35)' }}
+            >
+              השלם עכשיו ←
+            </button>
+            <button
+              onClick={() => { localStorage.setItem(`prime_anti_churn_${todayKey()}`, '1'); setShowAntiChurn(false) }}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'rgba(241,245,249,0.22)', fontSize: '0.78rem', cursor: 'pointer', padding: '0.35rem' }}
+            >
+              לא היום — ממשיך בלי
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Level Up Modal ── */}
       {levelUpModal && (

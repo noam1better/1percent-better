@@ -1,4 +1,4 @@
-const CACHE = 'prime-v1'
+const CACHE = 'prime-v2'
 
 self.addEventListener('install', e => {
   e.waitUntil(

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useUserPrefs } from '../context/UserContext'
 import { saveProfile } from '../services/focusTriggerService'
@@ -273,9 +273,12 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
   const [showSyllabus, setShowSyllabus] = useState(false)
   const [reviewDay,    setReviewDay]    = useState(null)
 
-  const col           = challenge.color
-  const daysCompleted = progress?.daysCompleted || 0
-  const finished      = daysCompleted >= challenge.days
+  const col              = challenge.color
+  const rawDaysCompleted = progress?.daysCompleted || 0
+  const daysFloor        = useRef(rawDaysCompleted)
+  daysFloor.current      = Math.max(daysFloor.current, rawDaysCompleted)
+  const daysCompleted    = daysFloor.current
+  const finished         = daysCompleted >= challenge.days
   const doneToday     = progress?.lastCompletedDate === todayKey()
   const pct           = Math.round((daysCompleted / challenge.days) * 100)
 
@@ -335,8 +338,8 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
             const segDone  = Math.min(Math.max(0, daysCompleted - segStart), 5)
             const isCurMod = daysCompleted >= segStart && daysCompleted < segStart + 5
             return (
-              <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', outline: isCurMod ? `1.5px solid ${col}50` : 'none', outlineOffset: 1 }}>
-                <div style={{ height: '100%', width: `${(segDone / 5) * 100}%`, background: `linear-gradient(90deg,${col}99,${col})`, borderRadius: 99, transition: 'width 0.7s ease' }} />
+              <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', outline: isCurMod ? `1.5px solid ${col}50` : 'none', outlineOffset: 1, direction: 'ltr' }}>
+                <div style={{ height: '100%', width: `${(segDone / 5) * 100}%`, background: `linear-gradient(90deg,${col}99,${col})`, borderRadius: 99 }} />
               </div>
             )
           })}
@@ -552,18 +555,88 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
   )
 }
 
+// ── 4-Pillar definitions ─────────────────────────────────────────
+
+const PILLARS = [
+  { id: null,         label: 'הכל',             icon: '◈',  color: 'rgba(241,245,249,0.5)', courseIds: null },
+  { id: 'builder',    label: 'The Builder',      icon: '🏗️', color: '#6366f1',
+    courseIds: ['ai-beginners', 'ai-pioneer', 'business-mind', 'claude-code-mastery', 'capital-markets'] },
+  { id: 'creator',    label: 'The Creator',      icon: '🎨', color: '#ec4899',
+    courseIds: ['product-builder', 'business-soul'] },
+  { id: 'reset',      label: 'The Reset',        icon: '🧘', color: '#10b981',
+    courseIds: ['self-discipline'] },
+  { id: 'connection', label: 'The Connection',   icon: '🤝', color: '#f59e0b',
+    courseIds: ['deal-closer'] },
+]
+
 // ── Track Library ──────────────────────────────────────────────────
 
 function TrackLibrary({ challenges, getProgress, onSelect, recommendedIds, activeCount, isCourseSlotLocked }) {
+  const [activePillar, setActivePillar] = useState(null)
   const atLimit = activeCount >= MAX_ACTIVE
+
+  const pillar         = PILLARS.find(p => p.id === activePillar) || PILLARS[0]
+  const visibleCourses = pillar.courseIds
+    ? challenges.filter(ch => pillar.courseIds.includes(ch.id))
+    : challenges
 
   return (
     <div style={{ animation: 'slide-up 0.3s ease both' }}>
-      <div style={{ marginBottom: '1.35rem' }}>
-        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ מסלולי למידה</div>
-        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.2rem' }}>תבחר מסלול. תלך לעומק.</h2>
-        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>כל השאר — רעש.</p>
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
+        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.2rem' }}>אתה vs. העצמי העתידי שלך</h2>
+        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>בחר עמודה. בנה את הגרסה הבאה שלך.</p>
       </div>
+
+      {/* 4-Pillar selector */}
+      <div style={{ display: 'flex', gap: '0.45rem', marginBottom: '1.1rem', overflowX: 'auto', paddingBottom: '2px' }}>
+        {PILLARS.map(p => {
+          const isActive = activePillar === p.id
+          return (
+            <button
+              key={String(p.id)}
+              onClick={() => setActivePillar(p.id)}
+              className="btn-tactile"
+              style={{
+                flexShrink: 0,
+                padding: '0.42rem 0.8rem',
+                borderRadius: 20,
+                border: `1px solid ${isActive ? p.color : 'rgba(255,255,255,0.08)'}`,
+                background: isActive ? `${p.color}18` : 'rgba(255,255,255,0.03)',
+                color: isActive ? p.color : 'rgba(241,245,249,0.4)',
+                fontSize: '0.75rem',
+                fontWeight: isActive ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                transition: 'all 0.18s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>{p.icon}</span>
+              <span>{p.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Pillar description */}
+      {activePillar && (() => {
+        const p = PILLARS.find(x => x.id === activePillar)
+        const DESC = {
+          builder:    'בנה מיומנויות AI, עסקים וצמיחה. זו העמודה שמכניסה כסף.',
+          creator:    'פתח את היצירתיות שלך. מותג, עיצוב, ביטוי עצמי.',
+          reset:      'משמעת עצמית ובהירות מנטלית. בלי זה — שאר העמודות קורסות.',
+          connection: 'יחסים ונוכחות אנושית. כי ההצלחה לבד היא ריקה.',
+        }
+        return (
+          <div style={{ background: `${p.color}0c`, border: `1px solid ${p.color}1e`, borderRadius: 12, padding: '0.65rem 0.9rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+            <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{p.icon}</span>
+            <span style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.74rem', lineHeight: 1.4 }}>{DESC[activePillar]}</span>
+          </div>
+        )
+      })()}
 
       {/* Active-slot indicator */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '1rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: atLimit ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${atLimit ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.07)'}` }}>
@@ -576,7 +649,7 @@ function TrackLibrary({ challenges, getProgress, onSelect, recommendedIds, activ
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-        {challenges.map(ch => {
+        {visibleCourses.map(ch => {
           const prog   = getProgress(ch.id)
           const days   = prog?.daysCompleted || 0
           const pct    = Math.round((days / ch.days) * 100)

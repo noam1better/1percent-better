@@ -2,15 +2,36 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { loadPoseLandmarker, analyzeFrame, drawSkeleton } from '../services/poseService'
 import { hapticRep, hapticMilestone, hapticGoal } from '../services/hapticService'
 import { syncWeeklyReps } from '../services/squadService'
+import { analyzeSession, coachConfigured } from '../services/coachService'
+import FeedbackModal from './FeedbackModal'
 
-// ── Cardio (timer-based) ────────────────────────────────────────────
+// ── Haversine — great-circle distance between two GPS coords (km) ────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R    = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a    = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// ── Cardio (timer + GPS distance) ───────────────────────────────────
 
 function CardioWorkout({ track, goal, onComplete, onClose }) {
-  const [elapsed,  setElapsed]  = useState(0)
-  const [running,  setRunning]  = useState(false)
-  const [finished, setFinished] = useState(false)
-  const timerRef = useRef(null)
+  const [elapsed,   setElapsed]   = useState(0)
+  const [running,   setRunning]   = useState(false)
+  const [finished,  setFinished]  = useState(false)
+  const [distance,  setDistance]  = useState(0)          // km, live GPS
+  const [geoStatus, setGeoStatus] = useState('idle')     // idle|requesting|tracking|denied|unavailable
+  const [distInput, setDistInput] = useState('')         // manual fallback
 
+  const timerRef    = useRef(null)
+  const watchIdRef  = useRef(null)
+  const lastPosRef  = useRef(null)   // { lat, lng } — cleared on pause to avoid jump
+  const distRef     = useRef(0)      // accumulator ref (no stale-closure issue in watchPosition cb)
+
+  // ── Timer ──
   useEffect(() => {
     if (running && !finished) {
       timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
@@ -18,11 +39,69 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
     return () => clearInterval(timerRef.current)
   }, [running, finished])
 
+  // ── GPS watch — start when running, stop on pause/finish ──
+  useEffect(() => {
+    if (!running || finished) {
+      // Pause: stop watch + clear lastPos so we don't get a phantom distance spike on resume
+      if (watchIdRef.current != null) {
+        navigator.geolocation?.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+      lastPosRef.current = null
+      return
+    }
+
+    if (!navigator.geolocation) { setGeoStatus('unavailable'); return }
+
+    setGeoStatus('requesting')
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      pos => {
+        setGeoStatus('tracking')
+        const { latitude: lat, longitude: lng } = pos.coords
+        if (lastPosRef.current) {
+          const delta = haversine(lastPosRef.current.lat, lastPosRef.current.lng, lat, lng)
+          // Ignore GPS jitter < 2 m
+          if (delta > 0.002) {
+            distRef.current += delta
+            setDistance(distRef.current)
+          }
+        }
+        lastPosRef.current = { lat, lng }
+      },
+      err => {
+        setGeoStatus(err.code === 1 ? 'denied' : 'unavailable')
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    )
+
+    return () => {
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+    }
+  }, [running, finished])
+
   function handleDone() {
     clearInterval(timerRef.current)
+    if (watchIdRef.current != null) {
+      navigator.geolocation?.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+    }
     setRunning(false)
     setFinished(true)
-    onComplete({ amount: Math.round(elapsed / 60), unit: track.unit })
+  }
+
+  const gpsTracked = geoStatus === 'tracking' || (finished && distRef.current > 0)
+
+  function handleSave(skipDistance = false) {
+    let dist
+    if (!skipDistance) {
+      dist = gpsTracked
+        ? parseFloat(distRef.current.toFixed(2))
+        : distInput !== '' ? parseFloat(distInput) : undefined
+    }
+    onComplete({ amount: Math.round(elapsed / 60), unit: track.unit, distance: dist })
   }
 
   const mins = String(Math.floor(elapsed / 60)).padStart(2, '0')
@@ -32,10 +111,11 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
   const ringColor  = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#F5C518'
   const timerColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#F5C518'
   const isSprint   = running && pct >= 80 && pct < 100
+  const doneMinutes = Math.round(elapsed / 60)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '1rem 0' }}>
-      {/* Timer ring */}
+      {/* Timer ring — always visible */}
       <div style={{ position: 'relative', width: 160, height: 160 }}>
         <svg width="160" height="160" style={{ transform: 'rotate(-90deg)' }}>
           <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(245,197,24,0.1)" strokeWidth="8" />
@@ -48,12 +128,15 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{
-            color: timerColor, fontSize: pct >= 90 ? '2.2rem' : '2rem', fontWeight: 900,
+            color: finished ? '#10b981' : timerColor,
+            fontSize: pct >= 90 ? '2.2rem' : '2rem', fontWeight: 900,
             fontVariantNumeric: 'tabular-nums',
             animation: pct >= 90 && running ? 'danger-pulse 0.8s ease infinite' : 'none',
             transition: 'font-size 0.3s ease, color 0.4s ease',
           }}>{mins}:{secs}</span>
-          <span style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.7rem', fontWeight: 700 }}>יעד: {goal} דק'</span>
+          <span style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.7rem', fontWeight: 700 }}>
+            {finished ? 'נרשם' : `יעד: ${goal} דק'`}
+          </span>
         </div>
         {isSprint && (
           <div style={{
@@ -66,6 +149,29 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
           }}>FINAL PUSH</div>
         )}
       </div>
+
+      {/* Live distance chip — shown while running or when GPS active */}
+      {(running || geoStatus === 'tracking') && !finished && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: geoStatus === 'tracking' ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${geoStatus === 'tracking' ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: 20, padding: '0.35rem 0.85rem',
+        }}>
+          <div style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: geoStatus === 'tracking' ? '#10b981' : geoStatus === 'requesting' ? '#f59e0b' : 'rgba(255,255,255,0.3)',
+            animation: geoStatus === 'tracking' ? 'cam-pulse 2s ease infinite' : geoStatus === 'requesting' ? 'cam-pulse 1s ease infinite' : 'none',
+          }} />
+          <span style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', fontVariantNumeric: 'tabular-nums' }}>
+            {distance.toFixed(2)}
+          </span>
+          <span style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.7rem', fontWeight: 700 }}>ק״מ</span>
+          {geoStatus === 'denied' && (
+            <span style={{ color: 'rgba(239,68,68,0.6)', fontSize: '0.6rem' }}>GPS חסום</span>
+          )}
+        </div>
+      )}
 
       {!finished ? (
         <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
@@ -83,11 +189,75 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', animation: 'fadeIn 0.3s ease' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✅</div>
-          <p style={{ color: '#10b981', fontWeight: 800, fontSize: '1rem' }}>
-            {Math.round(elapsed / 60) >= goal ? 'יעד הושג!' : `${Math.round(elapsed / 60)} דקות נרשמו`}
-          </p>
+        <div style={{ width: '100%', animation: 'fadeIn 0.3s ease' }}>
+          {/* Done banner */}
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>✅</div>
+            <div style={{ color: '#10b981', fontWeight: 900, fontSize: '1rem' }}>
+              {doneMinutes >= goal ? 'יעד הושג!' : `${doneMinutes} דקות`}
+            </div>
+          </div>
+
+          {/* Distance summary: auto if GPS worked, manual fallback otherwise */}
+          {gpsTracked ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+              background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.22)',
+              borderRadius: 14, padding: '0.85rem', marginBottom: '0.85rem',
+            }}>
+              <span style={{ fontSize: '1.1rem' }}>📍</span>
+              <div>
+                <div style={{ color: '#10b981', fontWeight: 900, fontSize: '1.4rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                  {distRef.current.toFixed(2)} ק״מ
+                </div>
+                <div style={{ color: 'rgba(16,185,129,0.55)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  נוצר אוטומטי · GPS
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginBottom: '0.65rem' }}>
+              <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                {geoStatus === 'denied' ? 'GPS חסום — הכנס מרחק ידנית (ק״מ)' : 'מרחק (ק״מ) — אופציונלי'}
+              </div>
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                step="0.01"
+                value={distInput}
+                onChange={e => setDistInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                placeholder="0.00"
+                className="glow-input"
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '0.85rem', borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: '#f1f5f9', fontSize: '1.3rem', fontWeight: 900,
+                  fontFamily: 'inherit', textAlign: 'center',
+                }}
+              />
+            </div>
+          )}
+
+          <button
+            onClick={() => handleSave()}
+            className="btn-primary btn-tactile"
+            style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 900, marginBottom: '0.45rem' }}
+          >
+            שמור ←
+          </button>
+          {!gpsTracked && (
+            <button
+              onClick={() => handleSave(true)}
+              className="btn-tactile"
+              style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: 'rgba(241,245,249,0.22)', fontSize: '0.7rem', cursor: 'pointer' }}
+            >
+              דלג על מרחק
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -187,6 +357,8 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
   const halfHaptedRef = useRef(false)
   const caveInCountRef   = useRef(0)
   const caveInActiveRef  = useRef(false)   // debounce: one event per 2s
+  const sessionStartRef  = useRef(null)    // set when camera goes live
+  const lastConfRef      = useRef(1)       // latest confidence for AI formScore
 
   const [phase,       setPhase]       = useState('loading')
   const [reps,        setReps]        = useState(0)
@@ -198,6 +370,7 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
   const [formWarning, setFormWarning] = useState(false)
   const [manualRep,   setManualRep]   = useState('')
   const [summary,     setSummary]     = useState(null)   // { score, headline, tips }
+  const [aiFeedback,  setAiFeedback]  = useState(null)   // null | 'loading' | string
   const formWarnTimer = useRef(null)
 
   const cleanup = useCallback(() => {
@@ -259,6 +432,7 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
     console.log('[camera] video attributes — muted:', video.muted, 'playsInline:', video.playsInline, 'autoplay:', video.hasAttribute('autoplay'))
 
     video.srcObject = streamRef.current
+    sessionStartRef.current = Date.now()
     console.log('[camera] srcObject set, readyState before play():', video.readyState)
 
     video.load()   // required after setting srcObject in some browsers
@@ -297,21 +471,24 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
           const prevState = poseStateRef.current
           const newState  = result.state
 
-          // ── Squat hold-timer rep logic ──────────────────────────────
-          let repCompleted = result.repCompleted   // pushups: from service
+          // ── Rep logic ──────────────────────────────────────────────
+          let repCompleted = result.repCompleted   // pushups / pullups / dips: from service
+
+          // Always show depth bar + confidence for any camera exercise
+          setSquatDepth(result.depth)
+          setConfidence(result.confidence)
+          lastConfRef.current = result.confidence
+
+          // Squat-specific: hold-timer + knee cave-in
           if (track.poseType === 'squats') {
             if (prevState === 'up' && newState === 'down') {
-              downSinceRef.current = ts              // start hold timer
+              downSinceRef.current = ts
             }
             if (prevState === 'down' && newState === 'up') {
               const held = ts - (downSinceRef.current ?? ts)
               repCompleted = held >= HOLD_MS
               downSinceRef.current = null
             }
-            setSquatDepth(result.depth)
-            setConfidence(result.confidence)
-
-            // Knee cave-in: debounced (ref-based, not state) — one count per 2s
             if (result.kneeCaveIn && !caveInActiveRef.current) {
               caveInActiveRef.current = true
               caveInCountRef.current += 1
@@ -354,16 +531,44 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
   function finishSet(finalReps) {
     cleanup()
     const s = calcSummary(finalReps, goal, caveInCountRef.current)
+    const today = new Date().toISOString().slice(0, 10)
     saveSetLog({
-      id: Date.now(), date: new Date().toISOString().slice(0, 10), timestamp: Date.now(),
+      id: Date.now(), date: today, timestamp: Date.now(),
       exerciseId: track.id, exerciseName: track.name, exerciseEmoji: track.emoji,
       reps: finalReps, goal, techniqueScore: s.score, caveInCount: caveInCountRef.current,
     })
     if (uid && finalReps > 0) {
       syncWeeklyReps(uid, userName || 'PRIME User', track.id, finalReps).catch(() => {})
     }
-    setSummary({ ...s, reps: finalReps })
+
+    // Sets completed today (including this one)
+    let setsToday = 1
+    try {
+      const log = JSON.parse(localStorage.getItem(SET_LOG_KEY) || '[]')
+      setsToday = log.filter(e => e.date === today).length + 1
+    } catch {}
+
+    // Persistent rival score — drifts slightly each session for realism
+    let rivalScore
+    try {
+      const stored = parseInt(localStorage.getItem('prime_rival_score') || '0')
+      rivalScore = stored || Math.min(97, s.score + 5 + Math.round(Math.random() * 10))
+      const next = Math.max(40, Math.min(97, rivalScore + Math.round((Math.random() - 0.38) * 10)))
+      localStorage.setItem('prime_rival_score', next)
+    } catch { rivalScore = Math.min(97, s.score + 7) }
+
+    setSummary({ ...s, reps: finalReps, setsToday, rivalScore })
     setPhase('summary')
+
+    // Fire AI analysis in background — show FeedbackModal when ready
+    if (coachConfigured() && finalReps > 0) {
+      setAiFeedback('loading')
+      const duration  = Math.round((Date.now() - (sessionStartRef.current || Date.now())) / 1000)
+      const formScore = Math.round(lastConfRef.current * 100)
+      analyzeSession(track.poseType, { reps: finalReps, duration, formScore })
+        .then(msg => setAiFeedback(msg))
+        .catch(() => setAiFeedback(null))
+    }
   }
 
   function handleDone() { finishSet(repsRef.current) }
@@ -438,15 +643,31 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
 
   // ── Summary ──
   if (phase === 'summary' && summary) return (
-    <SetSummaryPanel
-      track={track}
-      reps={summary.reps}
-      goal={goal}
-      score={summary.score}
-      headline={summary.headline}
-      tips={summary.tips}
-      onSave={() => onComplete({ amount: summary.reps, unit: track.unit })}
-    />
+    <>
+      <SetSummaryPanel
+        track={track}
+        reps={summary.reps}
+        goal={goal}
+        score={summary.score}
+        headline={summary.headline}
+        tips={summary.tips}
+        onSave={() => onComplete({ amount: summary.reps, unit: track.unit })}
+      />
+      {aiFeedback && (
+        <FeedbackModal
+          exerciseName={track.name}
+          reps={summary.reps}
+          goal={goal}
+          score={summary.score}
+          feedback={aiFeedback}
+          setsToday={summary.setsToday ?? 1}
+          setsGoal={5}
+          rivalName="Elon"
+          rivalScore={summary.rivalScore ?? 80}
+          onClose={() => setAiFeedback(null)}
+        />
+      )}
+    </>
   )
 
   // ── Live camera ──

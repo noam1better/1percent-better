@@ -12,8 +12,10 @@ dist/
 .firebase/hosting*.cache
 
 # Environment files with secrets
+.env
 .env.local
 .env.*.local
+my-new-idea/.env
 my-new-idea/.env.local
 my-new-idea/.env.*.local
 

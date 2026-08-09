@@ -2,12 +2,6 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 
-const HC_KEY = 'prime_hc_v1'
-
-export function initHighContrast() {
-  if (localStorage.getItem(HC_KEY) === '1') document.body.classList.add('hc')
-}
-
 function Row({ label, desc, children }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -54,15 +48,7 @@ function SectionHeader({ title }) {
 export default function Settings({ onRebuildPath }) {
   const { user, isGuest, logout } = useAuth()
   const { lang, setLang }         = useLang()
-  const [hc, setHcState]          = useState(() => localStorage.getItem(HC_KEY) === '1')
   const [loggingOut, setLoggingOut] = useState(false)
-
-  function toggleHC() {
-    const next = !hc
-    setHcState(next)
-    if (next) { localStorage.setItem(HC_KEY, '1'); document.body.classList.add('hc') }
-    else      { localStorage.removeItem(HC_KEY);   document.body.classList.remove('hc') }
-  }
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -104,7 +90,7 @@ export default function Settings({ onRebuildPath }) {
             onClick={handleLogout}
             disabled={loggingOut}
             className="btn-tactile"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, color: '#f87171', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: loggingOut ? 'not-allowed' : 'pointer', opacity: loggingOut ? 0.5 : 1, minHeight: 36 }}
+            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, color: '#f87171', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: loggingOut ? 'not-allowed' : 'pointer', opacity: loggingOut ? 0.5 : 1, minHeight: 44 }}
           >
             {loggingOut ? '...' : 'התנתק'}
           </button>
@@ -115,19 +101,13 @@ export default function Settings({ onRebuildPath }) {
       <SectionHeader title="◈ מראה" />
       <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.1rem 1rem', marginBottom: '0.5rem' }}>
         <Row
-          label="ניגודיות גבוהה"
-          desc="מגביר בהירות וניגוד — עוזר לקריאה"
-        >
-          <Toggle on={hc} onToggle={toggleHC} />
-        </Row>
-        <Row
           label={isHe ? 'English' : 'עברית'}
           desc={isHe ? 'Switch interface to English' : 'עבור ממשק לעברית'}
         >
           <button
             onClick={() => setLang(isHe ? 'en' : 'he')}
             className="btn-tactile"
-            style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 10, color: 'rgba(245,197,24,0.8)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 36 }}
+            style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 10, color: 'rgba(245,197,24,0.8)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
           >
             {isHe ? 'EN' : 'עב'}
           </button>
@@ -143,7 +123,7 @@ export default function Settings({ onRebuildPath }) {
               <button
                 onClick={onRebuildPath}
                 className="btn-tactile"
-                style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 10, color: 'rgba(245,197,24,0.7)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 36 }}
+                style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 10, color: 'rgba(245,197,24,0.7)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
               >
                 ♻️ בנה מחדש
               </button>

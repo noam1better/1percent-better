@@ -11,15 +11,20 @@ export async function loadPoseLandmarker() {
     const vision = await FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
     )
-    _landmarker = await PoseLandmarker.createFromOptions(vision, {
+    const opts = (delegate) => ({
       baseOptions: {
         modelAssetPath:
           'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-        delegate: 'GPU',
+        delegate,
       },
       runningMode: 'VIDEO',
       numPoses: 1,
     })
+    try {
+      _landmarker = await PoseLandmarker.createFromOptions(vision, opts('GPU'))
+    } catch {
+      _landmarker = await PoseLandmarker.createFromOptions(vision, opts('CPU'))
+    }
     return _landmarker
   })().catch(err => {
     _loadPromise = null
@@ -45,9 +50,16 @@ function angleDeg2D(A, B, C) {
 // ── Skeleton connections ──────────────────────────────────────────────
 const PUSHUP_SEGS = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24]]
 const SQUAT_SEGS  = [[23,25],[25,27],[24,26],[26,28],[23,24],[11,23],[12,24],[11,12]]
+const PULLUP_SEGS = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24]]
+const DIPS_SEGS   = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24]]
+const BOXING_SEGS = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24],[0,11],[0,12]]
 
 export function drawSkeleton(ctx, lm, poseType, w, h, confidence = 1) {
-  const segs = poseType === 'squats' ? SQUAT_SEGS : PUSHUP_SEGS
+  const segs = poseType === 'squats'  ? SQUAT_SEGS
+             : poseType === 'pullups' ? PULLUP_SEGS
+             : poseType === 'dips'    ? DIPS_SEGS
+             : poseType === 'boxing'  ? BOXING_SEGS
+             : PUSHUP_SEGS
   const good = confidence >= 0.7
   const lineColor = good ? 'rgba(245,197,24,0.6)' : 'rgba(239,68,68,0.75)'
   const dotColor  = good ? '#F5C518'               : '#ef4444'
@@ -148,8 +160,110 @@ export function analyzeSquat(lm, prevState) {
   return { angle: displayAngle, depth, state: newState, confidence: conf, kneeCaveIn, repCompleted: false }
 }
 
+// ── Pull-ups: elbow angle, front-facing camera ────────────────────────
+// Dead hang = angle ~165° (UP state), chin over bar = angle ~50° (DOWN state)
+// Lower visibility threshold (0.35) — wrists often partially out of frame
+export function analyzePullup(lm, prevState) {
+  const rConf = v(lm[12]) + v(lm[14]) + v(lm[16])
+  const lConf = v(lm[11]) + v(lm[13]) + v(lm[15])
+  let s, e, w2
+  if (rConf >= lConf && v(lm[12]) > 0.35 && v(lm[14]) > 0.35 && v(lm[16]) > 0.35) {
+    ;[s, e, w2] = [lm[12], lm[14], lm[16]]
+  } else if (v(lm[11]) > 0.35 && v(lm[13]) > 0.35 && v(lm[15]) > 0.35) {
+    ;[s, e, w2] = [lm[11], lm[13], lm[15]]
+  } else {
+    return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
+  }
+
+  const angle      = Math.round(angleDeg2D(s, e, w2))
+  let newState     = prevState
+  let repCompleted = false
+  if (prevState === 'up'   && angle < 65)  newState = 'down'              // pulled up
+  if (prevState === 'down' && angle > 150) { newState = 'up'; repCompleted = true } // returned to hang
+
+  const conf  = (v(s) + v(e) + v(w2)) / 3
+  const depth = Math.max(0, Math.min(1, (165 - angle) / 100))
+  return { angle, depth, state: newState, confidence: conf, kneeCaveIn: false, repCompleted }
+}
+
+// ── Dips: elbow angle, side/front view ───────────────────────────────
+// Arms extended at top = angle ~160° (UP), deep dip = angle ~80° (DOWN)
+export function analyzeDip(lm, prevState) {
+  const rConf = v(lm[12]) + v(lm[14]) + v(lm[16])
+  const lConf = v(lm[11]) + v(lm[13]) + v(lm[15])
+  let s, e, w2
+  if (rConf >= lConf && v(lm[12]) > 0.35 && v(lm[14]) > 0.35 && v(lm[16]) > 0.35) {
+    ;[s, e, w2] = [lm[12], lm[14], lm[16]]
+  } else if (v(lm[11]) > 0.35 && v(lm[13]) > 0.35 && v(lm[15]) > 0.35) {
+    ;[s, e, w2] = [lm[11], lm[13], lm[15]]
+  } else {
+    return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
+  }
+
+  const angle      = Math.round(angleDeg2D(s, e, w2))
+  let newState     = prevState
+  let repCompleted = false
+  if (prevState === 'up'   && angle < 85)  newState = 'down'              // dipped down
+  if (prevState === 'down' && angle > 145) { newState = 'up'; repCompleted = true } // locked out
+
+  const conf  = (v(s) + v(e) + v(w2)) / 3
+  const depth = Math.max(0, Math.min(1, (155 - angle) / 70))
+  return { angle, depth, state: newState, confidence: conf, kneeCaveIn: false, repCompleted }
+}
+
 export function analyzeFrame(poseType, landmarks, prevState) {
   if (poseType === 'pushups') return analyzePushup(landmarks, prevState)
   if (poseType === 'squats')  return analyzeSquat(landmarks, prevState)
+  if (poseType === 'pullups') return analyzePullup(landmarks, prevState)
+  if (poseType === 'dips')    return analyzeDip(landmarks, prevState)
   return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
+}
+
+// ── Boxing form (front-facing camera) ────────────────────────────────
+// Detects guard height, elbow tuck, and punch velocity.
+// lm: 33 landmarks from PoseLandmarker; prevLm: previous frame (for punch velocity)
+// Returns { violations: string[], punchLeft: bool, punchRight: bool, confidence: number }
+export function analyzeBoxingForm(lm, prevLm) {
+  function vis(pt) { return pt?.visibility ?? 0 }
+
+  const nose      = lm[0]
+  const lShoulder = lm[11], rShoulder = lm[12]
+  const lElbow    = lm[13], rElbow    = lm[14]
+  const lWrist    = lm[15], rWrist    = lm[16]
+
+  const conf = (vis(nose) + vis(lShoulder) + vis(rShoulder) + vis(lWrist) + vis(rWrist)) / 5
+  if (conf < 0.35) return { violations: [], punchLeft: false, punchRight: false, confidence: conf }
+
+  const violations = []
+
+  // Guard height: chin ≈ nose.y + 0.07; guard dropped if wrist > chin + 0.10
+  const chinY     = nose.y + 0.07
+  const dropLine  = chinY + 0.10
+  const lDrop = vis(lWrist) > 0.45 && lWrist.y > dropLine
+  const rDrop = vis(rWrist) > 0.45 && rWrist.y > dropLine
+  if      (lDrop && rDrop) violations.push('guardBoth')
+  else if (lDrop)          violations.push('guardLeft')
+  else if (rDrop)          violations.push('guardRight')
+
+  // Elbow tuck: elbow should stay within 50% of shoulder-width of its own shoulder
+  const shoulderW = Math.max(0.1, Math.abs(lShoulder.x - rShoulder.x))
+  const lFlare = vis(lElbow) > 0.4 && Math.abs(lElbow.x - lShoulder.x) > shoulderW * 0.5
+  const rFlare = vis(rElbow) > 0.4 && Math.abs(rElbow.x - rShoulder.x) > shoulderW * 0.5
+  if (lFlare || rFlare) violations.push('elbowFlare')
+
+  // Punch velocity: speed of wrist between frames (>9% of frame per 100ms = fast punch)
+  let punchLeft = false, punchRight = false
+  if (prevLm) {
+    const pl = prevLm[15], pr = prevLm[16]
+    if (vis(lWrist) > 0.4 && vis(pl) > 0.4) {
+      const dx = lWrist.x - pl.x, dy = lWrist.y - pl.y
+      punchLeft = (dx * dx + dy * dy) > 0.0081  // 0.09²
+    }
+    if (vis(rWrist) > 0.4 && vis(pr) > 0.4) {
+      const dx = rWrist.x - pr.x, dy = rWrist.y - pr.y
+      punchRight = (dx * dx + dy * dy) > 0.0081
+    }
+  }
+
+  return { violations, punchLeft, punchRight, confidence: conf }
 }

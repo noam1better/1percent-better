@@ -421,6 +421,60 @@ export default function AnalyticsTab({ profile, currentUid }) {
         <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{insight.text}</p>
       </div>
 
+      {/* ── Future Trajectory ── */}
+      {xp > 0 && (() => {
+        const activeChallenge = CHALLENGES
+          .filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0 && (challenges[ch.id]?.daysCompleted || 0) < ch.days)[0]
+        const dailyXP  = activeChallenge?.xpPerDay || 50
+        const proj = [
+          { days: 30, label: '30 יום',  xp: xp + dailyXP * 30 },
+          { days: 60, label: '60 יום',  xp: xp + dailyXP * 60 },
+          { days: 90, label: '90 יום',  xp: xp + dailyXP * 90 },
+        ]
+        const maxXP  = proj[2].xp
+        return (
+          <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(139,92,246,0.04))', border: '1px solid rgba(99,102,241,0.16)', borderRadius: 16, padding: '1.1rem 1.1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.85rem' }}>
+              <div>
+                <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.88rem' }}>מסלול הצמיחה שלך</span>
+                <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', marginTop: '0.1rem' }}>בהנחה של {dailyXP} XP/יום</div>
+              </div>
+              <span style={{ fontSize: '0.7rem' }}>🚀</span>
+            </div>
+
+            {/* Current marker */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
+              <div style={{ width: 56, textAlign: 'left', color: 'rgba(241,245,249,0.35)', fontSize: '0.65rem', fontWeight: 700, flexShrink: 0 }}>עכשיו</div>
+              <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.06)', direction: 'ltr' }}>
+                <div style={{ height: '100%', width: `${Math.round((xp / maxXP) * 100)}%`, borderRadius: 99, background: 'rgba(255,255,255,0.2)' }} />
+              </div>
+              <div style={{ width: 60, textAlign: 'right', color: 'rgba(241,245,249,0.5)', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>{xp.toLocaleString()} XP</div>
+            </div>
+
+            {proj.map((p, i) => {
+              const colors = ['#6366f1', '#8b5cf6', '#a855f7']
+              const lvl    = Math.floor(p.xp / 100) + 1
+              return (
+                <div key={p.days} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: i < 2 ? '0.5rem' : 0 }}>
+                  <div style={{ width: 56, textAlign: 'left', color: colors[i], fontSize: '0.65rem', fontWeight: 700, flexShrink: 0 }}>{p.label}</div>
+                  <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.06)', direction: 'ltr' }}>
+                    <div style={{ height: '100%', width: `${Math.round((p.xp / maxXP) * 100)}%`, borderRadius: 99, background: `linear-gradient(90deg,${colors[i]}88,${colors[i]})`, transition: 'width 0.8s ease' }} />
+                  </div>
+                  <div style={{ width: 60, textAlign: 'right', color: colors[i], fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>
+                    {p.xp.toLocaleString()} XP
+                    <div style={{ color: `${colors[i]}88`, fontSize: '0.55rem', fontWeight: 600 }}>רמה {lvl}</div>
+                  </div>
+                </div>
+              )
+            })}
+
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(99,102,241,0.15)', color: 'rgba(241,245,249,0.32)', fontSize: '0.68rem', lineHeight: 1.55 }}>
+              💡 המספרים האלה אמיתיים — זה מה שיקרה אם תמשיך בקצב הנוכחי.
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ── Tracks progress breakdown ── */}
       {challengeActive > 0 && (
         <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '1rem 1.1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }}>

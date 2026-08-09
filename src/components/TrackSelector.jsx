@@ -97,14 +97,15 @@ export default function TrackSelector({ uid, userName }) {
     setWorkout({ track, goal })
   }
 
-  function handleWorkoutComplete({ amount, unit }) {
+  function handleWorkoutComplete({ amount, unit, distance }) {
     const track     = TRACK_MAP[state.activeTrackId]
     const ts        = state.tracks[state.activeTrackId] || { goalAmount: track.startGoal, history: [] }
     const today     = TODAY()
     const completed = amount >= ts.goalAmount
 
+    const entry = { date: today, completed, amount, ...(distance != null ? { distance } : {}) }
     const newHistory = [
-      { date: today, completed, amount },
+      entry,
       ...(ts.history || []).filter(h => h.date !== today),
     ].slice(0, 60)
 

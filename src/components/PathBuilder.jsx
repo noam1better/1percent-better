@@ -6,7 +6,7 @@ import { buildCustomPath } from '../services/pathBuilderService'
 const MOTIVATION_QUESTIONS = [
   {
     id:          'deep_why',
-    question:    'שאלה אחרונה — ולא שטחית: למה זה חשוב לך באמת? מה מאחורי המטרה הזו?',
+    question:    'שאלה ראשונה — ולא שטחית: למה זה חשוב לך באמת? מה מאחורי המטרה הזו?',
     placeholder: 'כתוב את התשובה האמיתית, לא מה שנשמע טוב...',
     minChars:    15,
   },
