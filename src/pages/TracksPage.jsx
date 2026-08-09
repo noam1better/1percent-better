@@ -596,208 +596,18 @@ const PILLARS = [
   },
 ]
 
-// ── Track Library ──────────────────────────────────────────────────
-
-function TrackLibrary({ challenges, getProgress, onSelect, recommendedIds, activeCount, isCourseSlotLocked }) {
-  const [activePillar, setActivePillar] = useState(null)
-  const atLimit = activeCount >= MAX_ACTIVE
-
-  const pillar         = PILLARS.find(p => p.id === activePillar) || null
-  const visibleCourses = pillar
-    ? challenges.filter(ch => pillar.courseIds.includes(ch.id))
-    : challenges
-
-  // ── Pillar grid (home view) ─────────────────────────────────────
-  if (!activePillar) {
-    return (
-      <div style={{ animation: 'slide-up 0.3s ease both' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '1.35rem' }}>
-          <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
-          <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.2rem' }}>בחר עמודה. בנה את הגרסה הבאה שלך.</h2>
-          <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>כל עמודה — מסלול עמוק של 30 יום.</p>
-        </div>
-
-        {/* 2×2 pillar grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          {PILLARS.map(p => {
-            const pillarCourses  = challenges.filter(ch => p.courseIds.includes(ch.id))
-            const startedCount   = pillarCourses.filter(ch => (getProgress(ch.id)?.daysCompleted || 0) > 0).length
-            const totalDays      = pillarCourses.reduce((s, ch) => s + (getProgress(ch.id)?.daysCompleted || 0), 0)
-            const totalPossible  = pillarCourses.reduce((s, ch) => s + ch.days, 0)
-            const pct            = totalPossible > 0 ? Math.round((totalDays / totalPossible) * 100) : 0
-            return (
-              <button
-                key={p.id}
-                className="btn-tactile"
-                onClick={() => setActivePillar(p.id)}
-                style={{
-                  background: `linear-gradient(145deg,${p.color}12,${p.color}06)`,
-                  border: `1.5px solid ${p.color}30`,
-                  borderRadius: 20,
-                  padding: '1.25rem 1rem',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  boxShadow: `0 4px 20px ${p.color}10`,
-                  transition: 'all 0.18s ease',
-                  minHeight: 130,
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* shimmer */}
-                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg,transparent 40%,${p.color}08 50%,transparent 60%)`, animation: 'shimmer 3s ease-in-out infinite', pointerEvents: 'none' }} />
-
-                <span style={{ fontSize: '2rem', lineHeight: 1 }}>{p.icon}</span>
-                <span style={{ color: p.color, fontSize: '0.82rem', fontWeight: 900, letterSpacing: '-0.01em' }}>{p.label}</span>
-                <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem', lineHeight: 1.35 }}>{p.desc}</span>
-
-                {/* Progress indicator */}
-                {pct > 0 ? (
-                  <div style={{ width: '100%', marginTop: '0.3rem' }}>
-                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.08)', direction: 'ltr', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}88,${p.color})` }} />
-                    </div>
-                    <div style={{ color: `${p.color}99`, fontSize: '0.58rem', marginTop: '0.2rem', fontWeight: 700 }}>{pct}% הושלם</div>
-                  </div>
-                ) : (
-                  <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.6rem', marginTop: '0.2rem' }}>{pillarCourses.length} מסלולים</div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Active-slot indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: atLimit ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${atLimit ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.07)'}` }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: atLimit ? '#ef4444' : activeCount === 1 ? '#10b981' : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
-          <span style={{ color: atLimit ? '#f87171' : 'rgba(241,245,249,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>
-            {atLimit ? 'קורס פעיל — השלם אותו לפני פתיחת חדש' : 'בחר עמודה כדי לצפות במסלולים'}
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Pillar drill-down (course list) ────────────────────────────
-  return (
-    <div style={{ animation: 'slide-up 0.3s ease both' }}>
-
-      {/* Back + pillar header */}
-      <button
-        onClick={() => setActivePillar(null)}
-        className="btn-tactile"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1rem' }}
-      >
-        ← כל העמודות
-      </button>
-
-      <div style={{ background: `linear-gradient(145deg,${pillar.color}12,${pillar.color}06)`, border: `1.5px solid ${pillar.color}28`, borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: 52, height: 52, borderRadius: 14, background: `${pillar.color}20`, border: `1px solid ${pillar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', flexShrink: 0 }}>{pillar.icon}</div>
-        <div>
-          <div style={{ color: pillar.color, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>עמודה</div>
-          <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', marginBottom: '0.15rem' }}>{pillar.label}</div>
-          <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem', lineHeight: 1.4 }}>{pillar.longDesc}</div>
-        </div>
-      </div>
-
-      {/* Active-slot indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '1rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: atLimit ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${atLimit ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.07)'}` }}>
-        <div style={{ width: 10, height: 10, borderRadius: '50%', background: atLimit ? '#ef4444' : activeCount === 1 ? '#10b981' : 'rgba(255,255,255,0.15)', transition: 'background 0.3s', flexShrink: 0 }} />
-        <span style={{ color: atLimit ? '#f87171' : 'rgba(241,245,249,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>
-          {atLimit ? 'יש לך קורס פעיל — השלם אותו לפני שמתחילים חדש' : 'ללא קורס פעיל — בחר מסלול והתחל'}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-        {visibleCourses.map(ch => {
-          const prog   = getProgress(ch.id)
-          const days   = prog?.daysCompleted || 0
-          const pct    = Math.round((days / ch.days) * 100)
-          const isRec  = recommendedIds?.includes(ch.id)
-          const done   = days >= ch.days
-          const locked = isCourseSlotLocked(ch)
-
-          return (
-            <div
-              key={ch.id}
-              className={locked ? '' : 'track-card'}
-              onClick={() => onSelect(ch)}
-              style={{
-                background: locked
-                  ? 'rgba(255,255,255,0.015)'
-                  : isRec
-                    ? `linear-gradient(135deg,${ch.color}0d,rgba(255,255,255,0.018))`
-                    : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${locked ? 'rgba(255,255,255,0.06)' : isRec ? ch.color + '22' : 'rgba(255,255,255,0.05)'}`,
-                borderRadius: 18,
-                padding: '1.1rem 1.2rem',
-                boxShadow: (!locked && isRec) ? `0 4px 22px ${ch.color}10` : 'none',
-                cursor: locked ? 'not-allowed' : 'pointer',
-                opacity: locked ? 0.55 : 1,
-                transition: 'opacity 0.2s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 13, background: locked ? 'rgba(255,255,255,0.04)' : `${ch.color}1e`, border: `1px solid ${locked ? 'rgba(255,255,255,0.08)' : ch.color + '28'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: locked ? '1.4rem' : '1.55rem', flexShrink: 0 }}>
-                  {locked ? '🔒' : ch.emoji}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.12rem' }}>
-                    <span style={{ color: locked ? 'rgba(241,245,249,0.35)' : '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
-                    {!locked && isRec && <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
-                    {!locked && ch.expert && !done && <span style={{ background: 'linear-gradient(90deg,#0e7490,#06b6d4)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
-                    {done && <span style={{ color: '#10b981', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', borderRadius: 20, padding: '0.1rem 0.4rem' }}>✓ הושלם</span>}
-                    {locked && <span style={{ color: 'rgba(239,68,68,0.65)', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>נעול</span>}
-                  </div>
-                  <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{locked ? 'השלם קורס פעיל כדי לפתוח' : ch.subtitle}</div>
-                  {!locked && days > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.45rem' }}>
-                      <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)' }}>
-                        <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}80,${ch.color})`, width: `${pct}%` }} />
-                      </div>
-                      <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{days}d</span>
-                    </div>
-                  )}
-                </div>
-                <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  {locked ? (
-                    <div style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.6rem' }}>—</div>
-                  ) : (
-                    <>
-                      <div style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 800 }}>+{ch.xpPerDay} XP</div>
-                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>/ יום</div>
-                      <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.58rem', marginTop: '0.22rem' }}>{ch.days} שיעורים →</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ── TracksPage ─────────────────────────────────────────────────────
 
 export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
-  const { user, isGuest }          = useAuth()
-  const { prefs }                  = useUserPrefs()
-  const [selected, setSelected]    = useState(null)
-  const [showLockedModal, setShowLockedModal] = useState(false)
+  const { user, isGuest }                      = useAuth()
+  const { prefs }                              = useUserPrefs()
+  const [selected,      setSelected]           = useState(null)
+  const [activePillar,  setActivePillar]       = useState(null)
+  const [showQuiz,      setShowQuiz]           = useState(false)
+  const [showLockedModal, setShowLockedModal]  = useState(false)
+  const [quizRecs,      setQuizRecs]           = useState(() => loadQuizData()?.recommendations || [])
 
-  const hasAnyCourseStarted = CHALLENGES.some(ch => (profile?.challenges?.[ch.id]?.daysCompleted || 0) > 0)
-  const savedQuiz = loadQuizData()
-  const [showQuiz, setShowQuiz]    = useState(!savedQuiz && !hasAnyCourseStarted)
-  const [quizRecs, setQuizRecs]    = useState(() => savedQuiz?.recommendations || [])
-
-  const fallbackRec = prefs.recommendedTrack || profile?.preferences?.recommendedTrack
+  const fallbackRec    = prefs.recommendedTrack || profile?.preferences?.recommendedTrack
   const recommendedIds = quizRecs.length > 0 ? quizRecs : (fallbackRec ? [fallbackRec] : [])
 
   function getProgress(id) { return profile?.challenges?.[id] }
@@ -806,6 +616,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
     const d = getProgress(ch.id)?.daysCompleted || 0
     return d > 0 && d < ch.days
   }).length
+  const atLimit = activeCount >= MAX_ACTIVE
 
   function isCourseSlotLocked(ch) {
     const d = getProgress(ch.id)?.daysCompleted || 0
@@ -814,10 +625,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   }
 
   function handleSelect(ch) {
-    if (isCourseSlotLocked(ch)) {
-      setShowLockedModal(true)
-      return
-    }
+    if (isCourseSlotLocked(ch)) { setShowLockedModal(true); return }
     setSelected(ch)
   }
 
@@ -825,6 +633,11 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
     saveQuizData(recs)
     setQuizRecs(recs)
     setShowQuiz(false)
+    const topRec = recs[0]
+    if (topRec) {
+      const p = PILLARS.find(pl => pl.courseIds.includes(topRec))
+      if (p) setActivePillar(p.id)
+    }
     if (!isGuest && user) {
       await saveProfile(user.uid, { trackQuizRecs: recs }).catch(() => {})
     }
@@ -843,10 +656,12 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   }
 
   const TAB_H = 64
+  const PAD   = `1.5rem 1.25rem ${TAB_H + 24}px`
 
-  return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: `${selected ? 0 : '1.5rem'} 1.25rem ${TAB_H + 24}px`, position: 'relative' }}>
-      {selected ? (
+  // ── View: Course Dashboard ────────────────────────────────────────
+  if (selected) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: TAB_H + 24 }}>
         <CourseDashboard
           challenge={selected}
           progress={getProgress(selected.id)}
@@ -854,21 +669,195 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           onBack={() => setSelected(null)}
           onLessonComplete={handleLessonComplete}
         />
-      ) : showQuiz ? (
-        <CourseQuiz
-          onComplete={handleQuizComplete}
-          onSkip={() => setShowQuiz(false)}
-        />
-      ) : (
-        <TrackLibrary
-          challenges={CHALLENGES}
-          getProgress={getProgress}
-          onSelect={handleSelect}
-          recommendedIds={recommendedIds}
-          activeCount={activeCount}
-          isCourseSlotLocked={isCourseSlotLocked}
-        />
-      )}
+        {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
+      </div>
+    )
+  }
+
+  // ── View: Quiz (opt-in only) ──────────────────────────────────────
+  if (showQuiz) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: PAD }}>
+        <button
+          onClick={() => setShowQuiz(false)}
+          className="btn-tactile"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.5rem' }}
+        >
+          ← חזור
+        </button>
+        <CourseQuiz onComplete={handleQuizComplete} onSkip={() => setShowQuiz(false)} />
+      </div>
+    )
+  }
+
+  // ── View: Pillar drill-down ───────────────────────────────────────
+  if (activePillar) {
+    const pillar  = PILLARS.find(p => p.id === activePillar)
+    const courses = CHALLENGES.filter(ch => pillar.courseIds.includes(ch.id))
+
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: PAD, animation: 'slide-up 0.28s ease both' }}>
+
+        <button
+          onClick={() => setActivePillar(null)}
+          className="btn-tactile"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1.25rem' }}
+        >
+          ← 4 עמודות
+        </button>
+
+        <div style={{ background: `linear-gradient(145deg,${pillar.color}12,${pillar.color}06)`, border: `1.5px solid ${pillar.color}28`, borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: `${pillar.color}20`, border: `1px solid ${pillar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', flexShrink: 0 }}>{pillar.icon}</div>
+          <div>
+            <div style={{ color: pillar.color, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>עמודה</div>
+            <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', marginBottom: '0.15rem' }}>{pillar.label}</div>
+            <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem', lineHeight: 1.4 }}>{pillar.longDesc}</div>
+          </div>
+        </div>
+
+        {atLimit && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '1rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.28)' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />
+            <span style={{ color: '#f87171', fontSize: '0.72rem', fontWeight: 700 }}>יש לך קורס פעיל — השלם אותו לפני שמתחילים חדש</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+          {courses.map(ch => {
+            const prog   = getProgress(ch.id)
+            const days   = prog?.daysCompleted || 0
+            const pct    = Math.round((days / ch.days) * 100)
+            const isRec  = recommendedIds?.includes(ch.id)
+            const done   = days >= ch.days
+            const locked = isCourseSlotLocked(ch)
+
+            return (
+              <div
+                key={ch.id}
+                className={locked ? '' : 'track-card'}
+                onClick={() => handleSelect(ch)}
+                style={{
+                  background: locked ? 'rgba(255,255,255,0.015)' : isRec ? `linear-gradient(135deg,${ch.color}0d,rgba(255,255,255,0.018))` : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${locked ? 'rgba(255,255,255,0.06)' : isRec ? ch.color + '22' : 'rgba(255,255,255,0.05)'}`,
+                  borderRadius: 18,
+                  padding: '1.1rem 1.2rem',
+                  boxShadow: (!locked && isRec) ? `0 4px 22px ${ch.color}10` : 'none',
+                  cursor: locked ? 'not-allowed' : 'pointer',
+                  opacity: locked ? 0.55 : 1,
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: locked ? 'rgba(255,255,255,0.04)' : `${ch.color}1e`, border: `1px solid ${locked ? 'rgba(255,255,255,0.08)' : ch.color + '28'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: locked ? '1.4rem' : '1.55rem', flexShrink: 0 }}>
+                    {locked ? '🔒' : ch.emoji}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.12rem' }}>
+                      <span style={{ color: locked ? 'rgba(241,245,249,0.35)' : '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
+                      {!locked && isRec && <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
+                      {!locked && ch.expert && !done && <span style={{ background: 'linear-gradient(90deg,#0e7490,#06b6d4)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
+                      {done && <span style={{ color: '#10b981', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', borderRadius: 20, padding: '0.1rem 0.4rem' }}>✓ הושלם</span>}
+                      {locked && <span style={{ color: 'rgba(239,68,68,0.65)', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>נעול</span>}
+                    </div>
+                    <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{locked ? 'השלם קורס פעיל כדי לפתוח' : ch.subtitle}</div>
+                    {!locked && days > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.45rem' }}>
+                        <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}80,${ch.color})`, width: `${pct}%` }} />
+                        </div>
+                        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{days}d</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    {locked ? (
+                      <div style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.6rem' }}>—</div>
+                    ) : (
+                      <>
+                        <div style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 800 }}>+{ch.xpPerDay} XP</div>
+                        <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>/ יום</div>
+                        <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.58rem', marginTop: '0.22rem' }}>{ch.days} שיעורים →</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
+      </div>
+    )
+  }
+
+  // ── View: 4-Pillar Grid (default / root) ─────────────────────────
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: PAD, animation: 'slide-up 0.28s ease both' }}>
+
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
+        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.25rem' }}>בחר עמודה. בנה את הגרסה הבאה שלך.</h2>
+        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>כל עמודה — מסלול עמוק של 30 יום.</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        {PILLARS.map(p => {
+          const pillarCourses = CHALLENGES.filter(ch => p.courseIds.includes(ch.id))
+          const totalDays     = pillarCourses.reduce((s, ch) => s + (getProgress(ch.id)?.daysCompleted || 0), 0)
+          const totalPossible = pillarCourses.reduce((s, ch) => s + ch.days, 0)
+          const pct           = totalPossible > 0 ? Math.round((totalDays / totalPossible) * 100) : 0
+
+          return (
+            <button
+              key={p.id}
+              className="btn-tactile"
+              onClick={() => setActivePillar(p.id)}
+              style={{
+                background: `linear-gradient(145deg,${p.color}12,${p.color}06)`,
+                border: `1.5px solid ${p.color}30`,
+                borderRadius: 20,
+                padding: '1.25rem 1rem',
+                cursor: 'pointer',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: `0 4px 20px ${p.color}10`,
+                transition: 'all 0.18s ease',
+                minHeight: 130,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg,transparent 40%,${p.color}08 50%,transparent 60%)`, animation: 'shimmer 3s ease-in-out infinite', pointerEvents: 'none' }} />
+              <span style={{ fontSize: '2rem', lineHeight: 1 }}>{p.icon}</span>
+              <span style={{ color: p.color, fontSize: '0.82rem', fontWeight: 900, letterSpacing: '-0.01em' }}>{p.label}</span>
+              <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem', lineHeight: 1.35 }}>{p.desc}</span>
+              {pct > 0 ? (
+                <div style={{ width: '100%', marginTop: '0.3rem' }}>
+                  <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.08)', direction: 'ltr', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}88,${p.color})` }} />
+                  </div>
+                  <div style={{ color: `${p.color}99`, fontSize: '0.58rem', marginTop: '0.2rem', fontWeight: 700 }}>{pct}%</div>
+                </div>
+              ) : (
+                <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.6rem', marginTop: '0.2rem' }}>{pillarCourses.length} מסלולים</div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <button
+        onClick={() => setShowQuiz(true)}
+        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, width: '100%', padding: '0.75rem', color: 'rgba(241,245,249,0.28)', fontSize: '0.73rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+      >
+        לא בטוח מאיפה להתחיל?
+        <span style={{ color: 'rgba(196,121,90,0.65)' }}>ענה על שאלון קצר ←</span>
+      </button>
+
       {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
     </div>
   )
