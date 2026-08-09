@@ -558,15 +558,42 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
 // ── 4-Pillar definitions ─────────────────────────────────────────
 
 const PILLARS = [
-  { id: null,         label: 'הכל',             icon: '◈',  color: 'rgba(241,245,249,0.5)', courseIds: null },
-  { id: 'builder',    label: 'The Builder',      icon: '🏗️', color: '#6366f1',
-    courseIds: ['ai-beginners', 'ai-pioneer', 'business-mind', 'claude-code-mastery', 'capital-markets'] },
-  { id: 'creator',    label: 'The Creator',      icon: '🎨', color: '#ec4899',
-    courseIds: ['product-builder', 'business-soul'] },
-  { id: 'reset',      label: 'The Reset',        icon: '🧘', color: '#10b981',
-    courseIds: ['self-discipline'] },
-  { id: 'connection', label: 'The Connection',   icon: '🤝', color: '#f59e0b',
-    courseIds: ['deal-closer'] },
+  {
+    id: 'builder',
+    label: 'The Builder',
+    icon: '🛠️',
+    color: '#6366f1',
+    desc: 'AI, עסקים, צמיחה כלכלית',
+    longDesc: 'בנה מיומנויות AI, עסקים ומסחר. זו העמודה שמכניסה כסף ובונה עתיד.',
+    courseIds: ['ai-beginners', 'ai-pioneer', 'business-mind', 'claude-code-mastery', 'capital-markets'],
+  },
+  {
+    id: 'creator',
+    label: 'The Creator',
+    icon: '🎨',
+    color: '#ec4899',
+    desc: 'יצירה, מותג, ביטוי עצמי',
+    longDesc: 'פתח את היצירתיות שלך. מותג, עיצוב, ובניית נשמת העסק.',
+    courseIds: ['product-builder', 'business-soul'],
+  },
+  {
+    id: 'reset',
+    label: 'The Reset',
+    icon: '🧘',
+    color: '#10b981',
+    desc: 'משמעת, בהירות, שקט מנטלי',
+    longDesc: 'משמעת עצמית ובהירות מנטלית. בלי זה — שאר העמודות קורסות.',
+    courseIds: ['self-discipline'],
+  },
+  {
+    id: 'connection',
+    label: 'The Connection',
+    icon: '💛',
+    color: '#f59e0b',
+    desc: 'מכירות, יחסים, נוכחות',
+    longDesc: 'יחסים, מכירות ונוכחות אנושית. כי ההצלחה לבד היא ריקה.',
+    courseIds: ['deal-closer'],
+  },
 ]
 
 // ── Track Library ──────────────────────────────────────────────────
@@ -575,76 +602,114 @@ function TrackLibrary({ challenges, getProgress, onSelect, recommendedIds, activ
   const [activePillar, setActivePillar] = useState(null)
   const atLimit = activeCount >= MAX_ACTIVE
 
-  const pillar         = PILLARS.find(p => p.id === activePillar) || PILLARS[0]
-  const visibleCourses = pillar.courseIds
+  const pillar         = PILLARS.find(p => p.id === activePillar) || null
+  const visibleCourses = pillar
     ? challenges.filter(ch => pillar.courseIds.includes(ch.id))
     : challenges
 
+  // ── Pillar grid (home view) ─────────────────────────────────────
+  if (!activePillar) {
+    return (
+      <div style={{ animation: 'slide-up 0.3s ease both' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '1.35rem' }}>
+          <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
+          <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.2rem' }}>בחר עמודה. בנה את הגרסה הבאה שלך.</h2>
+          <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>כל עמודה — מסלול עמוק של 30 יום.</p>
+        </div>
+
+        {/* 2×2 pillar grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {PILLARS.map(p => {
+            const pillarCourses  = challenges.filter(ch => p.courseIds.includes(ch.id))
+            const startedCount   = pillarCourses.filter(ch => (getProgress(ch.id)?.daysCompleted || 0) > 0).length
+            const totalDays      = pillarCourses.reduce((s, ch) => s + (getProgress(ch.id)?.daysCompleted || 0), 0)
+            const totalPossible  = pillarCourses.reduce((s, ch) => s + ch.days, 0)
+            const pct            = totalPossible > 0 ? Math.round((totalDays / totalPossible) * 100) : 0
+            return (
+              <button
+                key={p.id}
+                className="btn-tactile"
+                onClick={() => setActivePillar(p.id)}
+                style={{
+                  background: `linear-gradient(145deg,${p.color}12,${p.color}06)`,
+                  border: `1.5px solid ${p.color}30`,
+                  borderRadius: 20,
+                  padding: '1.25rem 1rem',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: `0 4px 20px ${p.color}10`,
+                  transition: 'all 0.18s ease',
+                  minHeight: 130,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* shimmer */}
+                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg,transparent 40%,${p.color}08 50%,transparent 60%)`, animation: 'shimmer 3s ease-in-out infinite', pointerEvents: 'none' }} />
+
+                <span style={{ fontSize: '2rem', lineHeight: 1 }}>{p.icon}</span>
+                <span style={{ color: p.color, fontSize: '0.82rem', fontWeight: 900, letterSpacing: '-0.01em' }}>{p.label}</span>
+                <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem', lineHeight: 1.35 }}>{p.desc}</span>
+
+                {/* Progress indicator */}
+                {pct > 0 ? (
+                  <div style={{ width: '100%', marginTop: '0.3rem' }}>
+                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.08)', direction: 'ltr', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}88,${p.color})` }} />
+                    </div>
+                    <div style={{ color: `${p.color}99`, fontSize: '0.58rem', marginTop: '0.2rem', fontWeight: 700 }}>{pct}% הושלם</div>
+                  </div>
+                ) : (
+                  <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.6rem', marginTop: '0.2rem' }}>{pillarCourses.length} מסלולים</div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Active-slot indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: atLimit ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${atLimit ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.07)'}` }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: atLimit ? '#ef4444' : activeCount === 1 ? '#10b981' : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+          <span style={{ color: atLimit ? '#f87171' : 'rgba(241,245,249,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>
+            {atLimit ? 'קורס פעיל — השלם אותו לפני פתיחת חדש' : 'בחר עמודה כדי לצפות במסלולים'}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Pillar drill-down (course list) ────────────────────────────
   return (
     <div style={{ animation: 'slide-up 0.3s ease both' }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
-        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.2rem' }}>אתה vs. העצמי העתידי שלך</h2>
-        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>בחר עמודה. בנה את הגרסה הבאה שלך.</p>
-      </div>
 
-      {/* 4-Pillar selector */}
-      <div style={{ display: 'flex', gap: '0.45rem', marginBottom: '1.1rem', overflowX: 'auto', paddingBottom: '2px' }}>
-        {PILLARS.map(p => {
-          const isActive = activePillar === p.id
-          return (
-            <button
-              key={String(p.id)}
-              onClick={() => setActivePillar(p.id)}
-              className="btn-tactile"
-              style={{
-                flexShrink: 0,
-                padding: '0.42rem 0.8rem',
-                borderRadius: 20,
-                border: `1px solid ${isActive ? p.color : 'rgba(255,255,255,0.08)'}`,
-                background: isActive ? `${p.color}18` : 'rgba(255,255,255,0.03)',
-                color: isActive ? p.color : 'rgba(241,245,249,0.4)',
-                fontSize: '0.75rem',
-                fontWeight: isActive ? 800 : 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                transition: 'all 0.18s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>{p.icon}</span>
-              <span>{p.label}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Back + pillar header */}
+      <button
+        onClick={() => setActivePillar(null)}
+        className="btn-tactile"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1rem' }}
+      >
+        ← כל העמודות
+      </button>
 
-      {/* Pillar description */}
-      {activePillar && (() => {
-        const p = PILLARS.find(x => x.id === activePillar)
-        const DESC = {
-          builder:    'בנה מיומנויות AI, עסקים וצמיחה. זו העמודה שמכניסה כסף.',
-          creator:    'פתח את היצירתיות שלך. מותג, עיצוב, ביטוי עצמי.',
-          reset:      'משמעת עצמית ובהירות מנטלית. בלי זה — שאר העמודות קורסות.',
-          connection: 'יחסים ונוכחות אנושית. כי ההצלחה לבד היא ריקה.',
-        }
-        return (
-          <div style={{ background: `${p.color}0c`, border: `1px solid ${p.color}1e`, borderRadius: 12, padding: '0.65rem 0.9rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-            <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{p.icon}</span>
-            <span style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.74rem', lineHeight: 1.4 }}>{DESC[activePillar]}</span>
-          </div>
-        )
-      })()}
+      <div style={{ background: `linear-gradient(145deg,${pillar.color}12,${pillar.color}06)`, border: `1.5px solid ${pillar.color}28`, borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: `${pillar.color}20`, border: `1px solid ${pillar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', flexShrink: 0 }}>{pillar.icon}</div>
+        <div>
+          <div style={{ color: pillar.color, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>עמודה</div>
+          <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', marginBottom: '0.15rem' }}>{pillar.label}</div>
+          <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem', lineHeight: 1.4 }}>{pillar.longDesc}</div>
+        </div>
+      </div>
 
       {/* Active-slot indicator */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '1rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: atLimit ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${atLimit ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.07)'}` }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: atLimit ? '#ef4444' : activeCount === 1 ? '#10b981' : 'rgba(255,255,255,0.15)', transition: 'background 0.3s', flexShrink: 0 }} />
         <span style={{ color: atLimit ? '#f87171' : 'rgba(241,245,249,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>
-          {atLimit
-            ? 'יש לך קורס פעיל — השלם אותו לפני שמתחילים חדש'
-            : 'ללא קורס פעיל — בחר מסלול והתחל'}
+          {atLimit ? 'יש לך קורס פעיל — השלם אותו לפני שמתחילים חדש' : 'ללא קורס פעיל — בחר מסלול והתחל'}
         </span>
       </div>
 
