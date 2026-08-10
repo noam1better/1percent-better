@@ -4,6 +4,7 @@ import { useUserPrefs } from '../context/UserContext'
 import { saveProfile } from '../services/focusTriggerService'
 import { CHALLENGES, CHALLENGE_WEEKS, LESSON_TYPES, getDayTask, getLessonType, getModuleIndex } from '../data/challenges'
 import { getDayContent } from '../data/lessonContent'
+import BenchmarkTracker from '../components/BenchmarkTracker'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const MIN_REFLECTION = 40
@@ -446,6 +447,11 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
             </button>
           </>
         )}
+
+        {/* ── Personal Benchmarks ── */}
+        <div style={{ marginBottom: '1rem' }}>
+          <BenchmarkTracker challengeId={challenge.id} color={col} />
+        </div>
 
         {/* ── Curriculum accordion ── */}
         <button
