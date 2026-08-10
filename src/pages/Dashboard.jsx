@@ -4,7 +4,7 @@ import { useLang } from '../context/LangContext'
 import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard, joinWaitlist } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
-import { verifyDayCompletion, analyzeVideoForm, getFutureSelfReminder } from '../services/coachService'
+import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
 import { useUserPrefs } from '../context/UserContext'
 import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, LESSON_WHY } from '../data/challenges'
 import { MANTRAS } from '../data/mantras'
@@ -947,7 +947,6 @@ export default function Dashboard() {
   const [mantraIdx,        setMantraIdx]        = useState(() => new Date().getDate() % MANTRAS.length)
   const [showUnlockBanner, setShowUnlockBanner] = useState(false)
   const [showAntiChurn,    setShowAntiChurn]    = useState(false)
-  const [futureSelfMsg,    setFutureSelfMsg]    = useState('')
   const [completingId,     setCompletingId]     = useState(null)
   const [showPathHistory,  setShowPathHistory]  = useState(false)
   const [sectionsOpen,     setSectionsOpen]     = useState(() => {
@@ -1011,20 +1010,6 @@ export default function Dashboard() {
     }
   }, [loading, profile])
 
-  // Future Self message — fetch once when profile loads
-  useEffect(() => {
-    const currentXP = profile?.xp || 0
-    if (loading || !profile || currentXP === 0) return
-    const activeChallenge = CHALLENGES.filter(
-      ch => (profile?.challenges?.[ch.id]?.daysCompleted || 0) > 0 &&
-            (profile?.challenges?.[ch.id]?.daysCompleted || 0) < ch.days
-    )[0]
-    const dailyXP = activeChallenge?.xpPerDay || 50
-    const xp30    = currentXP + dailyXP * 30
-    getFutureSelfReminder(currentXP, xp30, profile?.streak?.count || 0)
-      .then(msg => setFutureSelfMsg(msg))
-      .catch(() => {})
-  }, [loading, profile?.xp])
 
   useEffect(() => {
     if (isAdvancedUnlocked && !localStorage.getItem('ft_advanced_seen')) {
@@ -1511,55 +1496,6 @@ export default function Dashboard() {
                 })}
               </div>
             )}
-
-            {/* ── Future Self Widget ── */}
-            {!loading && xp > 0 && (() => {
-              const activeChallenge = CHALLENGES.filter(
-                ch => (profile?.challenges?.[ch.id]?.daysCompleted || 0) > 0 &&
-                      (profile?.challenges?.[ch.id]?.daysCompleted || 0) < ch.days
-              )[0]
-              const dailyXP  = activeChallenge?.xpPerDay || 50
-              const xp30     = xp + dailyXP * 30
-              const lvl30    = getLevel(xp30)
-              const pctNow   = Math.round((xp / xp30) * 100)
-              return (
-                <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.14)', borderRadius: 20, padding: '1.25rem 1.35rem', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                    <span style={{ fontSize: '1rem' }}>⚡</span>
-                    <span style={{ color: '#a5b4fc', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>{td.futureSelfLabel}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                    <div>
-                      <span style={{ color: '#f1f5f9', fontSize: '1.6rem', fontWeight: 900, lineHeight: 1 }}>{xp.toLocaleString()}</span>
-                      <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.72rem', marginRight: '0.4rem' }}> XP · {td.level} {level}</span>
-                    </div>
-                    <div style={{ textAlign: 'left', direction: 'ltr' }}>
-                      <span style={{ color: '#a5b4fc', fontSize: '0.68rem', fontWeight: 700 }}>+{(xp30 - xp).toLocaleString()} XP </span>
-                      <span style={{ color: 'rgba(165,180,252,0.4)', fontSize: '0.65rem' }}>ב-30 יום</span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar toward future self */}
-                  <div style={{ marginBottom: futureSelfMsg ? '0.75rem' : 0 }}>
-                    <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#6366f1,#a5b4fc)', width: `${pctNow}%`, transition: 'width 1s ease' }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem' }}>
-                      <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>היום · {pctNow}%</span>
-                      <span style={{ color: 'rgba(165,180,252,0.4)', fontSize: '0.6rem' }}>+{dailyXP} XP/יום</span>
-                    </div>
-                  </div>
-
-                  {/* AI message */}
-                  {futureSelfMsg && (
-                    <div style={{ borderTop: '1px solid rgba(99,102,241,0.15)', paddingTop: '0.65rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.75rem', lineHeight: 1.55, fontStyle: 'italic' }}>
-                      {futureSelfMsg}
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
 
             {/* ── Monthly Roadmap (collapsible) ── */}
             <div style={{ marginBottom: 0 }}>
