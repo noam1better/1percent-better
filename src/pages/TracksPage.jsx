@@ -10,8 +10,7 @@ const MIN_REFLECTION = 40
 function hasValidWordCount(text, min = 5) {
   return text.trim().split(/\s+/).filter(w => w.length > 1).length >= min
 }
-const MAX_ACTIVE = 1
-const QUIZ_KEY   = 'prime_track_quiz'
+const QUIZ_KEY = 'prime_track_quiz'
 
 // ── Quiz data ──────────────────────────────────────────────────────
 
@@ -182,43 +181,6 @@ function CourseQuiz({ onComplete, onSkip }) {
 }
 
 // ── Locked Course Modal ────────────────────────────────────────────
-
-function LockedCourseModal({ onClose }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(239,68,68,0.45)', padding: '1.75rem 1.5rem 2.6rem', animation: 'slide-up 0.25s ease both' }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '2.2rem', marginBottom: '0.65rem' }}>🔒</div>
-          <h3 style={{ color: '#f87171', fontWeight: 900, fontSize: '1.1rem', margin: '0 0 0.5rem' }}>קורס זה נעול</h3>
-          <p style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.82rem', lineHeight: 1.7, margin: 0 }}>
-            כבר יש לך קורס פעיל. PRIME מאמין בקורס אחד בכל פעם — ריכוז מלא, קצב מקסימלי. <strong style={{ color: 'rgba(241,245,249,0.7)' }}>פוקוס הוא הכלי הכי חזק שיש לך.</strong>
-          </p>
-        </div>
-
-        <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 14, padding: '1rem 1.15rem', marginBottom: '1.4rem' }}>
-          <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.45rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>הכלל</div>
-          <p style={{ color: '#f1f5f9', fontSize: '0.85rem', lineHeight: 1.65, margin: 0 }}>
-            קורס חדש נפתח רק אחרי השלמת <strong>יום 30</strong> של הקורס הנוכחי. קורס אחד. עד הסוף. כך זה עובד.
-          </p>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="btn-tactile"
-          style={{ width: '100%', padding: '1rem', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#c4795a,#d4956e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
-        >
-          הבנתי — חוזר לקורסים הפעילים
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // ── Review Modal (past lessons only) ──────────────────────────────
 
@@ -604,30 +566,14 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   const [selected,      setSelected]           = useState(null)
   const [activePillar,  setActivePillar]       = useState(null)
   const [showQuiz,      setShowQuiz]           = useState(false)
-  const [showLockedModal, setShowLockedModal]  = useState(false)
-  const [quizRecs,      setQuizRecs]           = useState(() => loadQuizData()?.recommendations || [])
+  const [quizRecs, setQuizRecs] = useState(() => loadQuizData()?.recommendations || [])
 
   const fallbackRec    = prefs.recommendedTrack || profile?.preferences?.recommendedTrack
   const recommendedIds = quizRecs.length > 0 ? quizRecs : (fallbackRec ? [fallbackRec] : [])
 
   function getProgress(id) { return profile?.challenges?.[id] }
 
-  const activeCount = CHALLENGES.filter(ch => {
-    const d = getProgress(ch.id)?.daysCompleted || 0
-    return d > 0 && d < ch.days
-  }).length
-  const atLimit = activeCount >= MAX_ACTIVE
-
-  function isCourseSlotLocked(ch) {
-    const d = getProgress(ch.id)?.daysCompleted || 0
-    if (d > 0) return false
-    return activeCount >= MAX_ACTIVE
-  }
-
-  function handleSelect(ch) {
-    if (isCourseSlotLocked(ch)) { setShowLockedModal(true); return }
-    setSelected(ch)
-  }
+  function handleSelect(ch) { setSelected(ch) }
 
   async function handleQuizComplete(recs) {
     saveQuizData(recs)
@@ -669,7 +615,6 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           onBack={() => setSelected(null)}
           onLessonComplete={handleLessonComplete}
         />
-        {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
       </div>
     )
   }
@@ -715,78 +660,65 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           </div>
         </div>
 
-        {atLimit && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '1rem', padding: '0.65rem 0.95rem', borderRadius: 12, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.28)' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />
-            <span style={{ color: '#f87171', fontSize: '0.72rem', fontWeight: 700 }}>יש לך קורס פעיל — השלם אותו לפני שמתחילים חדש</span>
-          </div>
-        )}
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {courses.map(ch => {
-            const prog   = getProgress(ch.id)
-            const days   = prog?.daysCompleted || 0
-            const pct    = Math.round((days / ch.days) * 100)
-            const isRec  = recommendedIds?.includes(ch.id)
-            const done   = days >= ch.days
-            const locked = isCourseSlotLocked(ch)
+            const prog  = getProgress(ch.id)
+            const days  = prog?.daysCompleted || 0
+            const pct   = Math.round((days / ch.days) * 100)
+            const isRec = recommendedIds?.includes(ch.id)
+            const done  = days >= ch.days
+            const inProgress = days > 0 && !done
 
             return (
               <div
                 key={ch.id}
-                className={locked ? '' : 'track-card'}
+                className="track-card"
                 onClick={() => handleSelect(ch)}
                 style={{
-                  background: locked ? 'rgba(255,255,255,0.015)' : isRec ? `linear-gradient(135deg,${ch.color}0d,rgba(255,255,255,0.018))` : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${locked ? 'rgba(255,255,255,0.06)' : isRec ? ch.color + '22' : 'rgba(255,255,255,0.05)'}`,
+                  background: inProgress
+                    ? `linear-gradient(135deg,${ch.color}0e,rgba(255,255,255,0.02))`
+                    : isRec
+                      ? `linear-gradient(135deg,${ch.color}0a,rgba(255,255,255,0.018))`
+                      : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${inProgress ? ch.color + '30' : isRec ? ch.color + '20' : 'rgba(255,255,255,0.05)'}`,
                   borderRadius: 18,
                   padding: '1.1rem 1.2rem',
-                  boxShadow: (!locked && isRec) ? `0 4px 22px ${ch.color}10` : 'none',
-                  cursor: locked ? 'not-allowed' : 'pointer',
-                  opacity: locked ? 0.55 : 1,
-                  transition: 'opacity 0.2s',
+                  boxShadow: inProgress ? `0 4px 22px ${ch.color}12` : isRec ? `0 4px 22px ${ch.color}08` : 'none',
+                  cursor: 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 13, background: locked ? 'rgba(255,255,255,0.04)' : `${ch.color}1e`, border: `1px solid ${locked ? 'rgba(255,255,255,0.08)' : ch.color + '28'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: locked ? '1.4rem' : '1.55rem', flexShrink: 0 }}>
-                    {locked ? '🔒' : ch.emoji}
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: `${ch.color}1e`, border: `1px solid ${ch.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.55rem', flexShrink: 0 }}>
+                    {ch.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.12rem' }}>
-                      <span style={{ color: locked ? 'rgba(241,245,249,0.35)' : '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
-                      {!locked && isRec && <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
-                      {!locked && ch.expert && !done && <span style={{ background: 'linear-gradient(90deg,#0e7490,#06b6d4)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
+                      <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
+                      {isRec && !done && <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
+                      {ch.expert && !done && <span style={{ background: 'linear-gradient(90deg,#0e7490,#06b6d4)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
                       {done && <span style={{ color: '#10b981', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', borderRadius: 20, padding: '0.1rem 0.4rem' }}>✓ הושלם</span>}
-                      {locked && <span style={{ color: 'rgba(239,68,68,0.65)', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>נעול</span>}
+                      {inProgress && <span style={{ color: ch.color, fontSize: '0.57rem', fontWeight: 800, background: `${ch.color}12`, border: `1px solid ${ch.color}28`, borderRadius: 20, padding: '0.1rem 0.45rem' }}>פעיל</span>}
                     </div>
-                    <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{locked ? 'השלם קורס פעיל כדי לפתוח' : ch.subtitle}</div>
-                    {!locked && days > 0 && (
+                    <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{ch.subtitle}</div>
+                    {days > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.45rem' }}>
                         <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
                           <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}80,${ch.color})`, width: `${pct}%` }} />
                         </div>
-                        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{days}d</span>
+                        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{days}/{ch.days}d</span>
                       </div>
                     )}
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    {locked ? (
-                      <div style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.6rem' }}>—</div>
-                    ) : (
-                      <>
-                        <div style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 800 }}>+{ch.xpPerDay} XP</div>
-                        <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>/ יום</div>
-                        <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.58rem', marginTop: '0.22rem' }}>{ch.days} שיעורים →</div>
-                      </>
-                    )}
+                    <div style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 800 }}>+{ch.xpPerDay} XP</div>
+                    <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>/ יום</div>
+                    <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.58rem', marginTop: '0.22rem' }}>{ch.days} שיעורים →</div>
                   </div>
                 </div>
               </div>
             )
           })}
         </div>
-
-        {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
       </div>
     )
   }
@@ -858,7 +790,6 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
         <span style={{ color: 'rgba(196,121,90,0.65)' }}>ענה על שאלון קצר ←</span>
       </button>
 
-      {showLockedModal && <LockedCourseModal onClose={() => setShowLockedModal(false)} />}
     </div>
   )
 }
