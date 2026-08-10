@@ -101,9 +101,15 @@ export async function loadLeaderboard() {
     const real    = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
     const realIds = new Set(real.map(e => e.uid))
     const bots    = BOT_PROFILES.filter(b => !realIds.has(b.uid))
-    return [...real, ...bots]
-      .sort((a, b) => (b.xp || 0) - (a.xp || 0))
-      .slice(0, 10)
+    const merged  = [...real, ...bots].sort((a, b) => (b.xp || 0) - (a.xp || 0))
+    // deduplicate by name — keep the highest-XP entry per display name
+    const seen = new Map()
+    const deduped = []
+    for (const e of merged) {
+      const key = (e.name || '').trim().toLowerCase()
+      if (!seen.has(key)) { seen.set(key, true); deduped.push(e) }
+    }
+    return deduped.slice(0, 10)
   } catch {
     return BOT_PROFILES.slice(0, 8)
   }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { buildCustomPath } from '../services/pathBuilderService'
+import { buildCustomPath, loadCustomPath } from '../services/pathBuilderService'
 
 // ── Motivation questions (free-text, asked after Q1-5) ────────────────
 
@@ -24,21 +24,20 @@ const MOTIVATION_QUESTIONS = [
   },
 ]
 
-const TOTAL_STEPS = 5 + MOTIVATION_QUESTIONS.length  // 8
+const TOTAL_STEPS = 1 + 4 + MOTIVATION_QUESTIONS.length  // 8
+
+// ── 4 Pillars ─────────────────────────────────────────────────────────
+
+const PRIME_PILLARS = [
+  { id: 'builder',    name: 'The Builder',    emoji: '🛠️', color: '#6366f1', sub: 'קריירה, עצמאות, עשייה' },
+  { id: 'creator',    name: 'The Creator',    emoji: '🎨', color: '#ec4899', sub: 'יצירה, ביטוי, פרויקטים' },
+  { id: 'connection', name: 'The Connection', emoji: '💛', color: '#f59e0b', sub: 'יחסים, חברות, משפחה' },
+  { id: 'reset',      name: 'The Reset',      emoji: '🧘', color: '#10b981', sub: 'גוף, נפש, אנרגיה, שינה' },
+]
 
 // ── Questions ────────────────────────────────────────────────────────
 
 const QUESTIONS = [
-  {
-    id:       'goal',
-    question: 'מה המטרה הכי חשובה לך ב-30 הימים הקרובים?',
-    options:  [
-      { value: 'כוח ומשמעת גופנית',  label: 'כוח גופני',     emoji: '💪' },
-      { value: 'חשיבה ומיקוד מנטלי', label: 'מיקוד מנטלי',   emoji: '🧠' },
-      { value: 'פרודוקטיביות ועשייה', label: 'פרודוקטיביות',  emoji: '⚡' },
-      { value: 'שינוי הרגלים חיובי',  label: 'שינוי הרגלים',  emoji: '🔥' },
-    ],
-  },
   {
     id:       'timeCommitment',
     question: 'כמה זמן אתה יכול להקדיש ביום?',
@@ -118,6 +117,63 @@ function UserBubble({ text }) {
   )
 }
 
+// ── Pillar setup card ─────────────────────────────────────────────────
+
+function PillarSetupCard({ pillarInputs, onChange, onComplete }) {
+  const allEmpty = Object.values(pillarInputs).every(v => !v.trim())
+  return (
+    <div style={{ animation: 'slide-up 0.35s ease both' }}>
+      <div style={{ marginBottom: '1.1rem' }}>
+        <div style={{ color: 'rgba(245,197,24,0.6)', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>
+          ◈ מסלול הפריים
+        </div>
+        <div style={{ color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 900, marginBottom: '0.3rem', lineHeight: 1.35 }}>
+          מה החזון שלך לחודש הקרוב?
+        </div>
+        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.78rem', lineHeight: 1.6 }}>
+          כתוב את המטרה האישית שלך בכל עמוד. מספיק עמוד אחד.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', marginBottom: '1.25rem' }}>
+        {PRIME_PILLARS.map(pillar => (
+          <div key={pillar.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
+              <span style={{ fontSize: '1rem' }}>{pillar.emoji}</span>
+              <span style={{ color: pillar.color, fontSize: '0.82rem', fontWeight: 900 }}>{pillar.name}</span>
+              <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.68rem' }}>· {pillar.sub}</span>
+            </div>
+            <textarea
+              value={pillarInputs[pillar.id]}
+              onChange={e => onChange(pillar.id, e.target.value)}
+              placeholder={`מה אתה רוצה לבנות ב${pillar.name === 'The Builder' ? 'בנייה' : pillar.name === 'The Creator' ? 'יצירה' : pillar.name === 'The Connection' ? 'חיבור' : 'ריסט'} הקרוב?`}
+              rows={2}
+              className="glow-input"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '0.7rem 0.85rem', borderRadius: 12, border: `1px solid ${pillarInputs[pillar.id]?.trim() ? pillar.color + '40' : 'rgba(255,255,255,0.09)'}`, background: pillarInputs[pillar.id]?.trim() ? `rgba(${hexToRgb(pillar.color)},0.06)` : 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.84rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.55, direction: 'rtl', transition: 'border-color 0.2s, background 0.2s' }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onComplete}
+        disabled={allEmpty}
+        className="btn-primary btn-tactile"
+        style={{ width: '100%', padding: '1.1rem', borderRadius: 16, fontSize: '0.95rem', fontWeight: 900, opacity: allEmpty ? 0.35 : 1 }}
+      >
+        בנה את המסלול שלי ←
+      </button>
+    </div>
+  )
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `${r},${g},${b}`
+}
+
 // ── Path preview ──────────────────────────────────────────────────────
 
 function PathPreview({ pathRecord, onConfirm }) {
@@ -178,6 +234,69 @@ function PathPreview({ pathRecord, onConfirm }) {
   )
 }
 
+// ── Archive Warning ───────────────────────────────────────────────────
+
+function ArchiveWarning({ existingPath, onConfirm, onCancel }) {
+  const path         = existingPath?.path
+  const daysCompleted = existingPath?.progress?.completedDays?.length || 0
+  const streak       = existingPath?.consistency?.current_streak || 0
+
+  return (
+    <div style={{ animation: 'slide-up 0.3s ease both' }}>
+      <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.28)', borderRadius: 18, padding: '1rem 1.1rem', marginBottom: '0.75rem' }}>
+        <div style={{ color: '#fbbf24', fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.4rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>
+          ⚠️ מסלול פעיל קיים
+        </div>
+        <div style={{ color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 900, marginBottom: '0.2rem' }}>
+          {path?.path_name || 'מסלול קיים'}
+        </div>
+        {path?.tagline && (
+          <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.78rem', marginBottom: '0.65rem', lineHeight: 1.45 }}>
+            {path.tagline}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '0.4rem 0.7rem', textAlign: 'center' }}>
+            <div style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>{daysCompleted}</div>
+            <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', marginTop: '0.15rem' }}>ימים ✓</div>
+          </div>
+          {streak > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '0.4rem 0.7rem', textAlign: 'center' }}>
+              <div style={{ color: '#f97316', fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>🔥{streak}</div>
+              <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', marginTop: '0.15rem' }}>רצף</div>
+            </div>
+          )}
+          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '0.4rem 0.7rem', textAlign: 'center' }}>
+            <div style={{ color: '#06b6d4', fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>30</div>
+            <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', marginTop: '0.15rem' }}>ימי מסלול</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 14, padding: '0.75rem 0.9rem', marginBottom: '1rem' }}>
+        <p style={{ color: 'rgba(241,245,249,0.62)', fontSize: '0.8rem', lineHeight: 1.65, margin: 0 }}>
+          המסלול הנוכחי <strong style={{ color: '#a5b4fc' }}>יועבר לארכיון</strong> — הוא לא יימחק ותוכל לשחזר אותו בכל עת מהגדרות.
+        </p>
+      </div>
+
+      <button
+        onClick={onConfirm}
+        className="btn-primary btn-tactile"
+        style={{ width: '100%', padding: '1.1rem', borderRadius: 16, fontSize: '0.95rem', fontWeight: 900, marginBottom: '0.55rem' }}
+      >
+        ארכב ובנה מסלול חדש ←
+      </button>
+      <button
+        onClick={onCancel}
+        className="btn-tactile"
+        style={{ width: '100%', padding: '0.85rem', borderRadius: 14, background: 'transparent', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(241,245,249,0.38)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+      >
+        חזור למסלול הנוכחי
+      </button>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────
 
 const ERROR_MESSAGES = {
@@ -187,20 +306,19 @@ const ERROR_MESSAGES = {
 }
 
 export default function PathBuilder({ user, onDone }) {
-  const [chatItems,   setChatItems]   = useState([
-    { type: 'agent', text: 'ברוך הבא לבניית המסלול האישי שלך. 8 שאלות. תוכנית 30 יום שבנויה בדיוק עבורך.' },
-    { type: 'question', qIdx: 0 },
-  ])
-  const [currentQ,    setCurrentQ]    = useState(0)
-  const [answers,     setAnswers]     = useState({})
-  const [motivQ,      setMotivQ]      = useState(0)
-  const [motivation,  setMotivation]  = useState({})
-  const [motInput,    setMotInput]    = useState('')
-  const [phase,       setPhase]       = useState('questions')  // questions | motivation | building | error | preview
-  const [buildStep,   setBuildStep]   = useState(0)
-  const [apiStatus,   setApiStatus]   = useState(null)
-  const [error,       setError]       = useState(null)
-  const [pathRecord,  setPathRecord]  = useState(null)
+  const [chatItems,    setChatItems]    = useState([])
+  const [currentQ,     setCurrentQ]     = useState(0)
+  const [answers,      setAnswers]      = useState({})
+  const [motivQ,       setMotivQ]       = useState(0)
+  const [motivation,   setMotivation]   = useState({})
+  const [motInput,     setMotInput]     = useState('')
+  const [phase,        setPhase]        = useState('pillars')  // pillars | questions | motivation | archive_warning | building | error | preview
+  const [buildStep,    setBuildStep]    = useState(0)
+  const [apiStatus,    setApiStatus]    = useState(null)
+  const [error,        setError]        = useState(null)
+  const [pathRecord,   setPathRecord]   = useState(null)
+  const [existingPath, setExistingPath] = useState(null)
+  const [pillarInputs, setPillarInputs] = useState({ builder: '', creator: '', connection: '', reset: '' })
   const pendingData = useRef(null)    // { answers, motivation }
   const bottomRef   = useRef(null)
   const textareaRef = useRef(null)
@@ -212,6 +330,10 @@ export default function PathBuilder({ user, onDone }) {
   useEffect(() => {
     if (phase === 'motivation') textareaRef.current?.focus()
   }, [phase, motivQ])
+
+  useEffect(() => {
+    if (user?.uid) loadCustomPath(user.uid).then(p => { if (p) setExistingPath(p) })
+  }, [user?.uid])
 
   async function runBuild(savedAnswers, savedMotivation) {
     setPhase('building')
@@ -273,8 +395,27 @@ export default function PathBuilder({ user, onDone }) {
       }, 350)
     } else {
       pendingData.current = { answers, motivation: newMotivation }
-      setTimeout(() => runBuild(answers, newMotivation), 350)
+      if (existingPath) {
+        setTimeout(() => setPhase('archive_warning'), 350)
+      } else {
+        setTimeout(() => runBuild(answers, newMotivation), 350)
+      }
     }
+  }
+
+  function completePillars() {
+    const filled = PRIME_PILLARS.filter(p => pillarInputs[p.id]?.trim())
+    if (filled.length === 0) return
+    const newAnswers = { ...answers, pillarGoals: { ...pillarInputs } }
+    setAnswers(newAnswers)
+    const summary = filled.map(p => `${p.emoji} ${p.name}: ${pillarInputs[p.id].trim()}`).join(' · ')
+    setChatItems([
+      { type: 'user', text: summary },
+      { type: 'agent', text: 'מעולה. כמה שאלות קצרות כדי לכוון את המסלול אליך.' },
+      { type: 'question', qIdx: 0 },
+    ])
+    setPhase('questions')
+    setCurrentQ(0)
   }
 
   function handleRetry() {
@@ -283,7 +424,7 @@ export default function PathBuilder({ user, onDone }) {
 
   const activeQ      = phase === 'questions'  ? QUESTIONS[currentQ]             : null
   const activeMotivQ = phase === 'motivation' ? MOTIVATION_QUESTIONS[motivQ]    : null
-  const globalStep   = phase === 'questions'  ? currentQ : 5 + motivQ
+  const globalStep   = phase === 'pillars' ? 0 : phase === 'questions' ? 1 + currentQ : 5 + motivQ
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,10,0.98)', display: 'flex', flexDirection: 'column', zIndex: 5000 }}>
@@ -292,13 +433,14 @@ export default function PathBuilder({ user, onDone }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <img src="/prime-logo.svg" alt="PRIME" style={{ height: 22, opacity: 0.7 }} />
         <div style={{ fontFamily: "'SF Mono','Fira Code',monospace", color: 'rgba(245,197,24,0.5)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em' }}>
-          ◈ PERSONAL PATH BUILDER
+          ◈ מסלול הפריים
         </div>
         {/* Progress dots — 8 total */}
         <div style={{ display: 'flex', gap: '0.3rem' }}>
           {Array.from({ length: TOTAL_STEPS }, (_, i) => {
-            const filled  = i < globalStep || (phase !== 'questions' && phase !== 'motivation')
-            const current = i === globalStep && (phase === 'questions' || phase === 'motivation')
+            const activePhase = phase === 'pillars' || phase === 'questions' || phase === 'motivation'
+            const filled  = i < globalStep || (!activePhase)
+            const current = i === globalStep && activePhase
             const isMotiv = i >= 5
             return (
               <div key={i} style={{
@@ -314,7 +456,15 @@ export default function PathBuilder({ user, onDone }) {
       {/* Chat scroll area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
 
-        {(phase === 'questions' || phase === 'motivation') && chatItems.map((item, i) => {
+        {phase === 'pillars' && (
+          <PillarSetupCard
+            pillarInputs={pillarInputs}
+            onChange={(id, val) => setPillarInputs(prev => ({ ...prev, [id]: val }))}
+            onComplete={completePillars}
+          />
+        )}
+
+        {(phase === 'questions' || phase === 'motivation' || phase === 'archive_warning') && chatItems.map((item, i) => {
           if (item.type === 'agent')    return <AgentBubble key={i} text={item.text} />
           if (item.type === 'user')     return <UserBubble  key={i} text={item.text} />
           if (item.type === 'question') {
@@ -378,6 +528,14 @@ export default function PathBuilder({ user, onDone }) {
           </div>
         )}
 
+        {phase === 'archive_warning' && existingPath && (
+          <ArchiveWarning
+            existingPath={existingPath}
+            onConfirm={() => runBuild(pendingData.current.answers, pendingData.current.motivation)}
+            onCancel={() => onDone(existingPath)}
+          />
+        )}
+
         {phase === 'preview' && pathRecord && (
           <PathPreview pathRecord={pathRecord} onConfirm={() => onDone(pathRecord)} />
         )}
@@ -385,9 +543,9 @@ export default function PathBuilder({ user, onDone }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Option buttons — Q1–5 */}
+      {/* Option buttons — all questions single-select */}
       {phase === 'questions' && activeQ && (
-        <div style={{ padding: '0.85rem 1.25rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(5,5,10,0.95)' }}>
+        <div style={{ padding: '0.85rem 1.25rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(5,5,10,0.95)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: activeQ.options.length === 3 ? 'repeat(3,1fr)' : 'repeat(2,1fr)', gap: '0.5rem' }}>
             {activeQ.options.map(opt => (
               <button

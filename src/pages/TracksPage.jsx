@@ -164,7 +164,7 @@ function CourseQuiz({ onComplete, onSkip }) {
           >
             <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{opt.emoji}</span>
             <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.9rem', flex: 1 }}>{opt.text}</span>
-            <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.85rem', flexShrink: 0 }}>←</span>
+            <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.85rem', flexShrink: 0 }}>→</span>
           </button>
         ))}
       </div>
@@ -251,7 +251,9 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
   const dayInModule  = (currentDay - 1) % 5
   const modules      = CHALLENGE_WEEKS[challenge.id] || []
   const richContent  = getDayContent(challenge.id, moduleIdx, dayInModule)
-  const microTaskPh  = richContent?.microTask || 'מה באמת נשאר אתך? תהיה כן — אפילו משפט אחד אמיתי עדיף על פסקה מלוטשת.'
+  const microTaskPh  = richContent
+    ? 'מה ביצעת? מה למדת? תהיה ספציפי — אפילו משפט אחד אמיתי עדיף על פסקה מלוטשת.'
+    : 'מה באמת נשאר אתך? תהיה כן — אפילו משפט אחד אמיתי עדיף על פסקה מלוטשת.'
   const reflLen      = reflection.trim().length
   const reflWords    = hasValidWordCount(reflection)
   const canSubmit    = reflLen >= MIN_REFLECTION && reflWords
@@ -274,7 +276,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
           className="btn-tactile"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1rem' }}
         >
-          ← מסלולים
+          → מסלולים
         </button>
 
         {/* Track identity */}
@@ -628,7 +630,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           className="btn-tactile"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.5rem' }}
         >
-          ← חזור
+          → חזור
         </button>
         <CourseQuiz onComplete={handleQuizComplete} onSkip={() => setShowQuiz(false)} />
       </div>
@@ -648,7 +650,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           className="btn-tactile"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1.25rem' }}
         >
-          ← 4 עמודות
+          → 4 עמודות
         </button>
 
         <div style={{ background: `linear-gradient(145deg,${pillar.color}12,${pillar.color}06)`, border: `1.5px solid ${pillar.color}28`, borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>

@@ -25,6 +25,8 @@ import Settings from '../components/Settings'
 import TrainingMode from '../components/TrainingMode'
 import { loadCustomPath } from '../services/pathBuilderService'
 import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
+import MonthlyRoadmap from '../components/MonthlyRoadmap'
+import PathHistory from '../components/PathHistory'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -402,7 +404,7 @@ function LeaderboardTab({ entries, currentUid, td }) {
             return (
               <div key={e.uid} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1rem', borderBottom: i < entries.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: isMe ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
                 <span style={{ fontSize: i < 3 ? '1.1rem' : '0.82rem', width: 28, textAlign: 'center', color: i >= 3 ? 'rgba(241,245,249,0.3)' : undefined, fontWeight: i >= 3 ? 700 : undefined }}>{medals[i] || `#${i + 1}`}</span>
-                <span style={{ flex: 1, color: isMe ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: isMe ? 700 : 500 }}>{e.name}{isMe ? ` (${td.you})` : ''}</span>
+                <span style={{ flex: 1, color: isMe ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: isMe ? 700 : 500 }}><span dir="ltr">{e.name}</span>{isMe ? ` (${td.you})` : ''}</span>
                 <span style={{ color: isMe ? '#a5b4fc' : 'rgba(241,245,249,0.4)', fontSize: '0.85rem', fontWeight: 700 }}>{e.xp} XP</span>
               </div>
             )
@@ -718,7 +720,7 @@ function GoalTracker({ goal, onEdit }) {
   const fmtDate  = target.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div style={{ background: 'rgba(99,102,241,0.055)', border: '1px solid rgba(99,102,241,0.14)', borderRadius: 18, padding: '1.15rem 1.25rem 1.05rem', marginBottom: '1.25rem', position: 'relative' }}>
+    <div style={{ background: 'rgba(99,102,241,0.055)', border: '1px solid rgba(99,102,241,0.14)', borderRadius: 18, padding: '1.15rem 1.25rem 1.05rem', marginBottom: 0, position: 'relative' }}>
       <button
         onClick={onEdit}
         className="btn-tactile"
@@ -775,10 +777,10 @@ function GoalEditModal({ goal, onSave, onClear, onClose }) {
         />
         <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.5rem' }}>תאריך יעד</div>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.7rem', flexWrap: 'wrap' }}>
-          {[{l:'14 יום',d:14},{l:'30 יום',d:30},{l:'60 יום',d:60},{l:'16 יולי',date:'2026-07-16'}].map(q => (
+          {[{l:'14 יום',d:14},{l:'30 יום',d:30},{l:'60 יום',d:60},{l:'90 יום',d:90}].map(q => (
             <button
               key={q.l}
-              onClick={() => q.date ? setTargetDate(q.date) : setDaysFromNow(q.d)}
+              onClick={() => setDaysFromNow(q.d)}
               className="btn-tactile"
               style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 20, color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, padding: '0 0.85rem', cursor: 'pointer', minHeight: 44, minWidth: 0 }}
             >{q.l}</button>
@@ -946,6 +948,11 @@ export default function Dashboard() {
   const [showUnlockBanner, setShowUnlockBanner] = useState(false)
   const [showAntiChurn,    setShowAntiChurn]    = useState(false)
   const [futureSelfMsg,    setFutureSelfMsg]    = useState('')
+  const [completingId,     setCompletingId]     = useState(null)
+  const [showPathHistory,  setShowPathHistory]  = useState(false)
+  const [sectionsOpen,     setSectionsOpen]     = useState(() => {
+    try { return JSON.parse(localStorage.getItem('prime_sections_open')) || {} } catch { return {} }
+  })
 
   const reflTimers = useRef({})
 
@@ -1117,6 +1124,8 @@ export default function Dashboard() {
     saveCheckins(next)
     setCheckinsS(next)
     setQuickTask(null)
+    setCompletingId(trigger.id)
+    setTimeout(() => setCompletingId(null), 850)
     awardXP(XP_PER_TRIGGER)
     updateStreak(next, profile?.triggers || [])
   }
@@ -1160,6 +1169,14 @@ export default function Dashboard() {
     setProfile(updated)
     setShowGoalEdit(false)
     if (!isGuest) await saveProfile(user.uid, { goal: null }).catch(() => {})
+  }
+
+  function toggleSection(id) {
+    setSectionsOpen(prev => {
+      const next = { ...prev, [id]: !(prev[id] !== false) }
+      try { localStorage.setItem('prime_sections_open', JSON.stringify(next)) } catch {}
+      return next
+    })
   }
 
   // ── Challenge actions ─────────────────────────────────────────
@@ -1358,7 +1375,7 @@ export default function Dashboard() {
 
         {/* ── HOME TAB — Command Center ── */}
         {activeTab === 'home' && (
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1.25rem 0', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.75rem 1.35rem 0', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
 
             {/* ── MIRROR ── */}
             {mirrorData && (
@@ -1381,22 +1398,22 @@ export default function Dashboard() {
 
             {/* ── First-timer welcome ── */}
             {isFirstTimer && primaryAction.type !== 'all-done' && (
-              <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🎯</span>
                 <div>
-                  <div style={{ color: '#a5b4fc', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>ברוכים הבאים למערכת</div>
-                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>השג את הניצחון הראשון שלך היום — כל מסע מתחיל בצעד אחד.</div>
+                  <div style={{ color: '#a5b4fc', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>{td.welcomeFirst}</div>
+                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>{td.welcomeFirstSub}</div>
                 </div>
               </div>
             )}
 
             {/* ── Missed-day warning ── */}
             {missedYesterday && primaryAction.type !== 'all-done' && (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
                 <div>
-                  <div style={{ color: '#f87171', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>פספסת אתמול</div>
-                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>הרצף שלך בסכנה. השלם את המשימה היום כדי לשמור עליו.</div>
+                  <div style={{ color: '#f87171', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>{td.missedYday}</div>
+                  <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>{td.missedYdaySub}</div>
                 </div>
               </div>
             )}
@@ -1404,46 +1421,59 @@ export default function Dashboard() {
             {/* ── Quick Habits Panel ── */}
             {triggers.length > 0 && (
               <div style={{
-                background: 'rgba(255,255,255,0.025)',
-                border: '1px solid rgba(255,255,255,0.055)',
-                borderRadius: 18,
-                marginBottom: '1.25rem',
+                borderRadius: 20,
                 overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.07)',
               }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '0.75rem 1rem 0.6rem',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
-                }}>
+                <div
+                  onClick={() => toggleSection('habits')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.75rem 1rem 0.6rem',
+                    borderBottom: sectionsOpen.habits !== false ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
                   <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem', fontWeight: 700 }}>
-                    ⚡ הרגלים יומיים
+                    ⚡ {td.habitsSection}
                   </span>
-                  <span style={{ color: allDone ? '#34d399' : 'rgba(241,245,249,0.35)', fontSize: '0.78rem', fontWeight: 700 }}>
-                    {doneCount}/{triggers.length}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <span style={{ color: allDone ? '#34d399' : 'rgba(241,245,249,0.35)', fontSize: '0.78rem', fontWeight: 700 }}>
+                      {doneCount}/{triggers.length}
+                    </span>
+                    <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.68rem' }}>
+                      {sectionsOpen.habits !== false ? '▲' : '▼'}
+                    </span>
+                  </div>
                 </div>
-                {triggers.map((tr, i) => {
+                {sectionsOpen.habits !== false && triggers.map((tr, i) => {
                   const done = !!checkins[tr.id]
+                  const completing = completingId === tr.id
                   return (
                     <div
                       key={tr.id}
                       onClick={() => setQuickTask(tr)}
                       style={{
+                        position: 'relative',
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                         padding: '1rem 1.1rem',
                         borderBottom: i < triggers.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
                         cursor: 'pointer',
                         minHeight: 58,
-                        background: done ? 'rgba(16,185,129,0.04)' : 'rgba(99,102,241,0.03)',
+                        background: done ? 'rgba(255,255,255,0.015)' : 'transparent',
                       }}
                     >
-                      <div style={{
-                        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                        border: `2px solid ${done ? '#34d399' : 'rgba(99,102,241,0.45)'}`,
-                        background: done ? 'rgba(16,185,129,0.18)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#34d399', fontSize: '0.82rem', fontWeight: 900,
-                      }}>
+                      {completing && <ConfettiBurst />}
+                      <div
+                        className={completing ? 'habit-complete' : ''}
+                        style={{
+                          width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                          border: `2px solid ${done ? '#06b6d4' : 'rgba(99,102,241,0.45)'}`,
+                          background: done ? 'rgba(6,182,212,0.18)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#06b6d4', fontSize: '0.82rem', fontWeight: 900,
+                        }}
+                      >
                         {done ? '✓' : ''}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1465,8 +1495,8 @@ export default function Dashboard() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                         {!done
-                          ? <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>התחל ←</div>
-                          : <span style={{ color: 'rgba(52,211,153,0.7)', fontSize: '1.05rem' }}>✅</span>
+                          ? <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>התחל ←</div>
+                          : <span style={{ color: 'rgba(6,182,212,0.7)', fontSize: '1.05rem' }}>✅</span>
                         }
                         <button
                           onClick={e => { e.stopPropagation(); e.preventDefault(); setQuickTask(null); setEditHabit(tr) }}
@@ -1493,32 +1523,20 @@ export default function Dashboard() {
               const lvl30    = getLevel(xp30)
               const pctNow   = Math.round((xp / xp30) * 100)
               return (
-                <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 18, padding: '1.1rem 1.3rem', marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 40%,rgba(99,102,241,0.06) 50%,transparent 60%)', animation: 'shimmer 3.5s ease-in-out infinite', pointerEvents: 'none' }} />
+                <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.14)', borderRadius: 20, padding: '1.25rem 1.35rem', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
                     <span style={{ fontSize: '1rem' }}>⚡</span>
-                    <span style={{ color: '#a5b4fc', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>אתה vs. העצמי העתידי</span>
+                    <span style={{ color: '#a5b4fc', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>{td.futureSelfLabel}</span>
                   </div>
 
-                  {/* Side-by-side comparison */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
-                    {/* Now */}
-                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '0.7rem 0.8rem', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>עכשיו</div>
-                      <div style={{ color: '#f1f5f9', fontSize: '1.35rem', fontWeight: 900, lineHeight: 1 }}>{xp.toLocaleString()}</div>
-                      <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', marginTop: '0.15rem' }}>XP · רמה {level}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                    <div>
+                      <span style={{ color: '#f1f5f9', fontSize: '1.6rem', fontWeight: 900, lineHeight: 1 }}>{xp.toLocaleString()}</span>
+                      <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.72rem', marginRight: '0.4rem' }}> XP · {td.level} {level}</span>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                      <div style={{ color: 'rgba(99,102,241,0.6)', fontSize: '0.8rem' }}>→</div>
-                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.55rem', fontWeight: 600 }}>30 יום</div>
-                    </div>
-
-                    {/* Future */}
-                    <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 12, padding: '0.7rem 0.8rem', textAlign: 'center' }}>
-                      <div style={{ color: '#a5b4fc', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>עתידי</div>
-                      <div style={{ color: '#a5b4fc', fontSize: '1.35rem', fontWeight: 900, lineHeight: 1 }}>{xp30.toLocaleString()}</div>
-                      <div style={{ color: 'rgba(165,180,252,0.55)', fontSize: '0.6rem', marginTop: '0.15rem' }}>XP · רמה {lvl30}</div>
+                    <div style={{ textAlign: 'left', direction: 'ltr' }}>
+                      <span style={{ color: '#a5b4fc', fontSize: '0.68rem', fontWeight: 700 }}>+{(xp30 - xp).toLocaleString()} XP </span>
+                      <span style={{ color: 'rgba(165,180,252,0.4)', fontSize: '0.65rem' }}>ב-30 יום</span>
                     </div>
                   </div>
 
@@ -1543,7 +1561,31 @@ export default function Dashboard() {
               )
             })()}
 
-            <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />
+            {/* ── Monthly Roadmap (collapsible) ── */}
+            <div style={{ marginBottom: 0 }}>
+              <button
+                onClick={() => toggleSection('roadmap')}
+                className="btn-tactile"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: '0.4rem 0.2rem', cursor: 'pointer', marginBottom: sectionsOpen.roadmap !== false ? '0.4rem' : 0 }}
+              >
+                <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>🗓️ מפת דרכים חודשית</span>
+                <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.roadmap !== false ? '▲' : '▼'}</span>
+              </button>
+              {sectionsOpen.roadmap !== false && <MonthlyRoadmap />}
+            </div>
+
+            {/* ── Training Tracks (collapsible) ── */}
+            <div style={{ marginBottom: 0 }}>
+              <button
+                onClick={() => toggleSection('tracks')}
+                className="btn-tactile"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: '0.4rem 0.2rem', cursor: 'pointer', marginBottom: sectionsOpen.tracks !== false ? '0.4rem' : 0 }}
+              >
+                <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>📚 מסלולים ואימון</span>
+                <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.tracks !== false ? '▲' : '▼'}</span>
+              </button>
+              {sectionsOpen.tracks !== false && <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />}
+            </div>
 
             {/* ── Habits-only primary action ── */}
             {primaryAction.type === 'habit' && (
@@ -1601,11 +1643,11 @@ export default function Dashboard() {
                   {/* Header row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.8rem' }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: `${col}1e`, border: `1px solid ${col}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
-                      {isLocked ? '🔒' : primaryAction.track.emoji}
+                      {primaryAction.track.emoji}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: col, fontSize: '0.57rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.11em', marginBottom: '0.1rem' }}>
-                        {isLocked ? 'מסלול נעול' : 'מסלול פעיל · היום שלך'}
+                        {isLocked ? td.missedDay : td.activeTrack}
                       </div>
                       <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>{primaryAction.track.title}</div>
                       <div style={{ color: 'rgba(241,245,249,0.33)', fontSize: '0.68rem', marginTop: '0.08rem' }}>
@@ -1812,13 +1854,24 @@ export default function Dashboard() {
             <Settings
               onRebuildPath={() => { setCustomPath(null); setShowPathBuilder(true); setActiveTab('home') }}
             />
+            {!isGuest && (
+              <div style={{ padding: '0 1.25rem 1.25rem' }}>
+                <button
+                  onClick={() => setShowPathHistory(true)}
+                  className="btn-tactile"
+                  style={{ width: '100%', padding: '0.9rem', borderRadius: 14, background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.22)', color: '#06b6d4', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                >
+                  📂 ארכיון מסלולים
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* ── Bottom Tab Bar ── */}
       <div className="prime-tab-bar" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: TAB_H, background: 'rgba(14,14,22,0.97)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(255,255,255,0.055)', display: 'flex', alignItems: 'center', zIndex: 200 }}>
-        {[{ id: 'home', icon: '🏠', label: 'היום שלי' }, { id: 'tracks', icon: '📚', label: 'מסלולים' }, { id: 'stats', icon: '📊', label: 'סטטס' }, { id: 'settings', icon: '⚙️', label: 'הגדרות' }].map(tab => (
+        {[{ id: 'home', icon: '🏠', label: td.tabHome }, { id: 'tracks', icon: '📚', label: td.tabTracks }, { id: 'stats', icon: '📊', label: td.tabStats }, { id: 'settings', icon: '⚙️', label: td.tabSettings }].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0' }}>
             <span style={{ fontSize: '1.2rem', filter: activeTab === tab.id ? 'none' : 'grayscale(0.8) opacity(0.45)' }}>{tab.icon}</span>
             <span style={{ fontSize: '0.61rem', fontWeight: 700, color: activeTab === tab.id ? '#d4956e' : 'rgba(241,245,249,0.28)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{tab.label}</span>
@@ -2086,6 +2139,14 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {showPathHistory && user && (
+        <PathHistory
+          user={user}
+          onRestore={restored => { setCustomPath(restored); setShowPathHistory(false) }}
+          onClose={() => setShowPathHistory(false)}
+        />
       )}
 
       {saving && <div style={{ position: 'fixed', bottom: TAB_H + 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(196,121,90,0.92)', color: '#fff', borderRadius: 20, padding: '0.45rem 1.1rem', fontSize: '0.78rem', fontWeight: 600, zIndex: 300 }}>{td.saving}</div>}

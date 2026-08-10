@@ -1,16 +1,35 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 const genAI   = new GoogleGenerativeAI(API_KEY)
 const TODAY   = () => new Date().toISOString().slice(0, 10)
 
-const pathDoc = uid => doc(db, 'userPaths', uid)
+const pathDoc          = uid => doc(db, 'userPaths', uid)
+const historyCollection = uid => collection(db, 'userPaths', uid, 'history')
+
+// ── Goal string helper (pillarGoals → goals array → single goal) ──────
+function getGoalStr(answers) {
+  if (answers.pillarGoals) {
+    const pg = answers.pillarGoals
+    const parts = []
+    if (pg.builder?.trim())    parts.push(`The Builder: ${pg.builder.trim()}`)
+    if (pg.creator?.trim())    parts.push(`The Creator: ${pg.creator.trim()}`)
+    if (pg.connection?.trim()) parts.push(`The Connection: ${pg.connection.trim()}`)
+    if (pg.reset?.trim())      parts.push(`The Reset: ${pg.reset.trim()}`)
+    return parts.join(' | ') || 'משמעת'
+  }
+  if (Array.isArray(answers.goals) && answers.goals.length) return answers.goals.join(', ')
+  return answers.goal || 'משמעת'
+}
 
 // ── Fallback path (no API key or Gemini failure) ─────────────────────
+const PILLAR_CYCLE = ['builder', 'creator', 'connection', 'reset']
+
 function buildFallbackPath(answers) {
-  const phases = ['בניית יסודות', 'בניית תאוצה', 'לחץ ובחינה', 'שילוב ועוצמה']
+  const goalStr = getGoalStr(answers)
+  const phases = ['יסודות', 'צמיחה', 'ביצועים', 'שילוב']
   const tasks = [
     'בצע את ההרגל הראשון שלך ותעד אותו',
     'הוסף 5 דקות לפעילות הקודמת',
@@ -21,7 +40,7 @@ function buildFallbackPath(answers) {
     'יום אבן-דרך: סקור את השבוע, תכנן את הבא',
   ]
   return {
-    path_name: `מסלול ה${answers.goal}`,
+    path_name: `מסלול ה${goalStr}`,
     tagline: 'כל יום הוא צעד קדימה. כל צעד בונה את מי שאתה.',
     daily_habits: [
       { id: 'h1', emoji: '🎯', title: 'כוונת בוקר',  description: 'מה המטרה האחת שתבצע היום? כתוב אותה.',                   duration_min: 3  },
@@ -33,6 +52,7 @@ function buildFallbackPath(answers) {
       week:         Math.ceil((i + 1) / 7),
       phase:        phases[Math.floor(i / 7)],
       task:         tasks[i % tasks.length] + ` (יום ${i + 1})`,
+      pillar:       PILLAR_CYCLE[i % 4],
       is_milestone: [7, 14, 21, 30].includes(i + 1),
     })),
     coach_note: 'המסלול שנבנה עבורך הוא בדיוק מה שאתה צריך. אין קיצורי דרך. רק עקביות.',
@@ -41,11 +61,14 @@ function buildFallbackPath(answers) {
 
 // ── Fallback lesson (no API key or Gemini failure) ───────────────────
 function buildFallbackLesson(dayEntry, answers) {
+  const goalStr = Array.isArray(answers.goals) && answers.goals.length
+    ? answers.goals.join(', ')
+    : (answers.goal || 'משמעת')
   return {
     title:    `יום ${dayEntry.day}: ${dayEntry.task}`,
     concept:  `היום אנחנו מתמקדים בשלב "${dayEntry.phase}". המשימה שנבנתה עבורך: ${dayEntry.task}. שיעור זה יסביר את הרעיון המרכזי מאחורי המשימה ויתן לך את הכלים להצליח.`,
     deep_dive:
-      `עקרון המשמעת האישית מבוסס על הבנה עמוקה של מנגנוני הרגל. המחקר של ד"ר פיליפה לאלי מאוניברסיטת קולג' לונדון הראה שנדרשים בממוצע 66 ימים ליצירת הרגל אמיתי — לא 21 ימים כפי שנהוג לחשוב. ההבדל המשמעותי הוא שב-21 הימים הראשונים הפעולה עדיין מצריכה כוח רצון. אחרי 66 יום היא הופכת אוטומטית.\n\nבשלב "${dayEntry.phase}" שבו אתה נמצא כעת, המוח שלך עובר תהליך של מחזור עצבי (neuroplasticity). כל פעם שאתה מבצע את ההרגל, אתה מחזק את הנתיב העצבי הקשור לפעולה. זה כמו שביל ביער — ככל שעוברים בו יותר, כך הוא הופך ברור ונגיש יותר.\n\nהמפתח להצלחה בשלב זה הוא להבין שהמוח מתנגד לשינוי לא מפני שהוא חלש — אלא מפני שהוא יעיל. כל הרגל קיים מטעמי חיסכון אנרגטי. כדי להחליף הרגל ישן, עליך ליצור "תגמול מיידי" שמגיע מהפעולה החדשה עצמה, לא רק מהתוצאה הסופית.\n\nהמדע אחורי ה"${answers.goal}" מראה שהעקביות חשובה פי עשרה מהעוצמה. 10 דקות כל יום עדיפות על 2 שעות פעם בשבוע. הסיבה: השינוי הנוירולוגי מצטבר רק כאשר הגירוי חוזר על עצמו בתדירות גבוהה.`,
+      `עקרון המשמעת האישית מבוסס על הבנה עמוקה של מנגנוני הרגל. המחקר של ד"ר פיליפה לאלי מאוניברסיטת קולג' לונדון הראה שנדרשים בממוצע 66 ימים ליצירת הרגל אמיתי — לא 21 ימים כפי שנהוג לחשוב. ההבדל המשמעותי הוא שב-21 הימים הראשונים הפעולה עדיין מצריכה כוח רצון. אחרי 66 יום היא הופכת אוטומטית.\n\nבשלב "${dayEntry.phase}" שבו אתה נמצא כעת, המוח שלך עובר תהליך של מחזור עצבי (neuroplasticity). כל פעם שאתה מבצע את ההרגל, אתה מחזק את הנתיב העצבי הקשור לפעולה. זה כמו שביל ביער — ככל שעוברים בו יותר, כך הוא הופך ברור ונגיש יותר.\n\nהמפתח להצלחה בשלב זה הוא להבין שהמוח מתנגד לשינוי לא מפני שהוא חלש — אלא מפני שהוא יעיל. כל הרגל קיים מטעמי חיסכון אנרגטי. כדי להחליף הרגל ישן, עליך ליצור "תגמול מיידי" שמגיע מהפעולה החדשה עצמה, לא רק מהתוצאה הסופית.\n\nהמדע אחורי ה"${goalStr}" מראה שהעקביות חשובה פי עשרה מהעוצמה. 10 דקות כל יום עדיפות על 2 שעות פעם בשבוע. הסיבה: השינוי הנוירולוגי מצטבר רק כאשר הגירוי חוזר על עצמו בתדירות גבוהה.`,
     case_study:
       `ג'יימס קליר, מחבר הרב-מכר "Atomic Habits", עבד עם קבוצת הרכיבה הבריטית על אופניים לפני אולימפיאדת 2012. הקבוצה הייתה בינונית — אפס מדליות זהב ב-110 שנות תחרות. המאמן דייב ברייסלספורד החל ליישם את עיקרון ה"1% שיפור" בכל תחום: תנוחת שינה, תזונה, ניקוי ידיים למניעת מחלות, זווית האוכף, חומרי חיכוך על הגלגלים. כל שיפור בפני עצמו היה זניח. הצטברות כל השיפורים הייתה מהפכנית. ב-2012 הם ניצחו 8 מדליות זהב מתוך 10 אפשריות. שיעור אחד: אל תחפש את השינוי הגדול. חפש 100 שינויים קטנים.`,
     pro_tip:
@@ -58,38 +81,56 @@ function buildFallbackLesson(dayEntry, answers) {
 
 // ── Path generation prompt ───────────────────────────────────────────
 function buildPathPrompt(answers) {
+  const hasPillars = !!answers.pillarGoals
+  const pg = answers.pillarGoals || {}
+
+  const pillarSection = hasPillars
+    ? `4 עמודי פריים (החזון האישי של המשתמש):\n` +
+      `- 🛠️ The Builder (קריירה/עשייה): ${pg.builder || '—'}\n` +
+      `- 🎨 The Creator (יצירה/ביטוי): ${pg.creator || '—'}\n` +
+      `- 💛 The Connection (יחסים/חיבור): ${pg.connection || '—'}\n` +
+      `- 🧘 The Reset (גוף/נפש/אנרגיה): ${pg.reset || '—'}`
+    : `מטרות: ${getGoalStr(answers)}`
+
   return (
     `אתה מאמן ביצועים אליטה — ישיר, מדויק, ולא מחמיא.\n` +
-    `בנה תוכנית משמעת אישית ל-30 יום בעברית בלבד עבור המשתמש הזה:\n\n` +
+    `בנה "מסלול פריים" אישי ל-30 יום בעברית בלבד עבור המשתמש הזה:\n\n` +
     `פרופיל:\n` +
-    `- מטרה ראשית: ${answers.goal}\n` +
-    `- זמן יומי זמין: ${answers.timeCommitment}\n` +
-    `- האתגר הגדול ביותר: ${answers.challenge}\n` +
-    `- רמת ניסיון: ${answers.experience}\n` +
-    `- שיא האנרגיה: ${answers.peakTime}\n\n` +
+    `${pillarSection}\n` +
+    `- זמן יומי זמין: ${answers.timeCommitment || '30 דקות'}\n` +
+    `- האתגר הגדול ביותר: ${answers.challenge || 'חוסר עקביות'}\n` +
+    `- רמת ניסיון: ${answers.experience || 'בינוני'}\n` +
+    `- שיא האנרגיה: ${answers.peakTime || 'בוקר'}\n\n` +
     `החזר JSON תקין בלבד (ללא markdown, ללא backticks, ללא כל טקסט נוסף):\n` +
     `{\n` +
     `  "path_name": "3-4 מילות כותרת חזקה ואישית בעברית",\n` +
     `  "tagline": "משפט אחד חזק בעברית",\n` +
     `  "daily_habits": [\n` +
-    `    { "id": "h1", "emoji": "🎯", "title": "...", "description": "...", "duration_min": 5 },\n` +
-    `    { "id": "h2", "emoji": "⚡", "title": "...", "description": "...", "duration_min": 20 },\n` +
-    `    { "id": "h3", "emoji": "📓", "title": "...", "description": "...", "duration_min": 5 }\n` +
+    `    { "id": "h1", "emoji": "🎯", "title": "...", "description": "...", "duration_min": 5, "pillar": "builder" },\n` +
+    `    { "id": "h2", "emoji": "⚡", "title": "...", "description": "...", "duration_min": 20, "pillar": "reset" },\n` +
+    `    { "id": "h3", "emoji": "📓", "title": "...", "description": "...", "duration_min": 5, "pillar": "creator" }\n` +
     `  ],\n` +
     `  "roadmap": [\n` +
-    `    { "day": 1, "week": 1, "phase": "בניית יסודות", "task": "פעולה ספציפית ומדידה...", "is_milestone": false }\n` +
+    `    { "day": 1, "week": 1, "phase": "יסודות", "task": "פעולה ספציפית ומדידה...", "pillar": "builder", "is_milestone": false }\n` +
     `  ],\n` +
     `  "coach_note": "הודעה אישית ישירה למשתמש הזה בעברית"\n` +
     `}\n\n` +
     `כללים קריטיים:\n` +
-    `- daily_habits: בדיוק 3 הרגלים המתאימים לזמן הזמין (${answers.timeCommitment})\n` +
+    `- daily_habits: בדיוק 3 הרגלים המתאימים לזמן הזמין (${answers.timeCommitment || '30 דקות'})\n` +
     `- roadmap: בדיוק 30 רשומות — אחת לכל יום\n` +
-    `  - ימים 1-7: phase "בניית יסודות"\n` +
-    `  - ימים 8-14: phase "בניית תאוצה"\n` +
-    `  - ימים 15-21: phase "לחץ ובחינה"\n` +
-    `  - ימים 22-30: phase "שילוב ועוצמה"\n` +
+    (hasPillars
+      ? `  - ימים 1-7: phase "יסודות" — הנח בסיס לכל 4 עמודים, התמקד בעמוד עם הפוטנציאל הגבוה ביותר\n` +
+        `  - ימים 8-14: phase "צמיחה" — בנה תאוצה, הוסף עומק לכל עמוד\n` +
+        `  - ימים 15-21: phase "ביצועים" — לחץ אמיתי, פרוץ תקרות, אתגרים קשים\n` +
+        `  - ימים 22-30: phase "שילוב" — אחד את 4 העמודים, צור זהות חדשה\n`
+      : `  - ימים 1-7: phase "יסודות"\n` +
+        `  - ימים 8-14: phase "צמיחה"\n` +
+        `  - ימים 15-21: phase "ביצועים"\n` +
+        `  - ימים 22-30: phase "שילוב"\n`
+    ) +
     `  - ימים 7, 14, 21, 30 חייבים: is_milestone: true\n` +
-    `  - כל task: ספציפי, מדיד, רלוונטי לאתגר ${answers.challenge}\n` +
+    `  - pillar חייב להיות אחד מ: "builder", "creator", "connection", "reset"\n` +
+    `  - כל task: ספציפי, מדיד, קשור לחזון שהמשתמש כתב\n` +
     `- כל הטקסט בעברית בלבד`
   )
 }
@@ -164,12 +205,15 @@ function normalizePathData(raw) {
   const num = v => { const n = Number(v); return isFinite(n) ? n : 0 }
   const bool = v => v === true || v === 'true' || v === 1
 
+  const validPillar = v => ['builder','creator','connection','reset'].includes(v) ? v : null
+
   const habits = (Array.isArray(raw.daily_habits) ? raw.daily_habits : []).slice(0, 3).map((h, i) => ({
     id:           str(h?.id   || `h${i + 1}`),
     emoji:        str(h?.emoji || '🎯'),
     title:        str(h?.title || ''),
     description:  str(h?.description || ''),
     duration_min: num(h?.duration_min ?? 5),
+    ...(validPillar(h?.pillar) ? { pillar: h.pillar } : {}),
   }))
 
   const roadmap = (Array.isArray(raw.roadmap) ? raw.roadmap : []).slice(0, 30).map((r, i) => ({
@@ -178,6 +222,7 @@ function normalizePathData(raw) {
     phase:        str(r?.phase || ''),
     task:         str(r?.task  || ''),
     is_milestone: bool(r?.is_milestone),
+    ...(validPillar(r?.pillar) ? { pillar: r.pillar } : { pillar: PILLAR_CYCLE[i % 4] }),
   }))
 
   return {
@@ -240,6 +285,9 @@ export async function buildCustomPath(uid, answers, motivation, onStatus) {
   }
 
   onStatus?.('saving')
+
+  // Archive existing path before overwriting (non-critical — failure doesn't block build)
+  await archivePath(uid)
 
   const record = deepSanitize({
     questionnaire:   answers,
@@ -353,4 +401,39 @@ export async function rebuildPath(uid) {
     const snap = await getDoc(pathDoc(uid))
     if (snap.exists()) await setDoc(pathDoc(uid), { ...snap.data(), path: null, status: 'pending', updatedAt: TODAY() })
   } catch {}
+}
+
+export async function archivePath(uid) {
+  try {
+    const snap = await getDoc(pathDoc(uid))
+    if (!snap.exists()) return null
+    const ref = await addDoc(historyCollection(uid), {
+      ...snap.data(),
+      archivedAt: new Date().toISOString(),
+    })
+    return ref.id
+  } catch (err) {
+    console.error('[archivePath]', err?.code || err?.message || err)
+    return null
+  }
+}
+
+export async function loadArchivedPaths(uid) {
+  try {
+    const q    = query(historyCollection(uid), orderBy('archivedAt', 'desc'))
+    const snap = await getDocs(q)
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch {
+    return []
+  }
+}
+
+export async function restorePath(uid, archiveId) {
+  const archDoc = doc(db, 'userPaths', uid, 'history', archiveId)
+  const snap    = await getDoc(archDoc)
+  if (!snap.exists()) throw new Error('Archive not found')
+  const { archivedAt, ...pathData } = snap.data()
+  const restored = { ...pathData, restoredAt: new Date().toISOString(), updatedAt: TODAY() }
+  await setDoc(pathDoc(uid), restored)
+  return restored
 }
