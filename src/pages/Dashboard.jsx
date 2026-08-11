@@ -1482,7 +1482,7 @@ export default function Dashboard() {
                 <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>📚 מסלולים ואימון</span>
                 <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.tracks !== false ? '▲' : '▼'}</span>
               </button>
-              {sectionsOpen.tracks !== false && <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} />}
+              {sectionsOpen.tracks !== false && <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} visionProfile={customPath?.vision_profile || null} />}
             </div>
 
             {/* ── Habits-only primary action ── */}

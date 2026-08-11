@@ -264,6 +264,173 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
   )
 }
 
+// ── Me vs. Future Self widget ─────────────────────────────────────────
+
+const FUTURE_GOAL_KEY = id => `prime_future_goal_${id}`
+
+function FutureVsNowWidget({ reps, sessionGoal, trackId, visionProfile, repFlash }) {
+  const defaultFuture = sessionGoal * 3
+  const [futureGoal, setFutureGoal] = useState(() => {
+    try { return parseInt(localStorage.getItem(FUTURE_GOAL_KEY(trackId))) || defaultFuture }
+    catch { return defaultFuture }
+  })
+  const [expanded, setExpanded] = useState(false)
+  const [editing,  setEditing]  = useState(false)
+  const [editVal,  setEditVal]  = useState(String(defaultFuture))
+
+  function commitGoal(val) {
+    const n = Math.max(1, parseInt(val) || defaultFuture)
+    setFutureGoal(n)
+    try { localStorage.setItem(FUTURE_GOAL_KEY(trackId), String(n)) } catch {}
+    setEditing(false)
+    setEditVal(String(n))
+  }
+
+  const pct     = Math.min(100, Math.round((reps / futureGoal) * 100))
+  const delta   = Math.max(0, futureGoal - reps)
+  const reached = reps >= futureGoal
+
+  // ── Collapsed ──
+  if (!expanded) return (
+    <button
+      onClick={() => setExpanded(true)}
+      style={{
+        position: 'absolute', top: 10, left: 10,
+        background: 'rgba(4,4,10,0.84)',
+        borderRadius: 14, padding: '0.5rem 0.8rem',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(245,197,24,0.22)',
+        cursor: 'pointer', textAlign: 'left',
+        minWidth: 90,
+      }}
+    >
+      <div key={reps} style={{
+        fontSize: '2rem', fontWeight: 900, lineHeight: 1,
+        color: repFlash ? '#34d399' : '#F5C518',
+        transform: repFlash ? 'scale(1.35)' : 'scale(1)',
+        transition: 'transform 0.15s ease, color 0.15s ease',
+        animation: reps > 0 && !repFlash ? 'rep-flash 0.28s ease-out' : 'none',
+      }}>{reps}</div>
+      <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.58rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+        / {sessionGoal} · יעד: {futureGoal}
+      </div>
+      <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: reached ? '#34d399' : '#F5C518', borderRadius: 99, transition: 'width 0.4s ease' }} />
+      </div>
+    </button>
+  )
+
+  // ── Expanded ──
+  return (
+    <div style={{
+      position: 'absolute', top: 10, left: 10, right: 10,
+      background: 'rgba(4,4,10,0.93)',
+      borderRadius: 16, padding: '0.85rem 1rem',
+      backdropFilter: 'blur(14px)',
+      border: '1px solid rgba(245,197,24,0.3)',
+      animation: 'fadeIn 0.18s ease',
+      zIndex: 10,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+        <span style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.48rem', fontWeight: 800, letterSpacing: '0.13em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>
+          ◈ אני עכשיו vs אני עתידי
+        </span>
+        <button onClick={() => { setExpanded(false); setEditing(false) }}
+          style={{ background: 'none', border: 'none', color: 'rgba(241,245,249,0.35)', fontSize: '0.82rem', cursor: 'pointer', padding: '0.1rem 0.2rem', lineHeight: 1 }}>
+          ✕
+        </button>
+      </div>
+
+      {/* Two-column comparison */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
+        {/* Now */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div key={reps} style={{ color: '#F5C518', fontSize: '2.1rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{reps}</div>
+          <div style={{ color: 'rgba(245,197,24,0.45)', fontSize: '0.56rem', fontWeight: 700, marginTop: '0.15rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>עכשיו</div>
+        </div>
+
+        {/* Arrow + delta */}
+        <div style={{ textAlign: 'center', flexShrink: 0, padding: '0 0.2rem' }}>
+          <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '1rem', lineHeight: 1 }}>→</div>
+          <div style={{
+            color: reached ? '#34d399' : '#f87171',
+            fontSize: '0.58rem', fontWeight: 900, marginTop: '0.12rem',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {reached ? '✓ הגעת!' : `−${delta}`}
+          </div>
+        </div>
+
+        {/* Future goal (editable) */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          {editing ? (
+            <input
+              autoFocus
+              type="number" inputMode="numeric"
+              value={editVal}
+              onChange={e => setEditVal(e.target.value)}
+              onBlur={() => commitGoal(editVal)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitGoal(editVal)
+                if (e.key === 'Escape') { setEditing(false); setEditVal(String(futureGoal)) }
+              }}
+              style={{
+                width: '100%', background: 'rgba(245,197,24,0.12)',
+                border: '1px solid rgba(245,197,24,0.45)', borderRadius: 8,
+                color: '#F5C518', fontSize: '1.7rem', fontWeight: 900,
+                textAlign: 'center', fontFamily: 'inherit', padding: '0.1rem 0',
+              }}
+            />
+          ) : (
+            <button onClick={() => { setEditing(true); setEditVal(String(futureGoal)) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%' }}>
+              <div style={{ color: reached ? '#34d399' : 'rgba(241,245,249,0.8)', fontSize: '2.1rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{futureGoal}</div>
+            </button>
+          )}
+          <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.56rem', fontWeight: 700, marginTop: '0.15rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            יעד 60 יום
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.22rem' }}>
+          <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.48rem', fontWeight: 700 }}>0</span>
+          <span style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.5rem', fontWeight: 800 }}>{pct}% מהיעד</span>
+          <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.48rem', fontWeight: 700 }}>{futureGoal}</span>
+        </div>
+        <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${pct}%`,
+            background: reached ? '#34d399' : 'linear-gradient(90deg, rgba(245,197,24,0.7), #F5C518)',
+            borderRadius: 99, transition: 'width 0.5s ease',
+          }} />
+        </div>
+      </div>
+
+      {/* Vision snippet */}
+      {visionProfile?.three_year_vision && (
+        <div style={{ marginTop: '0.55rem', padding: '0.38rem 0.6rem', background: 'rgba(245,197,24,0.04)', borderRadius: 9, border: '1px solid rgba(245,197,24,0.1)' }}>
+          <div style={{ color: 'rgba(245,197,24,0.4)', fontSize: '0.46rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.12rem' }}>◈ החזון שלך</div>
+          <div style={{ color: 'rgba(241,245,249,0.42)', fontSize: '0.58rem', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {visionProfile.three_year_vision}
+          </div>
+        </div>
+      )}
+
+      {/* Edit hint */}
+      {!editing && (
+        <button onClick={() => { setEditing(true); setEditVal(String(futureGoal)) }}
+          style={{ display: 'block', margin: '0.4rem auto 0', background: 'none', border: 'none', color: 'rgba(241,245,249,0.18)', fontSize: '0.52rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+          ✏ הקש על {futureGoal} לעריכת יעד
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Strength (camera + pose) ────────────────────────────────────────
 
 const HOLD_MS = 120
@@ -343,7 +510,7 @@ function SetSummaryPanel({ track, reps, goal, score, headline, tips, onSave }) {
   )
 }
 
-function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
+function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete, onClose }) {
   const videoRef      = useRef(null)
   const canvasRef     = useRef(null)
   const landmarkerRef = useRef(null)
@@ -723,17 +890,14 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
           </div>
         )}
 
-        {/* Rep counter — top left */}
-        <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,5,5,0.78)', borderRadius: 12, padding: '0.5rem 0.85rem', backdropFilter: 'blur(8px)' }}>
-          <div key={reps} style={{
-            fontSize: '2rem', fontWeight: 900, lineHeight: 1,
-            color: repFlash ? '#34d399' : '#F5C518',
-            transform: repFlash ? 'scale(1.4)' : 'scale(1)',
-            transition: 'transform 0.15s ease, color 0.15s ease',
-            animation: reps > 0 && !repFlash ? 'rep-flash 0.28s ease-out' : 'none',
-          }}>{reps}</div>
-          <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.62rem', fontWeight: 700 }}>/ {goal} חזרות</div>
-        </div>
+        {/* Me vs. Future Self widget — top left */}
+        <FutureVsNowWidget
+          reps={reps}
+          sessionGoal={goal}
+          trackId={track.id}
+          visionProfile={visionProfile}
+          repFlash={repFlash}
+        />
 
         {/* State / angle badge — top right */}
         {angle !== null && (
@@ -814,7 +978,7 @@ function StrengthWorkout({ track, goal, uid, userName, onComplete, onClose }) {
 
 // ── Shell modal ─────────────────────────────────────────────────────
 
-export default function ActiveWorkout({ track, goal, uid, userName, onComplete, onClose }) {
+export default function ActiveWorkout({ track, goal, uid, userName, visionProfile, onComplete, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 3100 }}>
       <div style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', padding: '1.4rem 1.4rem 2.5rem', borderTop: '2px solid rgba(245,197,24,0.3)', animation: 'slide-up 0.28s ease' }}>
@@ -831,7 +995,7 @@ export default function ActiveWorkout({ track, goal, uid, userName, onComplete, 
         </div>
 
         {track.useCamera
-          ? <StrengthWorkout track={track} goal={goal} uid={uid} userName={userName} onComplete={onComplete} onClose={onClose} />
+          ? <StrengthWorkout track={track} goal={goal} uid={uid} userName={userName} visionProfile={visionProfile} onComplete={onComplete} onClose={onClose} />
           : <CardioWorkout   track={track} goal={goal} onComplete={onComplete} onClose={onClose} />
         }
       </div>
