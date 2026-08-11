@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
-import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, loadLeaderboard, joinWaitlist } from '../services/focusTriggerService'
+import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, joinWaitlist } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
@@ -20,8 +20,8 @@ import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboardin
 import PathBuilder from '../components/PathBuilder'
 import CustomPathCard from '../components/CustomPathCard'
 import MirrorCard from '../components/MirrorCard'
-import SquadLeaderboard from '../components/SquadLeaderboard'
 import Settings from '../components/Settings'
+import ArenaPage from './ArenaPage'
 import TrainingMode from '../components/TrainingMode'
 import { loadCustomPath } from '../services/pathBuilderService'
 import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
@@ -370,46 +370,6 @@ function ChallengeCard({ challenge, progress, onOpenModal, level, isRecommended 
             </div>
           </div>
         )
-      )}
-    </div>
-  )
-}
-
-// ── Leaderboard Tab ────────────────────────────────────────────────
-
-function LeaderboardTab({ entries, currentUid, td }) {
-  const medals = ['🥇','🥈','🥉']
-  return (
-    <div style={{ padding: '1.5rem 1.25rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        <span style={{ fontSize: '1.2rem' }}>🏆</span>
-        <h2 style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>{td.leaderboardSection}</h2>
-        <span style={{ marginInlineStart: 'auto', color: 'rgba(165,180,252,0.55)', fontSize: '0.72rem', fontWeight: 700 }}>{td.topXP}</span>
-      </div>
-      {entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 16, animation: 'fadeIn 0.3s ease' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>🏅</div>
-          <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.3rem' }}>הדירוג יפתח בקרוב</div>
-          <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.75rem', lineHeight: 1.65, marginBottom: '1rem' }}>
-            השלם מסלולים ומשימות יומיות<br/>כדי לצבור XP ולהופיע בדירוג.
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 20, padding: '0.35rem 0.9rem' }}>
-            <span style={{ color: 'rgba(165,180,252,0.8)', fontSize: '0.72rem', fontWeight: 700 }}>⚡ פוקוס על המסלול שלך קודם</span>
-          </div>
-        </div>
-      ) : (
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
-          {entries.map((e, i) => {
-            const isMe = e.uid === currentUid
-            return (
-              <div key={e.uid} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1rem', borderBottom: i < entries.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: isMe ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
-                <span style={{ fontSize: i < 3 ? '1.1rem' : '0.82rem', width: 28, textAlign: 'center', color: i >= 3 ? 'rgba(241,245,249,0.3)' : undefined, fontWeight: i >= 3 ? 700 : undefined }}>{medals[i] || `#${i + 1}`}</span>
-                <span style={{ flex: 1, color: isMe ? '#a5b4fc' : '#f1f5f9', fontSize: '0.9rem', fontWeight: isMe ? 700 : 500 }}><span dir="ltr">{e.name}</span>{isMe ? ` (${td.you})` : ''}</span>
-                <span style={{ color: isMe ? '#a5b4fc' : 'rgba(241,245,249,0.4)', fontSize: '0.85rem', fontWeight: 700 }}>{e.xp} XP</span>
-              </div>
-            )
-          })}
-        </div>
       )}
     </div>
   )
@@ -921,7 +881,6 @@ export default function Dashboard() {
   const [showModal,    setShowModal]    = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [xpToast,      setXPToast]      = useState(null)
-  const [leaderboard,  setLeaderboard]  = useState([])
   const [activeTab,    setActiveTab]    = useState('home')
   const [isDayStarted, setIsDayStarted] = useState(false)
   const [showWorkoutLib,    setShowWorkoutLib]    = useState(false)
@@ -963,11 +922,16 @@ export default function Dashboard() {
     }).finally(() => setPathLoading(false))
   }, [user, isGuest])
 
+  // Auto-open PathBuilder for authenticated users who have no active Prime Path yet
+  useEffect(() => {
+    if (loading || pathLoading || isGuest || customPath) return
+    setShowPathBuilder(true)
+  }, [loading, pathLoading, isGuest, customPath])
+
   useEffect(() => {
     if (isGuest) { setProfile({ name: 'Guest', xp: 0, triggers: [], challenges: {} }); setLoading(false); return }
     if (!user) return
     loadProfile(user.uid).then(p => setProfile(p || {})).catch(() => setProfile({})).finally(() => setLoading(false))
-    loadLeaderboard().then(setLeaderboard)
   }, [user, isGuest])
 
   useEffect(() => {
@@ -1047,7 +1011,6 @@ export default function Dashboard() {
     }
     await saveProfile(user.uid, { xp: newXP, activityLog: log })
     await syncLeaderboard(user.uid, profile?.name || 'Anonymous', newXP).catch(() => {})
-    loadLeaderboard().then(setLeaderboard)
   }
 
   async function deductXP(amount) {
@@ -1056,7 +1019,6 @@ export default function Dashboard() {
     setProfile(p => ({ ...p, xp: newXP }))
     await saveProfile(user.uid, { xp: newXP })
     await syncLeaderboard(user.uid, profile?.name || 'Anonymous', newXP).catch(() => {})
-    loadLeaderboard().then(setLeaderboard)
   }
 
   function updateStreak(nextCheckins, triggers) {
@@ -1268,8 +1230,30 @@ export default function Dashboard() {
     primaryAction = { type: 'all-done' }
   }
 
-  // Skip all onboarding flows if user already has meaningful progress in Firestore
-  const profileHasProgress = !loading && (
+  // Always show skeleton while profile is loading — prevents false-negative
+  // profileHasProgress flash that would show PrimeOnboarding/InitiationFlow
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#0e0e16', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0.75rem 1.25rem 0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ width: 90, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+        </div>
+        <div style={{ width: 60, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s 0.1s infinite' }} />
+        </div>
+      </div>
+      <div style={{ padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 480, width: '100%', margin: '0 auto' }}>
+        {[80, 120, 100, 60].map((h, i) => (
+          <div key={i} style={{ height: h, borderRadius: 16, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: `shimmer 1.4s ${i * 0.12}s infinite` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  // Profile is loaded — now check if this user has meaningful Firestore progress
+  const profileHasProgress = (
     (profile?.xp || 0) > 0
     || Object.keys(profile?.challenges || {}).some(k => (profile.challenges[k]?.daysCompleted || 0) > 0)
     || (profile?.triggers || []).length > 0
@@ -1284,28 +1268,6 @@ export default function Dashboard() {
       localStorage.setItem('onboardingCompleted', 'true')
       setInitiationDone(true)
     }} />
-  )
-
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0e0e16', display: 'flex', flexDirection: 'column' }}>
-      {/* Skeleton header */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0.75rem 1.25rem 0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ width: 90, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
-        </div>
-        <div style={{ width: 60, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.07) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s 0.1s infinite' }} />
-        </div>
-      </div>
-      {/* Skeleton cards */}
-      <div style={{ padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 480, width: '100%', margin: '0 auto' }}>
-        {[80, 120, 100, 60].map((h, i) => (
-          <div key={i} style={{ height: h, borderRadius: 16, background: 'rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)', backgroundSize: '200% 100%', animation: `shimmer 1.4s ${i * 0.12}s infinite` }} />
-          </div>
-        ))}
-      </div>
-    </div>
   )
 
   if (showPathBuilder && !isGuest && !pathLoading) {
@@ -1735,9 +1697,6 @@ export default function Dashboard() {
                         onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
                       />
                     )}
-                    {!isGuest && (
-                      <SquadLeaderboard uid={user?.uid} userName={profile?.name || 'PRIME User'} />
-                    )}
                     {!profile?.goal && !isGuest && (
                       <button
                         onClick={() => setShowGoalEdit(true)}
@@ -1774,14 +1733,18 @@ export default function Dashboard() {
           />
         )}
 
-        {/* ── STATS TAB (analytics + leaderboard) ── */}
+        {/* ── STATS TAB ── */}
         {activeTab === 'stats' && (
-          <>
-            <AnalyticsTab profile={profile} currentUid={user?.uid} />
-            <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: TAB_H + 16 }}>
-              <LeaderboardTab entries={leaderboard} currentUid={user?.uid} td={td} />
-            </div>
-          </>
+          <AnalyticsTab profile={profile} currentUid={user?.uid} />
+        )}
+
+        {/* ── ARENA TAB ── */}
+        {activeTab === 'arena' && (
+          <ArenaPage
+            uid={user?.uid}
+            userName={profile?.name || 'PRIME User'}
+            isGuest={isGuest}
+          />
         )}
 
         {/* ── SETTINGS TAB ── */}
@@ -1807,7 +1770,7 @@ export default function Dashboard() {
 
       {/* ── Bottom Tab Bar ── */}
       <div className="prime-tab-bar" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: TAB_H, background: 'rgba(14,14,22,0.97)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(255,255,255,0.055)', display: 'flex', alignItems: 'center', zIndex: 200 }}>
-        {[{ id: 'home', icon: '🏠', label: td.tabHome }, { id: 'tracks', icon: '📚', label: td.tabTracks }, { id: 'stats', icon: '📊', label: td.tabStats }, { id: 'settings', icon: '⚙️', label: td.tabSettings }].map(tab => (
+        {[{ id: 'home', icon: '🏠', label: td.tabHome }, { id: 'tracks', icon: '📚', label: td.tabTracks }, { id: 'arena', icon: '🏟️', label: 'זירה' }, { id: 'stats', icon: '📊', label: td.tabStats }, { id: 'settings', icon: '⚙️', label: td.tabSettings }].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0' }}>
             <span style={{ fontSize: '1.2rem', filter: activeTab === tab.id ? 'none' : 'grayscale(0.8) opacity(0.45)' }}>{tab.icon}</span>
             <span style={{ fontSize: '0.61rem', fontWeight: 700, color: activeTab === tab.id ? '#d4956e' : 'rgba(241,245,249,0.28)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{tab.label}</span>

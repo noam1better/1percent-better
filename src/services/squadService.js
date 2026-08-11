@@ -1,6 +1,6 @@
 import {
   doc, getDoc, setDoc, updateDoc, getDocs,
-  collection, query, where, arrayUnion,
+  collection, query, where, arrayUnion, limit,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -123,6 +123,33 @@ export async function createChallenge(challengerUid, challengerName, challengedU
     reps:       { [challengerUid]: 0, [challengedUid]: 0 },
   })
   return ref.id
+}
+
+export async function getSquadsWorldWar() {
+  try {
+    const snap = await getDocs(query(collection(db, 'squads'), limit(30)))
+    const wk = getWeekKey()
+    const allSquads = snap.docs.map(d => ({ squadId: d.id, ...d.data() }))
+    const results = await Promise.all(allSquads.map(async squad => {
+      const memberUids = squad.memberUids || []
+      const repsArr = await Promise.all(
+        memberUids.map(async uid => {
+          try {
+            const r = await getDoc(doc(db, 'weeklyReps', uid))
+            const d = r.data() || {}
+            return d.weekKey === wk ? (d.totalReps || 0) : 0
+          } catch { return 0 }
+        })
+      )
+      return {
+        squadId:     squad.squadId,
+        name:        squad.name || 'Unnamed Squad',
+        totalReps:   repsArr.reduce((a, b) => a + b, 0),
+        memberCount: memberUids.length,
+      }
+    }))
+    return results.sort((a, b) => b.totalReps - a.totalReps)
+  } catch { return [] }
 }
 
 export async function getActiveChallenges(uid) {
