@@ -6,31 +6,23 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 const genAI   = new GoogleGenerativeAI(API_KEY)
 const TODAY   = () => new Date().toISOString().slice(0, 10)
 
-const pathDoc          = uid => doc(db, 'userPaths', uid)
+const pathDoc           = uid => doc(db, 'userPaths', uid)
 const historyCollection = uid => collection(db, 'userPaths', uid, 'history')
 
-// ── Goal string helper (pillarGoals → goals array → single goal) ──────
-function getGoalStr(answers) {
-  if (answers.pillarGoals) {
-    const pg = answers.pillarGoals
-    const parts = []
-    if (pg.builder?.trim())    parts.push(`The Builder: ${pg.builder.trim()}`)
-    if (pg.creator?.trim())    parts.push(`The Creator: ${pg.creator.trim()}`)
-    if (pg.connection?.trim()) parts.push(`The Connection: ${pg.connection.trim()}`)
-    if (pg.reset?.trim())      parts.push(`The Reset: ${pg.reset.trim()}`)
-    return parts.join(' | ') || 'משמעת'
-  }
-  if (Array.isArray(answers.goals) && answers.goals.length) return answers.goals.join(', ')
-  return answers.goal || 'משמעת'
+// ── Goal string helper ────────────────────────────────────────────────
+function getGoalStr(visionProfile) {
+  if (visionProfile?.three_year_vision?.trim())
+    return visionProfile.three_year_vision.trim().slice(0, 120)
+  return 'משמעת'
 }
 
 // ── Fallback path (no API key or Gemini failure) ─────────────────────
 const PILLAR_CYCLE = ['builder', 'creator', 'connection', 'reset']
 
-function buildFallbackPath(answers) {
-  const goalStr = getGoalStr(answers)
-  const phases = ['יסודות', 'צמיחה', 'ביצועים', 'שילוב']
-  const tasks = [
+function buildFallbackPath(visionProfile) {
+  const goalStr = getGoalStr(visionProfile)
+  const phases  = ['יסודות', 'צמיחה', 'ביצועים', 'שילוב']
+  const tasks   = [
     'בצע את ההרגל הראשון שלך ותעד אותו',
     'הוסף 5 דקות לפעילות הקודמת',
     'שמור על כל ההרגלים ביום אחד',
@@ -39,13 +31,16 @@ function buildFallbackPath(answers) {
     'סיים את השבוע חזק — אל תוותר ביום האחרון',
     'יום אבן-דרך: סקור את השבוע, תכנן את הבא',
   ]
+  const nns = Array.isArray(visionProfile?.non_negotiables)
+    ? visionProfile.non_negotiables.filter(Boolean)
+    : []
   return {
-    path_name: `מסלול ה${goalStr}`,
-    tagline: 'כל יום הוא צעד קדימה. כל צעד בונה את מי שאתה.',
+    path_name:    `מסלול ה${goalStr.slice(0, 20)}`,
+    tagline:      'כל יום הוא צעד קדימה. כל צעד בונה את מי שאתה.',
     daily_habits: [
-      { id: 'h1', emoji: '🎯', title: 'כוונת בוקר',  description: 'מה המטרה האחת שתבצע היום? כתוב אותה.',                   duration_min: 3  },
-      { id: 'h2', emoji: '⚡', title: 'בלוק מיקוד',  description: `${answers.timeCommitment} של עשייה ממוקדת ללא הפרעות.`, duration_min: 20 },
-      { id: 'h3', emoji: '📓', title: 'סיכום יומי',  description: 'מה עשיתי? מה הייתי עושה אחרת?',                           duration_min: 3  },
+      { id: 'h1', emoji: '🔒', title: nns[0] || 'הרגל אי-פשרה ראשון', description: 'הרגל יסודי שאי אפשר לדלג עליו.', duration_min: 20 },
+      { id: 'h2', emoji: '⚡', title: nns[1] || 'בלוק מיקוד',          description: '30 דקות של עשייה ממוקדת ללא הפרעות.',  duration_min: 30 },
+      { id: 'h3', emoji: '📓', title: 'סיכום יומי',                    description: 'מה עשיתי? מה הייתי עושה אחרת?',          duration_min: 5  },
     ],
     roadmap: Array.from({ length: 30 }, (_, i) => ({
       day:          i + 1,
@@ -60,10 +55,9 @@ function buildFallbackPath(answers) {
 }
 
 // ── Fallback lesson (no API key or Gemini failure) ───────────────────
-function buildFallbackLesson(dayEntry, answers) {
-  const goalStr = Array.isArray(answers.goals) && answers.goals.length
-    ? answers.goals.join(', ')
-    : (answers.goal || 'משמעת')
+function buildFallbackLesson(dayEntry, pathRecord) {
+  const vp      = pathRecord.vision_profile || {}
+  const goalStr = vp.three_year_vision?.slice(0, 80) || 'משמעת'
   return {
     title:    `יום ${dayEntry.day}: ${dayEntry.task}`,
     concept:  `היום אנחנו מתמקדים בשלב "${dayEntry.phase}". המשימה שנבנתה עבורך: ${dayEntry.task}. שיעור זה יסביר את הרעיון המרכזי מאחורי המשימה ויתן לך את הכלים להצליח.`,
@@ -72,93 +66,171 @@ function buildFallbackLesson(dayEntry, answers) {
     case_study:
       `ג'יימס קליר, מחבר הרב-מכר "Atomic Habits", עבד עם קבוצת הרכיבה הבריטית על אופניים לפני אולימפיאדת 2012. הקבוצה הייתה בינונית — אפס מדליות זהב ב-110 שנות תחרות. המאמן דייב ברייסלספורד החל ליישם את עיקרון ה"1% שיפור" בכל תחום: תנוחת שינה, תזונה, ניקוי ידיים למניעת מחלות, זווית האוכף, חומרי חיכוך על הגלגלים. כל שיפור בפני עצמו היה זניח. הצטברות כל השיפורים הייתה מהפכנית. ב-2012 הם ניצחו 8 מדליות זהב מתוך 10 אפשריות. שיעור אחד: אל תחפש את השינוי הגדול. חפש 100 שינויים קטנים.`,
     pro_tip:
-      `רוב האנשים מודדים הצלחה בתוצאה ("ירדתי 5 קילו", "השלמתי פרויקט"). המקצוענים מודדים הצלחה בזהות ("אני אדם שמתאמן כל יום", "אני אדם שמסיים מה שהוא מתחיל"). ההבדל הוא קריטי: כשאתה מתמקד בתוצאה, כל יום שלא רואים תוצאה הוא כישלון. כשאתה מתמקד בזהות, כל יום שביצעת את ההרגל הוא הצלחה — גם אם התוצאה עדיין לא נראית. הזהות מקדימה תמיד את התוצאה.`,
+      `רוב האנשים מודדים הצלחה בתוצאה ("ירדתי 5 קילו", "השלמתי פרויקט"). המקצוענים מודדים הצלחה בזהות ("אני אדם שמתאמן כל יום", "אני אדם שמסיים מה שהוא מתחיל"). ההבדל הוא קריטי: כשאתה מתמקד בתוצאה, כל יום שלא רואים תוצאה הוא כישלון. כשאתה מתמקד בזהות, כל יום שביצעת את ההרגל הוא הצלחה — גם אם התוצאה עדיין לא נראית.`,
     challenge:
-      `האתגר שלך להיום: ${dayEntry.task}.\n\nצעד 1: לפני שאתה מבצע — כתוב בכתב יד (לא בטלפון) את המחשבה הראשונה שעולה לך כשאתה חושב על המשימה הזו. פחד? ספק? התרגשות?\n\nצעד 2: בצע את המשימה עצמה ללא הפרעות. טלפון בשקט. לא 'בעוד רגע'.\n\nצעד 3: מיד אחרי הסיום — כתוב 3 משפטים: מה הרגשת, מה הפתיע אותך, ומה תשמור על זה למחר.`,
+      `האתגר שלך להיום: ${dayEntry.task}.\n\nצעד 1: לפני שאתה מבצע — כתוב בכתב יד (לא בטלפון) את המחשבה הראשונה שעולה לך כשאתה חושב על המשימה הזו.\n\nצעד 2: בצע את המשימה עצמה ללא הפרעות. טלפון בשקט. לא 'בעוד רגע'.\n\nצעד 3: מיד אחרי הסיום — כתוב 3 משפטים: מה הרגשת, מה הפתיע אותך, ומה תשמור על זה למחר.`,
     duration_min: 15,
   }
 }
 
 // ── Path generation prompt ───────────────────────────────────────────
-function buildPathPrompt(answers) {
-  const hasPillars = !!answers.pillarGoals
-  const pg = answers.pillarGoals || {}
+function buildPathPrompt(visionProfile) {
+  const vp     = visionProfile || {}
+  const vision = (vp.three_year_vision || '').trim()
+  const gap    = (vp.the_gap || '').trim()
+  const cvArr  = Array.isArray(vp.core_values)    ? vp.core_values.filter(Boolean)    : []
+  const nnArr  = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean) : []
+  const cv     = cvArr.map((v, i) => `${i + 1}. ${v}`).join('\n') || '—'
+  const nn     = nnArr.map((v, i) => `${i + 1}. ${v}`).join('\n') || '—'
+  const nn1    = nnArr[0] || 'הרגל Non-Negotiable ראשון'
+  const nn2    = nnArr[1] || 'הרגל Non-Negotiable שני'
+  const gapShort = gap.slice(0, 50)
 
-  const pillarSection = hasPillars
-    ? `4 עמודי פריים (החזון האישי של המשתמש):\n` +
-      `- 🛠️ The Builder (קריירה/עשייה): ${pg.builder || '—'}\n` +
-      `- 🎨 The Creator (יצירה/ביטוי): ${pg.creator || '—'}\n` +
-      `- 💛 The Connection (יחסים/חיבור): ${pg.connection || '—'}\n` +
-      `- 🧘 The Reset (גוף/נפש/אנרגיה): ${pg.reset || '—'}`
-    : `מטרות: ${getGoalStr(answers)}`
-
-  return (
-    `אתה מאמן ביצועים אליטה — ישיר, מדויק, ולא מחמיא.\n` +
-    `בנה "מסלול פריים" אישי ל-30 יום בעברית בלבד עבור המשתמש הזה:\n\n` +
-    `פרופיל:\n` +
-    `${pillarSection}\n` +
-    `- זמן יומי זמין: ${answers.timeCommitment || '30 דקות'}\n` +
-    `- האתגר הגדול ביותר: ${answers.challenge || 'חוסר עקביות'}\n` +
-    `- רמת ניסיון: ${answers.experience || 'בינוני'}\n` +
-    `- שיא האנרגיה: ${answers.peakTime || 'בוקר'}\n\n` +
-    `החזר JSON תקין בלבד (ללא markdown, ללא backticks, ללא כל טקסט נוסף):\n` +
-    `{\n` +
-    `  "path_name": "3-4 מילות כותרת חזקה ואישית בעברית",\n` +
-    `  "tagline": "משפט אחד חזק בעברית",\n` +
-    `  "daily_habits": [\n` +
-    `    { "id": "h1", "emoji": "🎯", "title": "...", "description": "...", "duration_min": 5, "pillar": "builder" },\n` +
-    `    { "id": "h2", "emoji": "⚡", "title": "...", "description": "...", "duration_min": 20, "pillar": "reset" },\n` +
-    `    { "id": "h3", "emoji": "📓", "title": "...", "description": "...", "duration_min": 5, "pillar": "creator" }\n` +
-    `  ],\n` +
-    `  "roadmap": [\n` +
-    `    { "day": 1, "week": 1, "phase": "יסודות", "task": "פעולה ספציפית ומדידה...", "pillar": "builder", "is_milestone": false }\n` +
-    `  ],\n` +
-    `  "coach_note": "הודעה אישית ישירה למשתמש הזה בעברית"\n` +
-    `}\n\n` +
-    `כללים קריטיים:\n` +
-    `- daily_habits: בדיוק 3 הרגלים המתאימים לזמן הזמין (${answers.timeCommitment || '30 דקות'})\n` +
-    `- roadmap: בדיוק 30 רשומות — אחת לכל יום\n` +
-    (hasPillars
-      ? `  - ימים 1-7: phase "יסודות" — הנח בסיס לכל 4 עמודים, התמקד בעמוד עם הפוטנציאל הגבוה ביותר\n` +
-        `  - ימים 8-14: phase "צמיחה" — בנה תאוצה, הוסף עומק לכל עמוד\n` +
-        `  - ימים 15-21: phase "ביצועים" — לחץ אמיתי, פרוץ תקרות, אתגרים קשים\n` +
-        `  - ימים 22-30: phase "שילוב" — אחד את 4 העמודים, צור זהות חדשה\n`
-      : `  - ימים 1-7: phase "יסודות"\n` +
-        `  - ימים 8-14: phase "צמיחה"\n` +
-        `  - ימים 15-21: phase "ביצועים"\n` +
-        `  - ימים 22-30: phase "שילוב"\n`
-    ) +
-    `  - ימים 7, 14, 21, 30 חייבים: is_milestone: true\n` +
-    `  - pillar חייב להיות אחד מ: "builder", "creator", "connection", "reset"\n` +
-    `  - כל task: ספציפי, מדיד, קשור לחזון שהמשתמש כתב\n` +
-    `- כל הטקסט בעברית בלבד`
-  )
+  return [
+    `אתה "פריים קואץ'" — מאמן ביצועים אליטה. לא מחמיא. לא גנרי. לא סיסמאות.`,
+    `המשימה שלך: לבנות מסלול 30 יום שמוביל ישירות מ"הפער" ל"חזון" של האדם הספציפי שלפניך.`,
+    ``,
+    `══════════════════════════════════`,
+    `פרופיל המשתמש — קרא בעיון לפני שכתבת מילה אחת:`,
+    `══════════════════════════════════`,
+    ``,
+    `🔭 איפה הוא רוצה להיות בעוד 3 שנים:`,
+    `"${vision || 'לא צוין'}"`,
+    ``,
+    `⛰️ מה עוצר אותו עכשיו — הפער שחייב להיסגר:`,
+    `"${gap || 'לא צוין'}"`,
+    ``,
+    `💎 ערכי ליבה שחייב לגלם בכל יום:`,
+    cv,
+    ``,
+    `🔒 הרגלי אי-פשרה — הדברים שלא ניתן לדלג עליהם:`,
+    nn,
+    ``,
+    `══════════════════════════════════`,
+    `ארכיטקטורת המסלול — 4 שבועות, 4 שלבים:`,
+    `══════════════════════════════════`,
+    ``,
+    `שבוע 1 | phase: "יסודות" | weekly_theme: "פריצת מחסום — ${gapShort}"`,
+    `→ כל משימה שוברת את ההרגל/מחסום שגורם לפער הזה. בסיס אמיתי, לא מנטרות.`,
+    ``,
+    `שבוע 2 | phase: "צמיחה" | weekly_theme: "בניית שריר — ${gapShort}"`,
+    `→ כל משימה מעמיקה את ערכי הליבה ובונה תאוצה על הבסיס של שבוע 1.`,
+    ``,
+    `שבוע 3 | phase: "ביצועים" | weekly_theme: "פריצת תקרה — ${gapShort}"`,
+    `→ משימות שיוצאות מהנוחות. זה השבוע שרוב האנשים נשברים. המשתמש הזה לא.`,
+    ``,
+    `שבוע 4 | phase: "שילוב" | weekly_theme: "גיבוש זהות — ${gapShort}"`,
+    `→ אחד את כל מה שנבנה. עד יום 30 הוא כבר לא מי שהיה.`,
+    ``,
+    `══════════════════════════════════`,
+    `חוקים חמורים — הפרה = פסילה:`,
+    `══════════════════════════════════`,
+    ``,
+    `🚫 אסור בהחלט לכתוב:`,
+    `• משימות גנריות: "קרא ספר", "כתוב ביומן", "שתה מים", "צא לטבע"`,
+    `• סיסמאות ריקות: "היה ממוקד", "תחשוב חיובי", "תן 100%"`,
+    `• משימות שלא מזכירות את הפער או החזון הספציפיים`,
+    ``,
+    `✅ כך נראית משימה טובה (נוסחה: פעולה + מה בדיוק + קשר לפער):`,
+    `→ "כתוב 3 פעולות ספציפיות שיסגרו את '${gapShort}' השבוע — כל אחת עם שעה ומיקום"`,
+    `→ "בצע את '${nn1}' בדיוק 7 דקות אחרי קימה — אין טלפון לפני שסיימת"`,
+    `→ "זהה את הדבר שגורם לפער '${gapShort}' להישאר פתוח — וכתוב תוכנית לסגור אותו ב-24 שעות"`,
+    ``,
+    `══════════════════════════════════`,
+    `פורמט הפלט — JSON תקין בלבד:`,
+    `══════════════════════════════════`,
+    `ללא backticks. ללא markdown. ללא טקסט לפני/אחרי. JSON בלבד.`,
+    ``,
+    `{`,
+    `  "path_name": "3-4 מילים — כותרת אישית חזקה הנוגעת ישירות לחזון ולפער",`,
+    `  "tagline": "משפט אחד — קצר, חד, מחויב. לא השראה זולה. לא 'אתה יכול!'",`,
+    `  "daily_habits": [`,
+    `    { "id": "h1", "emoji": "🔒", "title": "${nn1}", "description": "למה הרגל זה סוגר את הפער — קצר ומדויק", "duration_min": 20, "pillar": "reset" },`,
+    `    { "id": "h2", "emoji": "⚡", "title": "${nn2}", "description": "תיאור קצר — קשר ישיר לחזון", "duration_min": 30, "pillar": "builder" },`,
+    `    { "id": "h3", "emoji": "📓", "title": "מדידה יומית", "description": "מה זז היום לכיוון הסגירת '${gapShort}'?", "duration_min": 5, "pillar": "creator" }`,
+    `  ],`,
+    `  "roadmap": [`,
+    `    { "day": 1, "week": 1, "phase": "יסודות", "weekly_theme": "פריצת מחסום — ${gapShort}", "task": "פעולה ספציפית, מדידה, קשורה ישירות לפרוץ הפער", "pillar": "builder", "is_milestone": false },`,
+    `    ... (29 רשומות נוספות — יום 2 עד יום 30)`,
+    `  ],`,
+    `  "coach_note": "2-3 משפטים — מתייחסים ישירות לפער '${gap.slice(0, 60)}' ולחזון. ישיר. אמיתי. לא מחמיא."`,
+    `}`,
+    ``,
+    `כללים אחרונים:`,
+    `• daily_habits: בדיוק 3. h1 = "${nn1}" verbatim`,
+    `• roadmap: בדיוק 30 אובייקטים. אחד לכל יום.`,
+    `• ימים 7, 14, 21, 30 → is_milestone: true`,
+    `• pillar: אחד בלבד מ: "builder" | "creator" | "connection" | "reset"`,
+    `• weekly_theme: אותו ערך לכל ימי אותו שבוע`,
+    `• הכל בעברית — אפס אנגלית בתוך הטקסטים`,
+  ].join('\n')
 }
 
 // ── Day lesson prompt ────────────────────────────────────────────────
 function buildLessonPrompt(dayEntry, pathRecord) {
-  const q = pathRecord.questionnaire || {}
-  return (
-    `אתה מאמן ביצועים אליטה שכותב שיעור אימון פרמיום ברמת מומחה.\n\n` +
-    `פרטי המשתמש:\n` +
-    `- תוכנית: ${pathRecord.path?.path_name || ''}\n` +
-    `- מטרה: ${q.goal || ''}\n` +
-    `- אתגר: ${q.challenge || ''}\n` +
-    `- ניסיון: ${q.experience || ''}\n` +
-    `- יום: ${dayEntry.day} מתוך 30 | שלב: ${dayEntry.phase}\n` +
-    `- משימת היום: ${dayEntry.task}\n\n` +
-    `כתוב שיעור מקיף ומעמיק בעברית. החזר JSON תקין בלבד (ללא markdown, ללא backticks):\n` +
-    `{\n` +
-    `  "title": "כותרת מושכת וחזקה של 5-8 מילים",\n` +
-    `  "concept": "פסקת פתיחה — מה השיעור הזה נותן למשתמש (2-3 משפטים)",\n` +
-    `  "deep_dive": "הסבר מעמיק ומחקרי של 400+ מילה. כלול: מנגנונים פסיכולוגיים, עובדות מדעיות, עקרונות שלא ניתן למצוא בחיפוש גוגל בסיסי. כתוב צפוף ועשיר — לא שטחי. אין כוכביות או markdown.",\n` +
-    `  "case_study": "דוגמה אמיתית מהעולם (150+ מילה). ציין שמות, חברות, תאריכים ספציפיים. הסבר מה קרה ומדוע זה רלוונטי למשתמש.",\n` +
-    `  "pro_tip": "תובנה נסתרת אחת שרוב האנשים לא מגלים (100+ מילה). לא עצה בסיסית — משהו שרק מקצוענים יודעים.",\n` +
-    `  "challenge": "האתגר הספציפי להיום (100+ מילה). שלבים מדויקים, ניתנים לביצוע ביום זה. כלול: מה לעשות, איך לעשות, ומה לתעד.",\n` +
-    `  "duration_min": 20\n` +
-    `}\n\n` +
-    `דרישות: כל הטקסט בעברית. deep_dive חייב להיות לפחות 400 מילה. ללא markdown בתוך הטקסט.`
-  )
+  const vp         = pathRecord.vision_profile || {}
+  const vision     = (vp.three_year_vision || '').trim()
+  const gap        = (vp.the_gap || '').trim()
+  const cv         = Array.isArray(vp.core_values)    ? vp.core_values.filter(Boolean).join(' | ')    : '—'
+  const nn         = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean).join(' | ') : '—'
+  const weekTheme  = dayEntry.weekly_theme || dayEntry.phase || ''
+  const weekNum    = dayEntry.week || Math.ceil(dayEntry.day / 7)
+
+  return [
+    `══ PRIME COACH — LESSON BRIEF ══`,
+    ``,
+    `אתה "פריים קואץ'" — מאמן ביצועים אליטה. אתה כותב שיעורים שמשנים חיים.`,
+    `הכלל: כל מילה בשיעור חייבת להיות רלוונטית לאדם הספציפי שלפניך — לא לאדם גנרי.`,
+    ``,
+    `══ פרופיל המשתמש ══`,
+    `חזון 3 שנים: "${vision || '—'}"`,
+    `הפער שצריך לסגור: "${gap || '—'}"`,
+    `ערכי ליבה: ${cv}`,
+    `Non-Negotiables: ${nn}`,
+    ``,
+    `══ פרטי השיעור ══`,
+    `יום ${dayEntry.day} / 30 | שבוע ${weekNum} | שלב: ${dayEntry.phase}`,
+    `נושא השבוע: ${weekTheme}`,
+    `משימת היום: "${dayEntry.task}"`,
+    ``,
+    `══ מה נדרש ממך ══`,
+    ``,
+    `כתוב שיעור שמסביר למה משימת היום הזו עוזרת לסגור את הפער הספציפי הזה.`,
+    `לא שיעור על "הרגלים בכלל" — שיעור על הפער "${gap.slice(0, 80)}", המשתמש הזה, הרגע הזה.`,
+    ``,
+    `DEEP_DIVE (חובה 400+ מילה):`,
+    `• הסבר את המנגנון הפסיכולוגי/נוירולוגי/התנהגותי שגורם לפער הזה להיות עיקש`,
+    `• הסבר למה משימת היום שוברת בדיוק את המנגנון הזה`,
+    `• כלול: מחקרים עם שמות חוקרים, עובדות כמותיות, מנגנוני מוח ספציפיים`,
+    `• כתוב צפוף ועשיר. אין ניסוחים כלליים. אין "חשוב לדעת". אין bullet points.`,
+    ``,
+    `CASE_STUDY (150+ מילה):`,
+    `• אדם/חברה/ספורטאי שעמד בפני פער דומה לפרופיל הזה — ופרץ אותו`,
+    `• שם מלא + מקום + שנה + תוצאה מדויקת (מספרים, שינוי מוחשי)`,
+    `• בחר דוגמה מדומיין רלוונטי לחזון: "${vision.slice(0, 60)}"`,
+    ``,
+    `CHALLENGE (3 צעדים ביצועיים):`,
+    `• צעד 1 — הכנה (5 דק'): פעולה קטנה שמכינה את השטח לצעד 2`,
+    `• צעד 2 — ביצוע המשימה: "${dayEntry.task}" — עם פרטים מדויקים (מתי, איך, כמה)`,
+    `• צעד 3 — עיגון (2 דק'): פעולה שמחזקת את מה שנעשה ומחברת לחזון`,
+    ``,
+    `DIRECT_MESSAGE: משפט אחד — ישיר, אמיתי, לא מחמיא. מה שהמאמן באמת חושב על המצב הזה.`,
+    ``,
+    `החזר JSON תקין בלבד — ללא backticks, ללא markdown, ללא טקסט לפני/אחרי:`,
+    `{`,
+    `  "title": "כותרת 5-7 מילים — חדה, ישירה, קשורה למשימת היום",`,
+    `  "concept": "2-3 משפטים — מה השיעור הזה פותר עבור המשתמש הזה ספציפית",`,
+    `  "deep_dive": "400+ מילה — מנגנון ספציפי. שמות חוקרים. עובדות כמותיות. אין bullet. אין markdown.",`,
+    `  "case_study": "150+ מילה — שם + מקום + שנה + תוצאה מדויקת. בדומיין רלוונטי לחזון.",`,
+    `  "pro_tip": "100+ מילה — תובנה שרוב האנשים לא יגלו. ספציפית לסוג הפער הזה.",`,
+    `  "challenge": "3 צעדים: הכנה + ביצוע + עיגון. פרטים מדויקים — מתי, איך, כמה.",`,
+    `  "direct_message": "משפט אחד — ישיר מהמאמן למשתמש. אמיתי וחד.",`,
+    `  "duration_min": 20`,
+    `}`,
+    ``,
+    `דרישות: הכל בעברית. deep_dive לפחות 400 מילה. המאמן פונה בגוף שני ("אתה").`,
+    `אין כוכביות/markdown בתוך שדות הטקסט. אין "•" או "-" בתוך deep_dive.`,
+  ].join('\n')
 }
 
 // ── Lesson cache (localStorage) ──────────────────────────────────────
@@ -183,13 +255,11 @@ function withTimeout(promise, ms, code) {
   ])
 }
 
-// ── Data sanitizers ───────────────────────────────────────────────────
-// Firestore rejects: undefined values, nested arrays, NaN, Infinity.
+// ── Data sanitizers ──────────────────────────────────────────────────
 function deepSanitize(val) {
   if (val === undefined || (typeof val === 'number' && !isFinite(val))) return null
   if (val === null || typeof val !== 'object') return val
   if (Array.isArray(val)) {
-    // flatten any nested arrays into strings to avoid Firestore invalid-argument
     return val.map(item => Array.isArray(item) ? JSON.stringify(item) : deepSanitize(item))
   }
   return Object.fromEntries(
@@ -199,10 +269,9 @@ function deepSanitize(val) {
   )
 }
 
-// Coerce Gemini output to the exact types Firestore + the UI expect.
 function normalizePathData(raw) {
-  const str = v => (typeof v === 'string' ? v : String(v ?? ''))
-  const num = v => { const n = Number(v); return isFinite(n) ? n : 0 }
+  const str  = v => (typeof v === 'string' ? v : String(v ?? ''))
+  const num  = v => { const n = Number(v); return isFinite(n) ? n : 0 }
   const bool = v => v === true || v === 'true' || v === 1
 
   const validPillar = v => ['builder','creator','connection','reset'].includes(v) ? v : null
@@ -220,6 +289,7 @@ function normalizePathData(raw) {
     day:          num(r?.day  ?? i + 1),
     week:         num(r?.week ?? Math.ceil((i + 1) / 7)),
     phase:        str(r?.phase || ''),
+    weekly_theme: str(r?.weekly_theme || ''),
     task:         str(r?.task  || ''),
     is_milestone: bool(r?.is_milestone),
     ...(validPillar(r?.pillar) ? { pillar: r.pillar } : { pillar: PILLAR_CYCLE[i % 4] }),
@@ -233,8 +303,6 @@ function normalizePathData(raw) {
     coach_note:   str(raw.coach_note),
   }
 }
-
-// ── Public API ───────────────────────────────────────────────────────
 
 // ── Consistency tracker ───────────────────────────────────────────────
 function calcConsistency(prev, todayStr) {
@@ -251,21 +319,21 @@ function calcConsistency(prev, todayStr) {
 }
 
 // ── Public API ─────────────────────────────────────────────────────────
-// onStatus(step) fires with: 'ai' (calling Gemini) | 'saving' (writing Firestore)
-// motivation = { deep_why, identity_statement, pain_avoidance } — optional, stored verbatim
-export async function buildCustomPath(uid, answers, motivation, onStatus) {
+// visionProfile = { three_year_vision, the_gap, core_values: [], non_negotiables: [] }
+// onStatus fires with: 'ai' | 'saving'
+export async function buildCustomPath(uid, visionProfile, onStatus) {
   let pathData
 
   onStatus?.('ai')
 
   if (!API_KEY) {
-    pathData = buildFallbackPath(answers)
+    pathData = buildFallbackPath(visionProfile)
   } else {
     try {
       const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
       const result = await withTimeout(
-        model.generateContent(buildPathPrompt(answers)),
-        20000,
+        model.generateContent(buildPathPrompt(visionProfile)),
+        35000,
         'GEMINI_TIMEOUT'
       )
       const raw = result.response.text().trim()
@@ -280,24 +348,26 @@ export async function buildCustomPath(uid, answers, motivation, onStatus) {
       ) throw new Error('INVALID_STRUCTURE')
     } catch (err) {
       if (err.code === 'GEMINI_TIMEOUT') throw err
-      pathData = buildFallbackPath(answers)
+      pathData = buildFallbackPath(visionProfile)
     }
   }
 
   onStatus?.('saving')
 
-  // Archive existing path before overwriting (non-critical — failure doesn't block build)
   await archivePath(uid)
 
+  const sanitizedVP = {
+    three_year_vision: String(visionProfile?.three_year_vision || '').slice(0, 1000),
+    the_gap:           String(visionProfile?.the_gap           || '').slice(0, 500),
+    core_values:       (visionProfile?.core_values      || []).map(v => String(v).slice(0, 100)),
+    non_negotiables:   (visionProfile?.non_negotiables  || []).map(v => String(v).slice(0, 100)),
+    captured_at:       TODAY(),
+  }
+
   const record = deepSanitize({
-    questionnaire:   answers,
-    core_motivation: {
-      deep_why:           String(motivation?.deep_why           || '').slice(0, 500),
-      identity_statement: String(motivation?.identity_statement || '').slice(0, 200),
-      pain_avoidance:     String(motivation?.pain_avoidance     || '').slice(0, 300),
-      captured_at:        TODAY(),
-    },
-    path:        pathData,
+    questionnaire:  visionProfile,
+    vision_profile: sanitizedVP,
+    path:           pathData,
     progress:    { currentDay: 1, startedAt: TODAY(), completedDays: [] },
     consistency: {
       last_completed_date: null,
@@ -310,8 +380,6 @@ export async function buildCustomPath(uid, answers, motivation, onStatus) {
     createdAt: TODAY(),
     updatedAt: TODAY(),
   })
-
-  console.log('[pathBuilder] writing record to Firestore:', JSON.stringify(record, null, 2))
 
   try {
     await withTimeout(setDoc(pathDoc(uid), record), 10000, 'FIRESTORE_TIMEOUT')
@@ -329,29 +397,24 @@ export async function loadCustomPath(uid) {
   } catch { return null }
 }
 
-// On-demand lesson generation. Checks localStorage → Firestore → Gemini.
-// Generated lesson is persisted to both caches so subsequent loads are instant.
 export async function generateDayLesson(uid, pathRecord, dayIndex) {
   const dayEntry  = pathRecord.path?.roadmap?.[dayIndex - 1]
   if (!dayEntry) throw new Error(`Invalid day index: ${dayIndex}`)
 
   const createdAt = pathRecord.createdAt || TODAY()
 
-  // 1. localStorage cache (fastest)
   const cached = getCachedLesson(dayIndex, createdAt)
   if (cached) return cached
 
-  // 2. Firestore cache (cross-device)
   const stored = pathRecord.lessons?.[String(dayIndex)]
   if (stored) {
     setCachedLesson(dayIndex, createdAt, stored)
     return stored
   }
 
-  // 3. Generate via Gemini (or fallback)
   let lesson
   if (!API_KEY) {
-    lesson = buildFallbackLesson(dayEntry, pathRecord.questionnaire || {})
+    lesson = buildFallbackLesson(dayEntry, pathRecord)
   } else {
     try {
       const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
@@ -361,11 +424,10 @@ export async function generateDayLesson(uid, pathRecord, dayIndex) {
       lesson = JSON.parse(raw)
       if (!lesson.title || !lesson.deep_dive) throw new Error('Invalid lesson')
     } catch {
-      lesson = buildFallbackLesson(dayEntry, pathRecord.questionnaire || {})
+      lesson = buildFallbackLesson(dayEntry, pathRecord)
     }
   }
 
-  // Persist to localStorage + Firestore (merge so we don't overwrite other lessons)
   setCachedLesson(dayIndex, createdAt, lesson)
   try {
     await setDoc(
