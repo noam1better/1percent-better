@@ -9,68 +9,154 @@ const TODAY   = () => new Date().toISOString().slice(0, 10)
 const pathDoc           = uid => doc(db, 'userPaths', uid)
 const historyCollection = uid => collection(db, 'userPaths', uid, 'history')
 
-// ── Goal string helper ────────────────────────────────────────────────
-function getGoalStr(visionProfile) {
-  if (visionProfile?.three_year_vision?.trim())
-    return visionProfile.three_year_vision.trim().slice(0, 120)
-  return 'משמעת'
-}
-
-// ── Fallback path (no API key or Gemini failure) ─────────────────────
+// ── Pillar cycle ──────────────────────────────────────────────────────
 const PILLAR_CYCLE = ['builder', 'creator', 'connection', 'reset']
 
-function buildFallbackPath(visionProfile) {
-  const goalStr = getGoalStr(visionProfile)
-  const phases  = ['יסודות', 'צמיחה', 'ביצועים', 'שילוב']
-  const tasks   = [
-    'בצע את ההרגל הראשון שלך ותעד אותו',
-    'הוסף 5 דקות לפעילות הקודמת',
-    'שמור על כל ההרגלים ביום אחד',
-    'אתגר את עצמך מעבר לנוחות',
-    'חזור על הבסיס — עקביות על פני עוצמה',
-    'סיים את השבוע חזק — אל תוותר ביום האחרון',
-    'יום אבן-דרך: סקור את השבוע, תכנן את הבא',
+// ── Emoji map from habit text ─────────────────────────────────────────
+function emojiForHabit(text) {
+  if (!text) return '🎯'
+  const t = text.toLowerCase()
+  if (/ריצה|כושר|אימון|ספורט|שחייה|בוקסינג|gym|חדר כושר|כוח/.test(t)) return '🏋️'
+  if (/קריאה|ספר|למוד|קורס/.test(t))                                     return '📚'
+  if (/מדיטציה|נשימה|מיינדפולנס/.test(t))                                return '🧘'
+  if (/כתיבה|יומן|רישום/.test(t))                                        return '✍️'
+  if (/שינה|מנוחה/.test(t))                                              return '😴'
+  if (/תכנון|ארגון|לוח זמנים/.test(t))                                   return '📋'
+  if (/סושיאל|מסך|טלפון/.test(t))                                        return '📵'
+  if (/מים|תזונה|אכילה/.test(t))                                         return '🥗'
+  return '🔒'
+}
+
+// ── Hebrew tokenizer — strips stop-words, returns meaningful tokens ───
+function tokenizeHebrew(text) {
+  const stop = new Set(['של','את','אל','על','עם','כי','זה','לא','הם','אני','אתה','היה','להיות','כדי','יש','אין','גם','כן','אבל','רק','כל','מה','שה','הוא','היא','הן','אנחנו','אתם','כאן','שם','עוד','כבר','פה','כך','אם','אחרי','לפני','בין','תוך','מתוך','עכשיו','היום','מחר','תמיד','ללא','בלי','הכי','ביותר','מאוד','גדול','קטן','חדש','ישן'])
+  return text
+    .split(/[\s,.:;!?'"()\-–—/]+/)
+    .map(w => w.replace(/["""'']/g, '').trim())
+    .filter(w => w.length > 2 && !stop.has(w))
+}
+
+// ── Dynamic path synthesizer — 100% user-input driven ────────────────
+function synthesizeDynamicPath(visionProfile) {
+  const vp     = visionProfile || {}
+  const vision = (vp.three_year_vision || '').trim()
+  const gap    = (vp.the_gap           || '').trim()
+  const cvArr  = Array.isArray(vp.core_values)    ? vp.core_values.filter(Boolean) : []
+  const nnArr  = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean) : []
+
+  const vToks = tokenizeHebrew(vision)
+  const gToks = tokenizeHebrew(gap)
+
+  const h1  = nnArr[0] || cvArr[0] || gToks[0] || 'הרגל ראשון'
+  const h2  = nnArr[1] || cvArr[1] || gToks[1] || 'הרגל שני'
+  const cv1 = cvArr[0] || vToks[0] || 'מצוינות'
+
+  const gapCut = gap.slice(0, 42)     || h1
+  const visCut = vision.slice(0, 36)  || h2
+
+  // Token pool: user's exact words, deduplicated, ordered by relevance
+  const tokenPool = [...new Set([
+    ...nnArr,
+    ...cvArr,
+    gapCut,
+    visCut,
+    ...gToks.slice(0, 6),
+    ...vToks.slice(0, 6),
+  ])].filter(Boolean)
+
+  // Phase names derived from user's gap + vision text — not preset strings
+  const phases = [
+    { name: `יסודות — ${h1.slice(0, 22)}`,       theme: `ביסוס "${h1}" מול "${gapCut.slice(0, 28)}"`,     intensity: '60%' },
+    { name: `תאוצה — ${gapCut.slice(0, 20)}`,    theme: `${h1} + ${h2} ← "${gapCut.slice(0, 26)}"`,       intensity: '75%' },
+    { name: `לחץ — "${gapCut.slice(0, 18)}"`,    theme: `פריצה: "${gapCut}"`,                              intensity: '90%' },
+    { name: `שילוב — ${visCut.slice(0, 20)}`,    theme: `זהות: "${visCut}"`,                               intensity: '80%' },
   ]
-  const nns = Array.isArray(visionProfile?.non_negotiables)
-    ? visionProfile.non_negotiables.filter(Boolean)
-    : []
+
+  // Verb-frames: pure grammar structure, every content word = user's token
+  const verbFrames = [
+    (tok, _wk) => `זהה: כיצד "${tok}" מחבר אותך ל"${visCut.slice(0, 24)}" — כתוב 3 תצפיות ספציפיות`,
+    (tok, _wk) => `תרגל ${tok} היום — תעד: מה עבד, מה לא, ומה תשנה מחר`,
+    (tok, _wk) => `אתגר: בצע ${tok} בעוצמה גבוהה ב-20% מהרגיל — ללא הסברים`,
+    (tok, _wk) => `עמת: מה ב-"${tok}" עדיין מחזיק את "${gapCut.slice(0, 22)}" פתוח? פרט ל-3 משפטים`,
+    (tok, _wk) => `בחן: האם ${tok} כבר אוטומטי בך? אם לא — מה המחסום המדויק שמונע זאת?`,
+    (tok, wk)  => `שלב ${tok} עם ${wk >= 2 ? h2 : h1} ביום אחד מלא — תעד את הסינרגיה`,
+    (tok, _wk) => `יישם ${tok} על ההחלטה הקשה ביותר שעומדת לפניך עכשיו — אל תדחה`,
+  ]
+
+  const roadmap = Array.from({ length: 30 }, (_, i) => {
+    const wk    = Math.floor(i / 7)
+    const phase = phases[Math.min(wk, 3)]
+    const tok   = tokenPool[i % tokenPool.length] || h1
+    const frame = verbFrames[(i + wk * 2) % verbFrames.length]
+    return {
+      day:             i + 1,
+      week:            wk + 1,
+      phase:           phase.name,
+      weekly_theme:    phase.theme,
+      task:            frame(tok, wk),
+      habit_1_action:  `${h1} — ${phase.intensity} עוצמה (יום ${i + 1})`,
+      habit_2_action:  `${h2} — ביצוע מלא, ללא דחייה`,
+      non_negotiable:  nnArr[0] || h1,
+      pillar:          PILLAR_CYCLE[i % 4],
+      is_milestone:    [7, 14, 21, 30].includes(i + 1),
+    }
+  })
+
+  const nameHead = vToks.slice(0, 4).join(' ').slice(0, 26) || visCut.slice(0, 26)
+  const gapHead  = gToks.slice(0, 3).join(' ').slice(0, 30) || gapCut.slice(0, 30)
+
   return {
-    path_name:    `מסלול ה${goalStr.slice(0, 20)}`,
-    tagline:      'כל יום הוא צעד קדימה. כל צעד בונה את מי שאתה.',
+    path_name:    nameHead || `${h1.slice(0, 22)} — 30 יום`,
+    tagline:      `${h1} + ${h2} · "${gapHead}" — נסגר עכשיו.`,
     daily_habits: [
-      { id: 'h1', emoji: '🔒', title: nns[0] || 'הרגל אי-פשרה ראשון', description: 'הרגל יסודי שאי אפשר לדלג עליו.', duration_min: 20 },
-      { id: 'h2', emoji: '⚡', title: nns[1] || 'בלוק מיקוד',          description: '30 דקות של עשייה ממוקדת ללא הפרעות.',  duration_min: 30 },
-      { id: 'h3', emoji: '📓', title: 'סיכום יומי',                    description: 'מה עשיתי? מה הייתי עושה אחרת?',          duration_min: 5  },
+      { id: 'h1', emoji: emojiForHabit(h1), title: h1,             description: `${h1} — ספציפי, יומי, ללא יוצא מן הכלל`,               duration_min: 30, pillar: 'builder'    },
+      { id: 'h2', emoji: emojiForHabit(h2), title: h2,             description: `${h2} — מחובר ישירות ל"${gapCut.slice(0, 25)}"`,        duration_min: 20, pillar: 'creator'    },
+      { id: 'h3', emoji: '💎',              title: `גילום ${cv1}`, description: `פעולה יומית שמגלמת ${cv1} ומקרבת ל"${visCut.slice(0,20)}"`, duration_min: 15, pillar: 'connection' },
     ],
-    roadmap: Array.from({ length: 30 }, (_, i) => ({
-      day:          i + 1,
-      week:         Math.ceil((i + 1) / 7),
-      phase:        phases[Math.floor(i / 7)],
-      task:         tasks[i % tasks.length] + ` (יום ${i + 1})`,
-      pillar:       PILLAR_CYCLE[i % 4],
-      is_milestone: [7, 14, 21, 30].includes(i + 1),
-    })),
-    coach_note: 'המסלול שנבנה עבורך הוא בדיוק מה שאתה צריך. אין קיצורי דרך. רק עקביות.',
+    roadmap,
+    coach_note: `"${gapCut}" — זה הפער. "${h1}" ו-"${h2}" — אלה הכלים שהגדרת. "${cv1}" — זה מי שאתה הופך להיות. 30 יום. אין תירוצים.`,
   }
 }
 
-// ── Fallback lesson (no API key or Gemini failure) ───────────────────
+// ── Fallback lesson — synthesized from user's own profile data ────────
 function buildFallbackLesson(dayEntry, pathRecord) {
-  const vp      = pathRecord.vision_profile || {}
-  const goalStr = vp.three_year_vision?.slice(0, 80) || 'משמעת'
+  const vp     = pathRecord.vision_profile || {}
+  const vision = (vp.three_year_vision || '').trim()
+  const gap    = (vp.the_gap           || '').trim()
+  const nnArr  = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean) : []
+  const cvArr  = Array.isArray(vp.core_values)     ? vp.core_values.filter(Boolean)     : []
+  const h1     = nnArr[0] || cvArr[0] || 'הרגל שלך'
+  const _cv1   = cvArr[0] || 'המחויבות שלך'
+  const gapCut = gap.slice(0, 50)
+  const visCut = vision.slice(0, 40)
   return {
-    title:    `יום ${dayEntry.day}: ${dayEntry.task}`,
-    concept:  `היום אנחנו מתמקדים בשלב "${dayEntry.phase}". המשימה שנבנתה עבורך: ${dayEntry.task}. שיעור זה יסביר את הרעיון המרכזי מאחורי המשימה ויתן לך את הכלים להצליח.`,
+    title:   `יום ${dayEntry.day}: ${dayEntry.task}`,
     deep_dive:
-      `עקרון המשמעת האישית מבוסס על הבנה עמוקה של מנגנוני הרגל. המחקר של ד"ר פיליפה לאלי מאוניברסיטת קולג' לונדון הראה שנדרשים בממוצע 66 ימים ליצירת הרגל אמיתי — לא 21 ימים כפי שנהוג לחשוב. ההבדל המשמעותי הוא שב-21 הימים הראשונים הפעולה עדיין מצריכה כוח רצון. אחרי 66 יום היא הופכת אוטומטית.\n\nבשלב "${dayEntry.phase}" שבו אתה נמצא כעת, המוח שלך עובר תהליך של מחזור עצבי (neuroplasticity). כל פעם שאתה מבצע את ההרגל, אתה מחזק את הנתיב העצבי הקשור לפעולה. זה כמו שביל ביער — ככל שעוברים בו יותר, כך הוא הופך ברור ונגיש יותר.\n\nהמפתח להצלחה בשלב זה הוא להבין שהמוח מתנגד לשינוי לא מפני שהוא חלש — אלא מפני שהוא יעיל. כל הרגל קיים מטעמי חיסכון אנרגטי. כדי להחליף הרגל ישן, עליך ליצור "תגמול מיידי" שמגיע מהפעולה החדשה עצמה, לא רק מהתוצאה הסופית.\n\nהמדע אחורי ה"${goalStr}" מראה שהעקביות חשובה פי עשרה מהעוצמה. 10 דקות כל יום עדיפות על 2 שעות פעם בשבוע. הסיבה: השינוי הנוירולוגי מצטבר רק כאשר הגירוי חוזר על עצמו בתדירות גבוהה.`,
+      `• "${dayEntry.task}" מכוונת ישירות לפער שזיהית: "${gapCut}"\n` +
+      `• כל ביצוע של ${h1} מחזק את הנתיב שסוגר בדיוק את הפער הזה — לא תיאורטית, אלא נוירולוגית\n` +
+      `• 30 יום של עקביות משנים זהות: מ"אני מנסה ${h1}" ל"אני אדם ש${h1} הוא חלק ממנו"`,
     case_study:
-      `ג'יימס קליר, מחבר הרב-מכר "Atomic Habits", עבד עם קבוצת הרכיבה הבריטית על אופניים לפני אולימפיאדת 2012. הקבוצה הייתה בינונית — אפס מדליות זהב ב-110 שנות תחרות. המאמן דייב ברייסלספורד החל ליישם את עיקרון ה"1% שיפור" בכל תחום: תנוחת שינה, תזונה, ניקוי ידיים למניעת מחלות, זווית האוכף, חומרי חיכוך על הגלגלים. כל שיפור בפני עצמו היה זניח. הצטברות כל השיפורים הייתה מהפכנית. ב-2012 הם ניצחו 8 מדליות זהב מתוך 10 אפשריות. שיעור אחד: אל תחפש את השינוי הגדול. חפש 100 שינויים קטנים.`,
+      `• מי שסגר פער דומה ל-"${gapCut.slice(0, 30)}" לא עשה זאת ביום גדול — עשה זאת בימים כמו היום\n` +
+      `• ההבדל בין מי שמגיע ל"${visCut.slice(0, 25)}" לבין מי שלא: הם לא עצרו ביום הקשה`,
     pro_tip:
-      `רוב האנשים מודדים הצלחה בתוצאה ("ירדתי 5 קילו", "השלמתי פרויקט"). המקצוענים מודדים הצלחה בזהות ("אני אדם שמתאמן כל יום", "אני אדם שמסיים מה שהוא מתחיל"). ההבדל הוא קריטי: כשאתה מתמקד בתוצאה, כל יום שלא רואים תוצאה הוא כישלון. כשאתה מתמקד בזהות, כל יום שביצעת את ההרגל הוא הצלחה — גם אם התוצאה עדיין לא נראית.`,
-    challenge:
-      `האתגר שלך להיום: ${dayEntry.task}.\n\nצעד 1: לפני שאתה מבצע — כתוב בכתב יד (לא בטלפון) את המחשבה הראשונה שעולה לך כשאתה חושב על המשימה הזו.\n\nצעד 2: בצע את המשימה עצמה ללא הפרעות. טלפון בשקט. לא 'בעוד רגע'.\n\nצעד 3: מיד אחרי הסיום — כתוב 3 משפטים: מה הרגשת, מה הפתיע אותך, ומה תשמור על זה למחר.`,
-    duration_min: 15,
+      `המחסום האמיתי ב-"${gapCut.slice(0, 35)}" אינו כישרון — הוא עקביות. ${h1} כל יום, בלי לדון בזה מחדש.`,
+    challenge:  dayEntry.task,
+    direct_message: `"${visCut}" — זה לאן אתה הולך. יום ${dayEntry.day} מוביל לשם.`,
   }
+}
+
+// ── Force habit titles to exactly match user's stated non_negotiables ──
+function enforceUserHabits(pathData, visionProfile) {
+  const vp    = visionProfile || {}
+  const nnArr = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean) : []
+  const cvArr = Array.isArray(vp.core_values)     ? vp.core_values.filter(Boolean)     : []
+  const h1    = nnArr[0] || cvArr[0]
+  const h2    = nnArr[1] || cvArr[1] || cvArr[0]
+  const cv1   = cvArr[0]
+  if (pathData.daily_habits?.[0] && h1)  pathData.daily_habits[0].title = h1
+  if (pathData.daily_habits?.[1] && h2)  pathData.daily_habits[1].title = h2
+  if (pathData.daily_habits?.[2] && cv1) pathData.daily_habits[2].title = `גילום ${cv1}`
+  return pathData
 }
 
 // ── Path generation prompt ───────────────────────────────────────────
@@ -82,87 +168,103 @@ function buildPathPrompt(visionProfile) {
   const nnArr  = Array.isArray(vp.non_negotiables) ? vp.non_negotiables.filter(Boolean) : []
   const cv     = cvArr.map((v, i) => `${i + 1}. ${v}`).join('\n') || '—'
   const nn     = nnArr.map((v, i) => `${i + 1}. ${v}`).join('\n') || '—'
-  const nn1    = nnArr[0] || 'הרגל Non-Negotiable ראשון'
-  const nn2    = nnArr[1] || 'הרגל Non-Negotiable שני'
   const gapShort = gap.slice(0, 50)
 
+  // h1, h2 come from user's non_negotiables; h3 from their core_values
+  const h1Label = nnArr[0] || cvArr[0] || 'הרגל ראשון'
+  const h2Label = nnArr[1] || cvArr[1] || cvArr[0] || 'הרגל שני'
+  const cv1     = cvArr[0] || 'מצוינות'
+
   return [
-    `אתה "פריים קואץ'" — מאמן ביצועים אליטה. לא מחמיא. לא גנרי. לא סיסמאות.`,
-    `המשימה שלך: לבנות מסלול 30 יום שמוביל ישירות מ"הפער" ל"חזון" של האדם הספציפי שלפניך.`,
+    `אתה "פריים קואץ'" — מאמן ביצועים אישי. כלל ברזל: אתה בונה תוכנית רק מה שהמשתמש שיתף — לא ממציא הרגלים, לא מוסיף תחומים.`,
     ``,
     `══════════════════════════════════`,
-    `פרופיל המשתמש — קרא בעיון לפני שכתבת מילה אחת:`,
+    `פרופיל המשתמש — זה כל מה שיש לך:`,
     `══════════════════════════════════`,
     ``,
-    `🔭 איפה הוא רוצה להיות בעוד 3 שנים:`,
-    `"${vision || 'לא צוין'}"`,
-    ``,
-    `⛰️ מה עוצר אותו עכשיו — הפער שחייב להיסגר:`,
-    `"${gap || 'לא צוין'}"`,
-    ``,
-    `💎 ערכי ליבה שחייב לגלם בכל יום:`,
-    cv,
-    ``,
-    `🔒 הרגלי אי-פשרה — הדברים שלא ניתן לדלג עליהם:`,
-    nn,
+    `🔭 חזון 3 שנים: "${vision || 'לא צוין'}"`,
+    `⛰️ הפער שחייב להיסגר: "${gap || 'לא צוין'}"`,
+    `💎 ערכי ליבה:\n${cv}`,
+    `🔒 Non-Negotiables (ההרגלים שהמשתמש הגדיר):\n${nn}`,
     ``,
     `══════════════════════════════════`,
-    `ארכיטקטורת המסלול — 4 שבועות, 4 שלבים:`,
+    `3 ההרגלים היומיים — נגזרים מהפרופיל בלבד:`,
     `══════════════════════════════════`,
     ``,
-    `שבוע 1 | phase: "יסודות" | weekly_theme: "פריצת מחסום — ${gapShort}"`,
-    `→ כל משימה שוברת את ההרגל/מחסום שגורם לפער הזה. בסיס אמיתי, לא מנטרות.`,
+    `h1 = "${h1Label}" ← זה בדיוק מה שהמשתמש כתב. אסור לשנות שם זה.`,
+    `• description: ציין מתי, כמה ואיך — ספציפי לפרופיל. מחובר ל"${vision.slice(0, 35)}"`,
     ``,
-    `שבוע 2 | phase: "צמיחה" | weekly_theme: "בניית שריר — ${gapShort}"`,
-    `→ כל משימה מעמיקה את ערכי הליבה ובונה תאוצה על הבסיס של שבוע 1.`,
+    `h2 = "${h2Label}" ← זה בדיוק מה שהמשתמש כתב. אסור לשנות שם זה.`,
+    `• description: פעולה קונקרטית ומדידה — לא "תהיה ממוקד". ישירות לסגירת הפער: "${gapShort}"`,
     ``,
-    `שבוע 3 | phase: "ביצועים" | weekly_theme: "פריצת תקרה — ${gapShort}"`,
-    `→ משימות שיוצאות מהנוחות. זה השבוע שרוב האנשים נשברים. המשתמש הזה לא.`,
-    ``,
-    `שבוע 4 | phase: "שילוב" | weekly_theme: "גיבוש זהות — ${gapShort}"`,
-    `→ אחד את כל מה שנבנה. עד יום 30 הוא כבר לא מי שהיה.`,
+    `h3 = גילום ערך הליבה "${cv1}":`,
+    `• פעולה יומית שמגלמת את הערך — ספציפית וברורה`,
+    `• קושרת בין הרגלי היום לחזון ארוך-הטווח`,
     ``,
     `══════════════════════════════════`,
-    `חוקים חמורים — הפרה = פסילה:`,
+    `ארכיטקטורת 4 שבועות — PHASE ו-THEME נגזרים ממילות הפרופיל עצמו:`,
     `══════════════════════════════════`,
     ``,
-    `🚫 אסור בהחלט לכתוב:`,
-    `• משימות גנריות: "קרא ספר", "כתוב ביומן", "שתה מים", "צא לטבע"`,
-    `• סיסמאות ריקות: "היה ממוקד", "תחשוב חיובי", "תן 100%"`,
-    `• משימות שלא מזכירות את הפער או החזון הספציפיים`,
+    `שבוע 1 | phase: "יסודות — ${h1Label.slice(0, 20)}" | weekly_theme: "ביסוס '${h1Label}' מול '${gapShort.slice(0, 25)}'"`,
+    `→ task: שבירת מחסום ספציפי שמשאיר את "${gapShort}" פתוח. עוצמה: 60%.`,
     ``,
-    `✅ כך נראית משימה טובה (נוסחה: פעולה + מה בדיוק + קשר לפער):`,
-    `→ "כתוב 3 פעולות ספציפיות שיסגרו את '${gapShort}' השבוע — כל אחת עם שעה ומיקום"`,
-    `→ "בצע את '${nn1}' בדיוק 7 דקות אחרי קימה — אין טלפון לפני שסיימת"`,
-    `→ "זהה את הדבר שגורם לפער '${gapShort}' להישאר פתוח — וכתוב תוכנית לסגור אותו ב-24 שעות"`,
+    `שבוע 2 | phase: "תאוצה — ${gapShort.slice(0, 20)}" | weekly_theme: "${h1Label} + ${h2Label} ← '${gapShort.slice(0, 22)}'"`,
+    `→ task: העמקת שני ה-Non-Negotiables וחיזוק הקשר לחזון. עוצמה: 75%.`,
+    ``,
+    `שבוע 3 | phase: "לחץ — '${gapShort.slice(0, 18)}'" | weekly_theme: "פריצה: '${gapShort}'"`,
+    `→ task: צא מאזור הנוחות לחלוטין — פעולה ספציפית לפרופיל זה. עוצמה: 90%.`,
+    ``,
+    `שבוע 4 | phase: "שילוב — ${vision.slice(0, 20)}" | weekly_theme: "זהות: '${vision.slice(0, 30)}'"`,
+    `→ task: איחוד הכל לכדי זהות חדשה — ספציפית ל"${vision.slice(0, 30)}". עוצמה: 80%.`,
     ``,
     `══════════════════════════════════`,
-    `פורמט הפלט — JSON תקין בלבד:`,
+    `חוקים שאין לעבור עליהם:`,
     `══════════════════════════════════`,
-    `ללא backticks. ללא markdown. ללא טקסט לפני/אחרי. JSON בלבד.`,
+    ``,
+    `🚫 אסור: להמציא הרגלים שהמשתמש לא ציין (אם לא אמר "כושר" — אל תכניס אימון; אם לא אמר "תזונה" — אל תכניס דיאטה)`,
+    `🚫 אסור: "היה ממוקד", "תן 100%", "חיה את הרגע" — חייב מספרים/זמן/פעולה ספציפית`,
+    `🚫 אסור: task שלא קשור ישירות לפער "${gapShort}" או לחזון`,
+    ``,
+    `✅ task טוב: "זהה 3 מחסומים שמשאירים את '${gapShort}' פתוח — כתוב תוכנית סגירה ל-24 שעות"`,
+    `✅ habit_1_action טוב: "${h1Label} — ביצוע ספציפי: מתי, כמה, ואיך בדיוק"`,
+    ``,
+    `══════════════════════════════════`,
+    `פורמט JSON — ללא backticks/markdown/טקסט לפני/אחרי:`,
+    `══════════════════════════════════`,
     ``,
     `{`,
-    `  "path_name": "3-4 מילים — כותרת אישית חזקה הנוגעת ישירות לחזון ולפער",`,
-    `  "tagline": "משפט אחד — קצר, חד, מחויב. לא השראה זולה. לא 'אתה יכול!'",`,
+    `  "path_name": "3-4 מילים — חזק, אישי, מחובר לחזון הספציפי",`,
+    `  "tagline": "משפט אחד — חד, מחויב, ישיר לפער. לא השראה זולה.",`,
     `  "daily_habits": [`,
-    `    { "id": "h1", "emoji": "🔒", "title": "${nn1}", "description": "למה הרגל זה סוגר את הפער — קצר ומדויק", "duration_min": 20, "pillar": "reset" },`,
-    `    { "id": "h2", "emoji": "⚡", "title": "${nn2}", "description": "תיאור קצר — קשר ישיר לחזון", "duration_min": 30, "pillar": "builder" },`,
-    `    { "id": "h3", "emoji": "📓", "title": "מדידה יומית", "description": "מה זז היום לכיוון הסגירת '${gapShort}'?", "duration_min": 5, "pillar": "creator" }`,
+    `    { "id": "h1", "emoji": "בחר אמוג'י מתאים ל'${h1Label}'", "title": "${h1Label}", "description": "מה בדיוק ואיך — ספציפי לפרופיל", "duration_min": 30, "pillar": "builder" },`,
+    `    { "id": "h2", "emoji": "בחר אמוג'י מתאים ל'${h2Label}'", "title": "${h2Label}", "description": "מה בדיוק ואיך — מחובר לחזון", "duration_min": 20, "pillar": "creator" },`,
+    `    { "id": "h3", "emoji": "💎", "title": "גילום ${cv1}", "description": "פעולה יומית שמגלמת ${cv1} ומסגרת את הפער", "duration_min": 15, "pillar": "connection" }`,
     `  ],`,
     `  "roadmap": [`,
-    `    { "day": 1, "week": 1, "phase": "יסודות", "weekly_theme": "פריצת מחסום — ${gapShort}", "task": "פעולה ספציפית, מדידה, קשורה ישירות לפרוץ הפער", "pillar": "builder", "is_milestone": false },`,
-    `    ... (29 רשומות נוספות — יום 2 עד יום 30)`,
+    `    {`,
+    `      "day": 1, "week": 1, "phase": "יסודות — ${h1Label.slice(0, 20)}",`,
+    `      "weekly_theme": "ביסוס '${h1Label}' מול '${gapShort.slice(0, 25)}'",`,
+    `      "task": "משימת יום 1 הספציפית לפרופיל — ישירות על הפער ועל החזון",`,
+    `      "habit_1_action": "מה בדיוק עושים עם '${h1Label}' ביום 1 — ספציפי ומדיד",`,
+    `      "habit_2_action": "מה בדיוק עושים עם '${h2Label}' ביום 1 — ספציפי ומדיד",`,
+    `      "non_negotiable": "${h1Label} — מתי ואיך ביום הספציפי הזה",`,
+    `      "pillar": "builder", "is_milestone": false`,
+    `    },`,
+    `    ... (29 רשומות נוספות, יום 2–30, כל שדה חייב להיות מלא)`,
     `  ],`,
-    `  "coach_note": "2-3 משפטים — מתייחסים ישירות לפער '${gap.slice(0, 60)}' ולחזון. ישיר. אמיתי. לא מחמיא."`,
+    `  "coach_note": "2-3 משפטים — ישיר לפער '${gap.slice(0, 60)}' ולחזון '${vision.slice(0,40)}'. לא מחמיא. אמיתי ואישי."`,
     `}`,
     ``,
-    `כללים אחרונים:`,
-    `• daily_habits: בדיוק 3. h1 = "${nn1}" verbatim`,
-    `• roadmap: בדיוק 30 אובייקטים. אחד לכל יום.`,
+    `כללים סופיים:`,
+    `• daily_habits[0].title חייב להיות בדיוק: "${h1Label}" — העתק-הדבק, ללא שינוי`,
+    `• daily_habits[1].title חייב להיות בדיוק: "${h2Label}" — העתק-הדבק, ללא שינוי`,
+    `• daily_habits[2].title חייב להיות בדיוק: "גילום ${cv1}" — ללא שינוי`,
+    `• daily_habits: בדיוק 3, id: h1/h2/h3`,
+    `• roadmap: בדיוק 30 אובייקטים — כל שדה מלא, אישי, לא גנרי`,
     `• ימים 7, 14, 21, 30 → is_milestone: true`,
-    `• pillar: אחד בלבד מ: "builder" | "creator" | "connection" | "reset"`,
-    `• weekly_theme: אותו ערך לכל ימי אותו שבוע`,
-    `• הכל בעברית — אפס אנגלית בתוך הטקסטים`,
+    `• pillar: "builder" | "creator" | "connection" | "reset" בלבד`,
+    `• weekly_theme זהה לכל 7 ימי השבוע`,
+    `• הכל בעברית`,
   ].join('\n')
 }
 
@@ -198,43 +300,37 @@ function buildLessonPrompt(dayEntry, pathRecord) {
     `כתוב שיעור שמסביר למה משימת היום הזו עוזרת לסגור את הפער הספציפי הזה.`,
     `לא שיעור על "הרגלים בכלל" — שיעור על הפער "${gap.slice(0, 80)}", המשתמש הזה, הרגע הזה.`,
     ``,
-    `DEEP_DIVE (חובה 400+ מילה):`,
-    `• הסבר את המנגנון הפסיכולוגי/נוירולוגי/התנהגותי שגורם לפער הזה להיות עיקש`,
-    `• הסבר למה משימת היום שוברת בדיוק את המנגנון הזה`,
-    `• כלול: מחקרים עם שמות חוקרים, עובדות כמותיות, מנגנוני מוח ספציפיים`,
-    `• כתוב צפוף ועשיר. אין ניסוחים כלליים. אין "חשוב לדעת". אין bullet points.`,
+    `DEEP_DIVE — 3 bullets בדיוק, כל bullet עד 20 מילה:`,
+    `• Bullet 1: המנגנון הפסיכולוגי/התנהגותי שגורם לפער — ישיר, ספציפי`,
+    `• Bullet 2: למה משימת היום שוברת בדיוק את המנגנון הזה — קונקרטי`,
+    `• Bullet 3: עובדה/מחקר אחד — שם חוקר + מספר + קשר לפער`,
     ``,
-    `CASE_STUDY (150+ מילה):`,
-    `• אדם/חברה/ספורטאי שעמד בפני פער דומה לפרופיל הזה — ופרץ אותו`,
-    `• שם מלא + מקום + שנה + תוצאה מדויקת (מספרים, שינוי מוחשי)`,
-    `• בחר דוגמה מדומיין רלוונטי לחזון: "${vision.slice(0, 60)}"`,
+    `CASE_STUDY — 2 bullets בדיוק:`,
+    `• Bullet 1: שם + מקום + שנה + מה עשה (בדומיין: "${vision.slice(0, 50)}")`,
+    `• Bullet 2: תוצאה — מספרים מדויקים, שינוי מוחשי`,
     ``,
-    `CHALLENGE (3 צעדים ביצועיים):`,
-    `• צעד 1 — הכנה (5 דק'): פעולה קטנה שמכינה את השטח לצעד 2`,
-    `• צעד 2 — ביצוע המשימה: "${dayEntry.task}" — עם פרטים מדויקים (מתי, איך, כמה)`,
-    `• צעד 3 — עיגון (2 דק'): פעולה שמחזקת את מה שנעשה ומחברת לחזון`,
+    `CHALLENGE — פקודה אחת ישירה (משפט אחד בלבד):`,
+    `"${dayEntry.task}" — מה בדיוק לעשות עכשיו. מתי. איך. כמה.`,
     ``,
     `DIRECT_MESSAGE: משפט אחד — ישיר, אמיתי, לא מחמיא. מה שהמאמן באמת חושב על המצב הזה.`,
     ``,
     `החזר JSON תקין בלבד — ללא backticks, ללא markdown, ללא טקסט לפני/אחרי:`,
     `{`,
     `  "title": "כותרת 5-7 מילים — חדה, ישירה, קשורה למשימת היום",`,
-    `  "concept": "2-3 משפטים — מה השיעור הזה פותר עבור המשתמש הזה ספציפית",`,
-    `  "deep_dive": "400+ מילה — מנגנון ספציפי. שמות חוקרים. עובדות כמותיות. אין bullet. אין markdown.",`,
-    `  "case_study": "150+ מילה — שם + מקום + שנה + תוצאה מדויקת. בדומיין רלוונטי לחזון.",`,
-    `  "pro_tip": "100+ מילה — תובנה שרוב האנשים לא יגלו. ספציפית לסוג הפער הזה.",`,
-    `  "challenge": "3 צעדים: הכנה + ביצוע + עיגון. פרטים מדויקים — מתי, איך, כמה.",`,
-    `  "direct_message": "משפט אחד — ישיר מהמאמן למשתמש. אמיתי וחד.",`,
-    `  "duration_min": 20`,
+    `  "deep_dive": "3 bullets · כל bullet מתחיל ב-• · עד 20 מילה לכל bullet",`,
+    `  "case_study": "2 bullets · כל bullet מתחיל ב-• · שם+שנה+תוצאה",`,
+    `  "pro_tip": "1-2 משפטים — תובנה שרוב האנשים לא יגלו. ספציפית לפער.",`,
+    `  "challenge": "פקודה אחת ישירה — משפט אחד עם מתי/איך/כמה",`,
+    `  "direct_message": "משפט אחד — ישיר מהמאמן למשתמש. אמיתי וחד."`,
     `}`,
     ``,
-    `דרישות: הכל בעברית. deep_dive לפחות 400 מילה. המאמן פונה בגוף שני ("אתה").`,
-    `אין כוכביות/markdown בתוך שדות הטקסט. אין "•" או "-" בתוך deep_dive.`,
+    `דרישות: הכל בעברית. bullets מתחילים ב-• . המאמן פונה בגוף שני ("אתה").`,
+    `אין markdown, אין כוכביות, אין שדות ריקים.`,
   ].join('\n')
 }
 
 // ── Lesson cache (localStorage) ──────────────────────────────────────
-function lessonCacheKey(day, createdAt) { return `prime_lesson_${createdAt}_d${day}` }
+function lessonCacheKey(day, createdAt) { return `prime_lesson_v2_${createdAt}_d${day}` }
 
 function getCachedLesson(day, createdAt) {
   try { return JSON.parse(localStorage.getItem(lessonCacheKey(day, createdAt))) || null }
@@ -286,12 +382,15 @@ function normalizePathData(raw) {
   }))
 
   const roadmap = (Array.isArray(raw.roadmap) ? raw.roadmap : []).slice(0, 30).map((r, i) => ({
-    day:          num(r?.day  ?? i + 1),
-    week:         num(r?.week ?? Math.ceil((i + 1) / 7)),
-    phase:        str(r?.phase || ''),
-    weekly_theme: str(r?.weekly_theme || ''),
-    task:         str(r?.task  || ''),
-    is_milestone: bool(r?.is_milestone),
+    day:             num(r?.day  ?? i + 1),
+    week:            num(r?.week ?? Math.ceil((i + 1) / 7)),
+    phase:           str(r?.phase || ''),
+    weekly_theme:    str(r?.weekly_theme || ''),
+    task:            str(r?.task  || ''),
+    habit_1_action:  str(r?.habit_1_action || r?.physical || ''),
+    habit_2_action:  str(r?.habit_2_action || r?.nutrition || ''),
+    non_negotiable:  str(r?.non_negotiable || ''),
+    is_milestone:    bool(r?.is_milestone),
     ...(validPillar(r?.pillar) ? { pillar: r.pillar } : { pillar: PILLAR_CYCLE[i % 4] }),
   }))
 
@@ -327,7 +426,7 @@ export async function buildCustomPath(uid, visionProfile, onStatus) {
   onStatus?.('ai')
 
   if (!API_KEY) {
-    pathData = buildFallbackPath(visionProfile)
+    pathData = synthesizeDynamicPath(visionProfile)
   } else {
     try {
       const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
@@ -340,6 +439,7 @@ export async function buildCustomPath(uid, visionProfile, onStatus) {
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       const parsed = JSON.parse(raw)
       pathData = normalizePathData(parsed)
+      pathData = enforceUserHabits(pathData, visionProfile)
 
       if (
         !pathData.path_name ||
@@ -348,11 +448,18 @@ export async function buildCustomPath(uid, visionProfile, onStatus) {
       ) throw new Error('INVALID_STRUCTURE')
     } catch (err) {
       if (err.code === 'GEMINI_TIMEOUT') throw err
-      pathData = buildFallbackPath(visionProfile)
+      pathData = synthesizeDynamicPath(visionProfile)
     }
   }
 
   onStatus?.('saving')
+
+  // Purge all stale lesson caches before writing new path
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('prime_lesson_')) localStorage.removeItem(k)
+    })
+  } catch {}
 
   await archivePath(uid)
 
@@ -494,7 +601,7 @@ export async function restorePath(uid, archiveId) {
   const archDoc = doc(db, 'userPaths', uid, 'history', archiveId)
   const snap    = await getDoc(archDoc)
   if (!snap.exists()) throw new Error('Archive not found')
-  const { archivedAt, ...pathData } = snap.data()
+  const { archivedAt: _archivedAt, ...pathData } = snap.data()
   const restored = { ...pathData, restoredAt: new Date().toISOString(), updatedAt: TODAY() }
   await setDoc(pathDoc(uid), restored)
   return restored

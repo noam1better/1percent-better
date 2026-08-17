@@ -52,7 +52,7 @@ export default function MirrorCard({ gapDays, message, onRespond }) {
           className="btn-primary btn-tactile"
           style={{ flex: 2, padding: '0.85rem', borderRadius: 12, fontSize: '0.85rem', fontWeight: 800 }}
         >
-          כן, אני מחויב ←
+          כן, חוזר לעצמי ←
         </button>
         <button
           onClick={() => respond('not_now')}

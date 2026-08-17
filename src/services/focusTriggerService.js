@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 import { db } from './firebase'
 
 const profileDoc   = uid         => doc(db, 'focusTriggers', uid)
@@ -11,6 +11,7 @@ const waitlistDoc  = uid         => doc(db, 'waitlist', uid)
 function sanitizeText(s, max = 2000) {
   return String(s || '')
     .replace(/<[^>]*>/g, '')
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .trim()
     .slice(0, max)
@@ -28,6 +29,19 @@ function sanitizeFieldKey(s) {
 function validateDate(date) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Invalid date format')
   return date
+}
+
+export function subscribeProfile(uid, callback) {
+  const ref = profileDoc(uid)
+  return onSnapshot(ref, snap => {
+    if (snap.exists()) {
+      callback(snap.data())
+    } else {
+      const defaults = { tier: 'free', createdAt: new Date().toISOString() }
+      setDoc(ref, defaults, { merge: true }).catch(() => {})
+      callback(defaults)
+    }
+  }, () => callback({}))
 }
 
 export async function loadProfile(uid) {
@@ -83,35 +97,21 @@ export async function syncLeaderboard(uid, name, xp) {
   }
 }
 
-const BOT_PROFILES = [
-  { uid: '__bot_1', name: 'Rotem K.',   xp: 2840 },
-  { uid: '__bot_2', name: 'Amit D.',    xp: 2410 },
-  { uid: '__bot_3', name: 'Noa S.',     xp: 1975 },
-  { uid: '__bot_4', name: 'Yoav M.',    xp: 1620 },
-  { uid: '__bot_5', name: 'Shira L.',   xp: 1280 },
-  { uid: '__bot_6', name: 'Oren P.',    xp:  990 },
-  { uid: '__bot_7', name: 'Maya T.',    xp:  730 },
-  { uid: '__bot_8', name: 'Eitan R.',   xp:  510 },
-]
-
 export async function loadLeaderboard() {
   try {
-    const q       = query(collection(db, 'leaderboard'), orderBy('xp', 'desc'), limit(20))
-    const snap    = await getDocs(q)
-    const real    = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
-    const realIds = new Set(real.map(e => e.uid))
-    const bots    = BOT_PROFILES.filter(b => !realIds.has(b.uid))
-    const merged  = [...real, ...bots].sort((a, b) => (b.xp || 0) - (a.xp || 0))
-    // deduplicate by name — keep the highest-XP entry per display name
+    const q    = query(collection(db, 'leaderboard'), orderBy('xp', 'desc'), limit(20))
+    const snap = await getDocs(q)
+    const real = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+    // deduplicate by display name — keep highest-XP entry
     const seen = new Map()
     const deduped = []
-    for (const e of merged) {
+    for (const e of real) {
       const key = (e.name || '').trim().toLowerCase()
       if (!seen.has(key)) { seen.set(key, true); deduped.push(e) }
     }
     return deduped.slice(0, 10)
   } catch {
-    return BOT_PROFILES.slice(0, 8)
+    return []
   }
 }
 

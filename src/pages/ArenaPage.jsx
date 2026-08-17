@@ -27,11 +27,27 @@ function GlobalLeaderboard({ currentUid }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadLeaderboard().then(data => { setEntries(data); setLoading(false) })
+    const timer = setTimeout(() => setLoading(false), 5000)
+    loadLeaderboard()
+      .then(data => { setEntries(data || []); setLoading(false) })
+      .catch(() => setLoading(false))
+      .finally(() => clearTimeout(timer))
   }, [])
 
   if (loading) return (
     <div style={{ padding: '2rem 1.25rem', textAlign: 'center', color: 'rgba(241,245,249,0.3)', fontSize: '0.78rem' }}>טוען...</div>
+  )
+
+  if (entries.length === 0) return (
+    <div style={{ padding: '0 1.25rem 1rem' }}>
+      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: 'rgba(99,102,241,0.04)', border: '1px dashed rgba(99,102,241,0.18)', borderRadius: 16 }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🌍</div>
+        <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.35rem' }}>הלוח הגלובלי עוד מתמלא</div>
+        <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.72rem', lineHeight: 1.65 }}>
+          כאשר משתמשים ישלימו יותר ימים, הם יופיעו כאן. השם שלך יהיה הראשון.
+        </div>
+      </div>
+    </div>
   )
 
   return (
@@ -82,7 +98,11 @@ function SquadsWorldWar({ mySquadId }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getSquadsWorldWar().then(data => { setSquads(data); setLoading(false) })
+    const timer = setTimeout(() => setLoading(false), 5000)
+    getSquadsWorldWar()
+      .then(data => { setSquads(data || []); setLoading(false) })
+      .catch(() => setLoading(false))
+      .finally(() => clearTimeout(timer))
   }, [])
 
   if (loading) return (
@@ -91,11 +111,16 @@ function SquadsWorldWar({ mySquadId }) {
 
   if (squads.length === 0) return (
     <div style={{ padding: '0 1.25rem 1rem' }}>
-      <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 16 }}>
-        <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚔️</div>
-        <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.2rem' }}>אין סקווד עדיין</div>
-        <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.72rem', lineHeight: 1.65 }}>
-          צור סקווד בחלק "הסקווד שלך" כדי להצטרף לקרב.
+      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: 'linear-gradient(145deg,rgba(245,197,24,0.05),rgba(245,197,24,0.02))', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 16 }}>
+        <div style={{ fontSize: '2.2rem', marginBottom: '0.55rem' }}>⚔️</div>
+        <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.9rem', marginBottom: '0.35rem' }}>המלחמה עוד לא התחילה</div>
+        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.72rem', lineHeight: 1.7, marginBottom: '0.75rem' }}>
+          צור סקווד בחלק מעל, הזמן לפחות חבר אחד — וה-PRIME ARENA יוצת.
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {['💪 אימון', '🔥 רצף', '🏆 ניצחון'].map(tag => (
+            <span key={tag} style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 20, padding: '0.2rem 0.6rem', color: 'rgba(245,197,24,0.6)', fontSize: '0.65rem', fontWeight: 700 }}>{tag}</span>
+          ))}
         </div>
       </div>
     </div>
@@ -156,7 +181,7 @@ export default function ArenaPage({ uid, userName, isGuest }) {
       <div style={{ padding: '1.5rem 1.25rem 0.5rem', background: 'linear-gradient(180deg, rgba(245,197,24,0.05) 0%, transparent 100%)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.5rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.3rem' }}>◈ PRIME ARENA</div>
         <h1 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.55rem', margin: 0, letterSpacing: '-0.02em' }}>הזירה 🏟️</h1>
-        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.73rem', marginTop: '0.3rem' }}>תתחרה. השתפר. נצח.</p>
+        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.73rem', marginTop: '0.3rem' }}>תתחרה. תתקדם. תנצח. 🏆</p>
       </div>
 
       {/* ── Section 1: Your Squad ── */}

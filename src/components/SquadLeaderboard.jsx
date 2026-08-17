@@ -13,7 +13,7 @@ function InviteCodeBox({ inviteCode }) {
   function copy() {
     navigator.clipboard?.writeText(inviteCode).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), 1500)
     }).catch(() => {})
   }
   return (
@@ -23,9 +23,10 @@ function InviteCodeBox({ inviteCode }) {
       <button
         onClick={copy}
         className="btn-tactile"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#10b981' : 'rgba(241,245,249,0.35)', fontSize: '0.82rem', padding: '0.1rem 0.25rem', flexShrink: 0, transition: 'color 0.2s ease' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: copied ? 'rgba(16,185,129,0.12)' : 'none', border: copied ? '1px solid rgba(16,185,129,0.3)' : '1px solid transparent', borderRadius: 8, cursor: 'pointer', color: copied ? '#10b981' : 'rgba(241,245,249,0.72)', fontSize: '0.78rem', padding: '0.2rem 0.45rem', flexShrink: 0, transition: 'color 0.2s ease, background 0.2s ease, border-color 0.2s ease' }}
       >
-        {copied ? '✓' : '📋'}
+        <span>{copied ? '✓' : '📋'}</span>
+        {copied && <span style={{ fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.01em' }}>הועתק!</span>}
       </button>
     </div>
   )
@@ -123,15 +124,20 @@ export default function SquadLeaderboard({ uid, userName }) {
 
   const loadSquad = useCallback(async () => {
     if (!uid) return
-    const s = await getMySquad(uid)
-    setSquad(s)
-    if (s) {
-      setLoading(true)
-      try {
-        const lb = await getSquadLeaderboard(s)
-        setEntries(lb)
-      } finally { setLoading(false) }
-    }
+    const timer = setTimeout(() => { setSquad(null); setLoading(false) }, 5000)
+    try {
+      const s = await getMySquad(uid)
+      setSquad(s)
+      if (s) {
+        setLoading(true)
+        try {
+          const lb = await getSquadLeaderboard(s)
+          setEntries(lb)
+        } catch { /* leave entries empty */ }
+        finally { setLoading(false) }
+      }
+    } catch { setSquad(null) }
+    finally { clearTimeout(timer) }
   }, [uid])
 
   useEffect(() => { loadSquad() }, [loadSquad])
@@ -159,12 +165,23 @@ export default function SquadLeaderboard({ uid, userName }) {
   // ── No squad: arena waiting CTA ──
   if (!squad) return (
     <div style={{ marginBottom: '1.1rem' }}>
-      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18, padding: '1.4rem 1.25rem 1.1rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🏟️</div>
-        <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.92rem', marginBottom: '0.3rem' }}>הזירה מחכה לך</div>
-        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.75rem', lineHeight: 1.65 }}>
-          הזמן חבר למסלול כדי לפתוח את לוח השיאים ולהתחרות.<br/>
-          הלוח נפתח ברגע שיצטרף מתחרה נוסף.
+      <div style={{ background: 'linear-gradient(145deg, rgba(245,197,24,0.08), rgba(245,197,24,0.03))', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 18, padding: '1.5rem 1.25rem 1.25rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.6rem' }}>🏆</div>
+        <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', marginBottom: '0.35rem' }}>הצטרף לזירה — התחרה בחברים</div>
+        <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.74rem', lineHeight: 1.6, marginBottom: '1.1rem' }}>
+          הדרך הכי חזקה להישאר על המסלול — צוות שרואה אותך.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.1rem', textAlign: 'right' }}>
+          {[
+            { icon: '💪', text: 'אחריות — חברים שרואים את ההתקדמות שלך' },
+            { icon: '🔥', text: 'תחרות — לוח שיאים שבועי עם XP וחזרות' },
+            { icon: '⚡', text: 'מוטיבציה — קשה לוותר כשמישהו עוקב אחריך' },
+          ].map(b => (
+            <div key={b.text} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>{b.icon}</span>
+              <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.74rem' }}>{b.text}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 16, padding: '1.1rem 1.15rem' }}>

@@ -1,4 +1,4 @@
-const CACHE = 'prime-v3'
+const CACHE = 'prime-v23'
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -14,6 +14,24 @@ self.addEventListener('activate', e => {
     )
   )
   self.clients.claim()
+})
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  const action = e.action   // 'done' | 'later' | 'help' | '' (body click)
+  const data   = e.notification.data || {}
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const msg = { type: 'NUDGE_RESPONSE', action: action || 'open', data }
+      if (list.length > 0) {
+        list[0].postMessage(msg)
+        list[0].focus()
+      } else {
+        clients.openWindow('/').then(c => c && c.postMessage(msg))
+      }
+    })
+  )
 })
 
 self.addEventListener('fetch', e => {

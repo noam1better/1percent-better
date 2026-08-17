@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useUserPrefs } from '../context/UserContext'
 import { saveProfile } from '../services/focusTriggerService'
@@ -7,10 +7,6 @@ import { getDayContent } from '../data/lessonContent'
 import BenchmarkTracker from '../components/BenchmarkTracker'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
-const MIN_REFLECTION = 40
-function hasValidWordCount(text, min = 5) {
-  return text.trim().split(/\s+/).filter(w => w.length > 1).length >= min
-}
 const QUIZ_KEY = 'prime_track_quiz'
 
 // ── Quiz data ──────────────────────────────────────────────────────
@@ -52,7 +48,7 @@ function computeRecommendations(answers) {
 
   const goalMap = {
     finance:  { 'capital-markets': 4, 'business-mind': 2, 'deal-closer': 2, 'self-discipline': 1 },
-    physical: { 'self-discipline': 4, 'business-soul': 2, 'capital-markets': 1 },
+    physical: { 'self-discipline': 6, 'business-soul': -3, 'capital-markets': -3, 'business-mind': -3, 'deal-closer': -2 },
     business: { 'business-mind': 4, 'deal-closer': 3, 'product-builder': 3, 'business-soul': 2, 'self-discipline': 1 },
     tech:     { 'ai-beginners': 4, 'ai-pioneer': 3, 'claude-code-mastery': 3, 'product-builder': 2 },
   }
@@ -111,7 +107,7 @@ function CourseQuiz({ onComplete, onSkip }) {
   }
 
   if (revealing) {
-    const matched = CHALLENGES.filter(ch => recs.includes(ch.id))
+    const matched = recs.map(id => CHALLENGES.find(ch => ch.id === id)).filter(Boolean)
     return (
       <div style={{ padding: '2.5rem 0', animation: 'fadeIn 0.4s ease' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
@@ -230,11 +226,12 @@ function ReviewModal({ challenge, dayNum, onClose }) {
 // ── Course Dashboard ───────────────────────────────────────────────
 
 function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isRecommended }) {
-  const [reflection,   setReflection]   = useState('')
   const [completing,   setCompleting]   = useState(false)
   const [completedNow, setCompletedNow] = useState(false)
   const [showSyllabus, setShowSyllabus] = useState(false)
   const [reviewDay,    setReviewDay]    = useState(null)
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
 
   const col              = challenge.color
   const rawDaysCompleted = progress?.daysCompleted || 0
@@ -246,24 +243,18 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
   const pct           = Math.round((daysCompleted / challenge.days) * 100)
 
   const currentDay   = Math.min(daysCompleted + 1, challenge.days)
-  const lessonType   = getLessonType(currentDay)
+  const _lessonType  = getLessonType(currentDay)
   const moduleTheme  = getDayTask(challenge.id, currentDay)
   const moduleIdx    = getModuleIndex(currentDay)
   const dayInModule  = (currentDay - 1) % 5
   const modules      = CHALLENGE_WEEKS[challenge.id] || []
   const richContent  = getDayContent(challenge.id, moduleIdx, dayInModule)
-  const microTaskPh  = richContent
-    ? 'מה ביצעת? מה למדת? תהיה ספציפי — אפילו משפט אחד אמיתי עדיף על פסקה מלוטשת.'
-    : 'מה באמת נשאר אתך? תהיה כן — אפילו משפט אחד אמיתי עדיף על פסקה מלוטשת.'
-  const reflLen      = reflection.trim().length
-  const reflWords    = hasValidWordCount(reflection)
-  const canSubmit    = reflLen >= MIN_REFLECTION && reflWords
 
   function handleComplete() {
-    if (!canSubmit || completing || doneToday) return
+    if (completing || doneToday) return
     setCompleting(true)
     setCompletedNow(true)
-    setTimeout(() => onLessonComplete(challenge, currentDay, reflection), 1400)
+    setTimeout(() => onLessonComplete(challenge, currentDay, ''), 500)
   }
 
   return (
@@ -328,7 +319,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
             <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🏆</div>
             <h2 style={{ color: col, fontWeight: 900, fontSize: '1.3rem', margin: '0 0 0.5rem' }}>השלמת את {challenge.title}!</h2>
             <p style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-              {challenge.days} ימים · {challenge.days * challenge.xpPerDay} XP · אתה לא אותו אדם שהתחיל.
+              {challenge.days} ימים · {challenge.days * challenge.xpPerDay} XP · גדלת. 🌟
             </p>
           </div>
 
@@ -336,9 +327,9 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
         ) : (doneToday || completedNow) ? (
           <div style={{ textAlign: 'center', padding: '2rem 0', animation: 'fadeIn 0.4s ease' }}>
             <div style={{ fontSize: '3rem', marginBottom: '0.65rem' }}>✅</div>
-            <div style={{ color: '#10b981', fontWeight: 900, fontSize: '1.15rem', marginBottom: '0.4rem' }}>יום {daysCompleted} הושלם!</div>
+            <div style={{ color: '#10b981', fontWeight: 900, fontSize: '1.15rem', marginBottom: '0.4rem' }}>🎉 יום {daysCompleted} הושלם!</div>
             <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.82rem', lineHeight: 1.6 }}>
-              חזור מחר ליום {daysCompleted + 1} · {pct}% מהמסלול מאחוריך
+              חזור מחר — ממשיכים לנצח! 🚀 · {pct}% הושלם
             </div>
             {daysCompleted > 0 && daysCompleted % 5 === 0 && (
               <div style={{ marginTop: '1.1rem', display: 'inline-block', background: `${col}12`, border: `1px solid ${col}28`, borderRadius: 14, padding: '0.75rem 1.2rem' }}>
@@ -350,100 +341,48 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
         /* ─── ACTIVE LESSON ─── */
         ) : (
           <>
-            {/* ── Lesson header chip ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: `${col}14`, border: `1px solid ${col}28`, borderRadius: 20, padding: '0.28rem 0.75rem' }}>
-                <span style={{ fontSize: '0.85rem' }}>{lessonType.icon}</span>
-                <span style={{ color: col, fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{lessonType.label}</span>
-              </div>
-              <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>יום {currentDay} · מודול {moduleIdx + 1}</span>
+            {/* All steps */}
+            <div style={{ background: `${col}0a`, border: `1.5px solid ${col}28`, borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem' }}>
+              <p style={{ color: col, fontSize: '0.57rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
+                ⚡ משימות יום {currentDay}
+              </p>
+              {richContent?.fieldAction?.length > 0
+                ? richContent.fieldAction.map((step, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', marginBottom: i < richContent.fieldAction.length - 1 ? '0.7rem' : 0 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: `${col}22`, border: `1px solid ${col}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: col, marginTop: '0.1rem' }}>
+                        {i + 1}
+                      </div>
+                      <p style={{ color: '#f1f5f9', fontSize: '0.88rem', fontWeight: 600, lineHeight: 1.55, margin: 0 }}>{step}</p>
+                    </div>
+                  ))
+                : <p style={{ color: '#f1f5f9', fontSize: '0.95rem', fontWeight: 800, lineHeight: 1.5, margin: 0 }}>⚡ {moduleTheme}</p>
+              }
             </div>
 
-            {richContent ? (
-              <>
-                {/* ── 1. השורה התחתונה ── */}
-                <div style={{ background: `${col}0d`, border: `1.5px solid ${col}28`, borderRadius: 16, padding: '1rem 1.15rem', marginBottom: '0.75rem' }}>
-                  <div style={{ color: col, fontSize: '0.54rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.13em', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.5rem' }}>
-                    📌 השורה התחתונה
-                  </div>
-                  <p style={{ color: '#f1f5f9', fontSize: '0.92rem', fontWeight: 700, lineHeight: 1.65, margin: 0 }}>{richContent.bottomLine}</p>
-                </div>
-
-                {/* ── 2. פרקטיקה בשטח ── */}
-                <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1rem 1.15rem', marginBottom: '0.75rem' }}>
-                  <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.54rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.13em', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.65rem' }}>
-                    ⚡ פרקטיקה בשטח
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                    {(richContent.fieldAction || []).map((step, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-start' }}>
-                        <div style={{ minWidth: 20, height: 20, borderRadius: '50%', background: `${col}22`, border: `1px solid ${col}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, color: col, flexShrink: 0, marginTop: '0.05rem' }}>
-                          {i + 1}
-                        </div>
-                        <p style={{ color: 'rgba(241,245,249,0.82)', fontSize: '0.83rem', lineHeight: 1.6, margin: 0 }}>{step}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── 3. דוגמה אמיתית ── */}
-                <div style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.15)', borderRadius: 16, padding: '1rem 1.15rem', marginBottom: '0.75rem' }}>
-                  <div style={{ color: 'rgba(251,191,36,0.7)', fontSize: '0.54rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.13em', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.5rem' }}>
-                    🌍 דוגמה אמיתית
-                  </div>
-                  <p style={{ color: 'rgba(241,245,249,0.7)', fontSize: '0.83rem', lineHeight: 1.65, margin: 0 }}>{richContent.realExample}</p>
-                </div>
-              </>
-            ) : (
-              /* Fallback for courses without rich content yet */
-              <div style={{ background: `linear-gradient(145deg,${col}0e,${col}04)`, border: `1.5px solid ${col}26`, borderRadius: 16, padding: '1.1rem 1.15rem', marginBottom: '0.75rem' }}>
-                <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.54rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.13em', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.6rem' }}>
-                  🎯 המשימה שלך היום
-                </div>
-                <p style={{ color: '#f1f5f9', fontSize: '0.97rem', fontWeight: 700, lineHeight: 1.65, margin: '0 0 1rem' }}>{moduleTheme}</p>
-                <div style={{ background: 'rgba(251,191,36,0.055)', border: '1px solid rgba(251,191,36,0.14)', borderRadius: 11, padding: '0.7rem 0.9rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>💡</span>
-                  <p style={{ color: 'rgba(241,245,249,0.52)', fontSize: '0.77rem', lineHeight: 1.58, margin: 0 }}>{lessonType.insight}</p>
-                </div>
+            {/* Real example */}
+            {richContent?.realExample && (
+              <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
+                <p style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>📖 דוגמה אמיתית</p>
+                <p style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem', lineHeight: 1.6, margin: 0 }}>{richContent.realExample}</p>
               </div>
             )}
 
-            {/* ── 4. משימת היום / Reflection ── */}
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.45rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>
-                ✍️ משימת היום
+            {/* Micro task / reflection */}
+            {richContent?.microTask && (
+              <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.16)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
+                <p style={{ color: 'rgba(245,197,24,0.65)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>✏️ רפלקציה</p>
+                <p style={{ color: 'rgba(241,245,249,0.68)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{richContent.microTask}</p>
               </div>
-              {richContent && (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.65rem 0.85rem', marginBottom: '0.55rem' }}>
-                  <p style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.76rem', lineHeight: 1.6, margin: 0 }}>{richContent.microTask}</p>
-                </div>
-              )}
-              <textarea
-                value={reflection}
-                onChange={e => setReflection(e.target.value)}
-                placeholder={microTaskPh}
-                rows={3}
-                className="glow-input"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '0.85rem 0.95rem', borderRadius: 12, border: `1px solid ${canSubmit ? col + '50' : reflLen >= MIN_REFLECTION ? 'rgba(245,197,24,0.3)' : 'rgba(255,255,255,0.08)'}`, background: 'rgba(255,255,255,0.03)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.55, marginBottom: '0.35rem', transition: 'border-color 0.2s' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.62rem', color: canSubmit ? '#10b981' : reflLen >= MIN_REFLECTION && !reflWords ? '#f5c518' : 'rgba(241,245,249,0.18)' }}>
-                  {canSubmit ? `✓ ${reflLen} תווים` : reflLen >= MIN_REFLECTION && !reflWords ? 'נדרשות לפחות 5 מילים לתשובה אמיתית' : `${reflLen} / ${MIN_REFLECTION} תווים`}
-                </span>
-                <span style={{ fontSize: '0.62rem', color: 'rgba(241,245,249,0.18)' }}>
-                  +{challenge.xpPerDay} XP
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* Completion CTA */}
             <button
               onClick={handleComplete}
-              disabled={!canSubmit || completing}
+              disabled={completing}
               className="btn-tactile"
-              style={{ width: '100%', padding: '1.1rem', borderRadius: 16, border: 'none', fontSize: '1rem', fontWeight: 800, cursor: canSubmit && !completing ? 'pointer' : 'not-allowed', marginBottom: '1rem', background: canSubmit ? `linear-gradient(135deg,${col}cc,${col})` : 'rgba(255,255,255,0.05)', color: canSubmit ? '#fff' : 'rgba(255,255,255,0.18)', transition: 'all 0.2s', boxShadow: canSubmit ? `0 8px 28px ${col}30` : 'none' }}
+              style={{ width: '100%', padding: '1.1rem', borderRadius: 16, border: 'none', fontSize: '1rem', fontWeight: 800, cursor: completing ? 'not-allowed' : 'pointer', marginBottom: '1rem', background: `linear-gradient(135deg,${col}cc,${col})`, color: '#fff', transition: 'all 0.2s', boxShadow: `0 8px 28px ${col}30`, opacity: completing ? 0.7 : 1 }}
             >
-              {completing ? '⏳ שומר...' : `✅ סיים שיעור ${currentDay} · +${challenge.xpPerDay} XP`}
+              {completing ? '🎉' : `🔥 סיים יום ${currentDay}!`}
             </button>
           </>
         )}
@@ -468,7 +407,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
               const startDay      = mIdx * 5 + 1
               const moduleDone    = daysCompleted >= startDay + 4
               const moduleLocked  = daysCompleted < startDay - 1
-              const moduleActive  = !moduleDone && !moduleLocked
+              const _moduleActive = !moduleDone && !moduleLocked
 
               return (
                 <div key={mIdx} style={{ marginBottom: '0.85rem' }}>
@@ -530,7 +469,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
 const PILLARS = [
   {
     id: 'builder',
-    label: 'The Builder',
+    label: 'הבונה',
     icon: '🛠️',
     color: '#6366f1',
     desc: 'AI, עסקים, צמיחה כלכלית',
@@ -539,30 +478,30 @@ const PILLARS = [
   },
   {
     id: 'creator',
-    label: 'The Creator',
+    label: 'היוצר',
     icon: '🎨',
     color: '#ec4899',
     desc: 'יצירה, מותג, ביטוי עצמי',
     longDesc: 'פתח את היצירתיות שלך. מותג, עיצוב, ובניית נשמת העסק.',
-    courseIds: ['product-builder', 'business-soul'],
+    courseIds: ['product-builder', 'business-soul', 'ai-pioneer', 'claude-code-mastery'],
   },
   {
     id: 'reset',
-    label: 'The Reset',
+    label: 'האיפוס',
     icon: '🧘',
     color: '#10b981',
     desc: 'משמעת, בהירות, שקט מנטלי',
     longDesc: 'משמעת עצמית ובהירות מנטלית. בלי זה — שאר העמודות קורסות.',
-    courseIds: ['self-discipline'],
+    courseIds: ['self-discipline', 'capital-markets', 'business-mind'],
   },
   {
     id: 'connection',
-    label: 'The Connection',
+    label: 'הקשר',
     icon: '💛',
     color: '#f59e0b',
     desc: 'מכירות, יחסים, נוכחות',
     longDesc: 'יחסים, מכירות ונוכחות אנושית. כי ההצלחה לבד היא ריקה.',
-    courseIds: ['deal-closer'],
+    courseIds: ['deal-closer', 'business-mind', 'ai-beginners'],
   },
 ]
 
@@ -571,13 +510,21 @@ const PILLARS = [
 export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   const { user, isGuest }                      = useAuth()
   const { prefs }                              = useUserPrefs()
-  const [selected,      setSelected]           = useState(null)
-  const [activePillar,  setActivePillar]       = useState(null)
-  const [showQuiz,      setShowQuiz]           = useState(false)
-  const [quizRecs, setQuizRecs] = useState(() => loadQuizData()?.recommendations || [])
+  const [selected,           setSelected]           = useState(null)
+  const [activePillar,       setActivePillar]       = useState(null)
+  const [showQuiz,           setShowQuiz]           = useState(false)
+  const [quizRecs,           setQuizRecs]           = useState(() => loadQuizData()?.recommendations || [])
+  const [expandedSlot,       setExpandedSlot]       = useState(null)
+  const [showTracksArchive,  setShowTracksArchive]  = useState(false)
 
-  const fallbackRec    = prefs.recommendedTrack || profile?.preferences?.recommendedTrack
-  const recommendedIds = quizRecs.length > 0 ? quizRecs : (fallbackRec ? [fallbackRec] : [])
+  // Priority: Firestore trackQuizRecs (set by PathBuilder niche detection) > localStorage > legacy OnboardingFlow fallback
+  const recommendedIds = (profile?.trackQuizRecs?.length > 0)
+    ? profile.trackQuizRecs
+    : quizRecs.length > 0
+      ? quizRecs
+      : (prefs.recommendedTrack || profile?.preferences?.recommendedTrack)
+        ? [prefs.recommendedTrack || profile?.preferences?.recommendedTrack]
+        : []
 
   function getProgress(id) { return profile?.challenges?.[id] }
 
@@ -587,17 +534,22 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
     saveQuizData(recs)
     setQuizRecs(recs)
     setShowQuiz(false)
+    try {
+      CHALLENGES.forEach(ch => {
+        if (!recs.includes(ch.id)) localStorage.removeItem(`prime_benchmarks_${ch.id}`)
+      })
+    } catch {}
     const topRec = recs[0]
     if (topRec) {
-      const p = PILLARS.find(pl => pl.courseIds.includes(topRec))
-      if (p) setActivePillar(p.id)
+      const topChallenge = CHALLENGES.find(ch => ch.id === topRec)
+      if (topChallenge) setSelected(topChallenge)
     }
     if (!isGuest && user) {
       await saveProfile(user.uid, { trackQuizRecs: recs }).catch(() => {})
     }
   }
 
-  async function handleLessonComplete(challenge, dayNum, reflection) {
+  async function handleLessonComplete(challenge, _dayNum, _reflection) {
     if (isGuest) { onAwardXP(challenge.xpPerDay, true); return }
     const today  = todayKey()
     const prev   = profile?.challenges?.[challenge.id] || {}
@@ -646,7 +598,12 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   // ── View: Pillar drill-down ───────────────────────────────────────
   if (activePillar) {
     const pillar  = PILLARS.find(p => p.id === activePillar)
-    const courses = CHALLENGES.filter(ch => pillar.courseIds.includes(ch.id))
+    const allPillarCourses = CHALLENGES.filter(ch => pillar.courseIds.includes(ch.id))
+    const courses = recommendedIds.length > 0
+      ? allPillarCourses.filter(ch => recommendedIds.includes(ch.id)).length > 0
+        ? allPillarCourses.filter(ch => recommendedIds.includes(ch.id))
+        : allPillarCourses  // pillar has no niche match → show all (user browsing off-niche)
+      : allPillarCourses
 
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: PAD, animation: 'slide-up 0.28s ease both' }}>
@@ -713,7 +670,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                         <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
                           <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}80,${ch.color})`, width: `${pct}%` }} />
                         </div>
-                        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{days}/{ch.days}d</span>
+                        <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{pct}%</span>
                       </div>
                     )}
                   </div>
@@ -731,72 +688,214 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
     )
   }
 
-  // ── View: 4-Pillar Grid (default / root) ─────────────────────────
+  // ── View: Daily Protocol Hub (default / root) ────────────────────
+  const currentHour = new Date().getHours()
+  const currentSlot = currentHour < 12 ? 'morning' : currentHour < 18 ? 'noon' : 'evening'
+
+  const topTrackId     = recommendedIds[0]
+  const topTrack       = topTrackId ? CHALLENGES.find(ch => ch.id === topTrackId) : null
+  const topProgress    = topTrack ? getProgress(topTrack.id) : null
+  const nextDay        = (topProgress?.daysCompleted || 0) + 1
+  const todayTask      = topTrack ? getDayTask(topTrack.id, nextDay) : null
+  const trackDoneToday = topProgress?.lastCompletedDate === todayKey()
+
+  const PROTOCOL_SLOTS = [
+    {
+      id: 'morning', icon: '🌅', color: '#F5C518',
+      title: 'פרוטוקול בוקר', subtitle: 'מיקוד ומנטליות',
+      timeLabel: '06:00 – 12:00',
+      steps: [
+        'סקור את הוויזיה שלך ל-3 שנים — 2 דקות בלבד',
+        'הגדר מטרה אחת קריטית שתבצע היום',
+        'קבע מה לא ייכנס ליום שלך (Non-Negotiable)',
+      ],
+      cta: 'כוון את הבוקר ←',
+      onCta: null,
+    },
+    {
+      id: 'noon', icon: '⚡', color: '#fb923c',
+      title: 'פרוטוקול צהריים', subtitle: 'עשייה ממוקדת',
+      timeLabel: '12:00 – 18:00',
+      steps: [
+        'כבה הודעות — 25 דקות ללא הפרעות',
+        todayTask
+          ? `משימת היום: ${todayTask.length > 72 ? todayTask.slice(0, 72) + '…' : todayTask}`
+          : 'בצע את משימת היום מהמסלול שלך',
+        'תעד תוצאה אחת קונקרטית שביצעת בפועל',
+      ],
+      cta: topTrack && !trackDoneToday ? `פתח מסלול: ${topTrack.title} ←` : '⚡ התחל בלוק עשייה ←',
+      onCta: topTrack && !trackDoneToday ? () => setSelected(topTrack) : null,
+    },
+    {
+      id: 'evening', icon: '🌙', color: '#a78bfa',
+      title: 'פרוטוקול ערב', subtitle: 'רפלקציה והתאוששות',
+      timeLabel: '18:00 – 23:00',
+      steps: [
+        'מה ביצעתי היום בפועל? (עובדה, לא הערכה)',
+        'מה הייתי עושה אחרת? (שיפור אחד בלבד)',
+        'הגדר מטרה אחת קונקרטית לבוקר של מחר',
+      ],
+      cta: 'סכם את היום ←',
+      onCta: null,
+    },
+  ]
+
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: PAD, animation: 'slide-up 0.28s ease both' }}>
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.35rem' }}>◈ 4 עמודות החיים</div>
-        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.15rem', margin: '0 0 0.25rem' }}>בחר עמודה. בנה את הגרסה הבאה שלך.</h2>
-        <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', margin: 0 }}>כל עמודה — מסלול עמוק של 30 יום.</p>
+      {/* Header */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.2rem' }}>◈ PRIME · פרוטוקול יומי</div>
+        <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', margin: '0 0 0.18rem' }}>היום שלך מחכה לך.</h2>
+        <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.74rem', margin: 0 }}>בחר חלק יום. התרכז בפעולה אחת. קדימה.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        {PILLARS.map(p => {
-          const pillarCourses = CHALLENGES.filter(ch => p.courseIds.includes(ch.id))
-          const totalDays     = pillarCourses.reduce((s, ch) => s + (getProgress(ch.id)?.daysCompleted || 0), 0)
-          const totalPossible = pillarCourses.reduce((s, ch) => s + ch.days, 0)
-          const pct           = totalPossible > 0 ? Math.round((totalDays / totalPossible) * 100) : 0
+      {/* 3 Protocol cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
+        {PROTOCOL_SLOTS.map(slot => {
+          const isActive   = slot.id === currentSlot
+          const isExpanded = expandedSlot === slot.id
 
           return (
-            <button
-              key={p.id}
-              className="btn-tactile"
-              onClick={() => setActivePillar(p.id)}
+            <div
+              key={slot.id}
               style={{
-                background: `linear-gradient(145deg,${p.color}12,${p.color}06)`,
-                border: `1.5px solid ${p.color}30`,
-                borderRadius: 20,
-                padding: '1.25rem 1rem',
-                cursor: 'pointer',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.4rem',
-                boxShadow: `0 4px 20px ${p.color}10`,
-                transition: 'all 0.18s ease',
-                minHeight: 130,
-                position: 'relative',
+                background: isActive
+                  ? `linear-gradient(145deg,${slot.color}10,${slot.color}04)`
+                  : 'rgba(255,255,255,0.025)',
+                border: `1.5px solid ${isActive ? slot.color + '38' : 'rgba(255,255,255,0.07)'}`,
+                borderRadius: 18,
                 overflow: 'hidden',
+                boxShadow: isActive ? `0 4px 24px ${slot.color}10` : 'none',
+                transition: 'border 0.2s, box-shadow 0.2s',
               }}
             >
-              <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg,transparent 40%,${p.color}08 50%,transparent 60%)`, animation: 'shimmer 3s ease-in-out infinite', pointerEvents: 'none' }} />
-              <span style={{ fontSize: '2rem', lineHeight: 1 }}>{p.icon}</span>
-              <span style={{ color: p.color, fontSize: '0.82rem', fontWeight: 900, letterSpacing: '-0.01em' }}>{p.label}</span>
-              <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem', lineHeight: 1.35 }}>{p.desc}</span>
-              {pct > 0 ? (
-                <div style={{ width: '100%', marginTop: '0.3rem' }}>
-                  <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.08)', direction: 'ltr', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}88,${p.color})` }} />
+              {/* Card header — always visible */}
+              <button
+                onClick={() => setExpandedSlot(isExpanded ? null : slot.id)}
+                className="btn-tactile"
+                style={{
+                  width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  textAlign: 'right',
+                }}
+              >
+                <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{slot.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ color: isActive ? slot.color : '#f1f5f9', fontWeight: 800, fontSize: '0.88rem' }}>{slot.title}</span>
+                    {isActive && (
+                      <span style={{ background: `${slot.color}18`, border: `1px solid ${slot.color}30`, borderRadius: 20, padding: '0.08rem 0.45rem', color: slot.color, fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>עכשיו</span>
+                    )}
                   </div>
-                  <div style={{ color: `${p.color}99`, fontSize: '0.58rem', marginTop: '0.2rem', fontWeight: 700 }}>{pct}%</div>
+                  <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.67rem', marginTop: '0.08rem' }}>
+                    {slot.subtitle} · {slot.timeLabel}
+                  </div>
                 </div>
-              ) : (
-                <div style={{ color: 'rgba(241,245,249,0.18)', fontSize: '0.6rem', marginTop: '0.2rem' }}>{pillarCourses.length} מסלולים</div>
+                <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.75rem', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>▾</span>
+              </button>
+
+              {/* Expanded content */}
+              {isExpanded && (
+                <div style={{ padding: '0 1rem 1rem', animation: 'fadeIn 0.18s ease' }}>
+
+                  {/* Steps */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '0.9rem' }}>
+                    {slot.steps.map((step, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                          background: `${slot.color}18`, border: `1px solid ${slot.color}35`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.58rem', fontWeight: 900, color: slot.color, marginTop: '0.1rem',
+                        }}>{i + 1}</div>
+                        <p style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.82rem', lineHeight: 1.55, margin: 0 }}>{step}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={slot.onCta || undefined}
+                    className="btn-tactile"
+                    style={{
+                      width: '100%', padding: '0.85rem', borderRadius: 13, border: 'none',
+                      background: `linear-gradient(135deg,${slot.color}cc,${slot.color})`,
+                      color: '#0e0e16', fontSize: '0.85rem', fontWeight: 900,
+                      cursor: 'pointer', letterSpacing: '0.01em',
+                    }}
+                  >
+                    {slot.cta}
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
 
+      {/* Archive toggle */}
       <button
-        onClick={() => setShowQuiz(true)}
-        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, width: '100%', padding: '0.75rem', color: 'rgba(241,245,249,0.28)', fontSize: '0.73rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+        onClick={() => setShowTracksArchive(v => !v)}
+        className="btn-tactile"
+        style={{
+          width: '100%', background: 'none',
+          border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
+          padding: '0.7rem', color: 'rgba(241,245,249,0.25)', fontSize: '0.7rem',
+          fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: '0.4rem', marginBottom: showTracksArchive ? '0.85rem' : 0,
+        }}
       >
-        לא בטוח מאיפה להתחיל?
-        <span style={{ color: 'rgba(196,121,90,0.65)' }}>ענה על שאלון קצר ←</span>
+        {showTracksArchive ? '▲' : '▼'}
+        <span>מסלולים עמוקים — 4 עמודות · 30 יום</span>
       </button>
+
+      {/* Collapsed archive: 4-pillar grid */}
+      {showTracksArchive && (
+        <div style={{ animation: 'fadeIn 0.22s ease' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            {PILLARS.map(p => {
+              const pillarCourses = CHALLENGES.filter(ch => p.courseIds.includes(ch.id))
+              const totalDays     = pillarCourses.reduce((s, ch) => s + (getProgress(ch.id)?.daysCompleted || 0), 0)
+              const totalPossible = pillarCourses.reduce((s, ch) => s + ch.days, 0)
+              const pct           = totalPossible > 0 ? Math.round((totalDays / totalPossible) * 100) : 0
+
+              return (
+                <button
+                  key={p.id}
+                  className="btn-tactile"
+                  onClick={() => setActivePillar(p.id)}
+                  style={{
+                    background: `linear-gradient(145deg,${p.color}10,${p.color}05)`,
+                    border: `1.5px solid ${p.color}28`, borderRadius: 18,
+                    padding: '1.1rem 0.85rem', cursor: 'pointer', textAlign: 'center',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
+                    minHeight: 120, position: 'relative', overflow: 'hidden',
+                  }}
+                >
+                  <span style={{ fontSize: '1.7rem', lineHeight: 1 }}>{p.icon}</span>
+                  <span style={{ color: p.color, fontSize: '0.78rem', fontWeight: 900 }}>{p.label}</span>
+                  <span style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', lineHeight: 1.3 }}>{p.desc}</span>
+                  <div style={{ width: '100%', marginTop: '0.2rem' }}>
+                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}80,${p.color})` }} />
+                    </div>
+                    <div style={{ color: pct > 0 ? `${p.color}88` : 'rgba(241,245,249,0.15)', fontSize: '0.55rem', fontWeight: 700, marginTop: '0.15rem' }}>{pct > 0 ? `${pct}%` : `${pillarCourses.length} מסלולים`}</div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={() => setShowQuiz(true)}
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 11, width: '100%', padding: '0.65rem', color: 'rgba(241,245,249,0.22)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+          >
+            לא בטוח מאיפה להתחיל?
+            <span style={{ color: 'rgba(196,121,90,0.55)' }}>ענה על שאלון קצר ←</span>
+          </button>
+        </div>
+      )}
 
     </div>
   )

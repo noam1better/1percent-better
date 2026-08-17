@@ -114,10 +114,10 @@ export async function generateDailyMessage() {
     return entry
   }
 
-  const goalsLine = disciplineGoal
+  const _goalsLine = disciplineGoal
     ? `- מטרה יומית: ${disciplineGoal} דקות ${disciplineActivity}`
     : ''
-  const trackLine = activeTrackName
+  const _trackLine = activeTrackName
     ? `- מסלול אימון פעיל: ${activeTrackName}`
     : ''
 

@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
-import { loadProfile, saveProfile, loadActivity, saveReflection, syncLeaderboard, joinWaitlist } from '../services/focusTriggerService'
+import { subscribeProfile, saveProfile, syncLeaderboard } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
-import { requestPermission, checkNotifications } from '../services/notificationService'
+import { requestPermission, checkNotifications, checkNudges, saveNudgeResponse, snoozeNudge, markNudgeDone } from '../services/notificationService'
 import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
-import { useUserPrefs } from '../context/UserContext'
-import { CHALLENGES, CHALLENGE_WEEKS, getDayTask, LESSON_WHY } from '../data/challenges'
+import { CHALLENGES, getDayTask, getModuleIndex } from '../data/challenges'
+import { getDayContent } from '../data/lessonContent'
 import { MANTRAS } from '../data/mantras'
 import TracksPage from './TracksPage'
 import AnalyticsTab from './AnalyticsTab'
 import InitiationFlow from './InitiationFlow'
 import AddToHomeScreen from '../components/AddToHomeScreen'
 import DisciplineGoalCard from '../components/DisciplineGoalCard'
-import TrackSelector from '../components/TrackSelector'
 import DailyBrief from '../components/DailyBrief'
 import ContractLock from '../components/ContractLock'
 import PrimeOnboarding, { hasSeenOnboarding } from '../components/PrimeOnboarding'
@@ -23,10 +22,16 @@ import MirrorCard from '../components/MirrorCard'
 import Settings from '../components/Settings'
 import ArenaPage from './ArenaPage'
 import TrainingMode from '../components/TrainingMode'
-import { loadCustomPath } from '../services/pathBuilderService'
+import { buildCustomPath } from '../services/pathBuilderService'
+import { onSnapshot, doc } from 'firebase/firestore'
+import { db } from '../services/firebase'
 import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorService'
 import MonthlyRoadmap from '../components/MonthlyRoadmap'
+import WeeklySpark from '../components/WeeklySpark'
+import { logEnergy, getTodayEnergy, ENERGY_TAGS } from '../services/energyLogService'
 import PathHistory from '../components/PathHistory'
+import ActiveWorkout from '../components/ActiveWorkout'
+import { TRACK_MAP } from '../data/trainingTracks'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -34,13 +39,33 @@ const todayKey     = () => new Date().toISOString().slice(0, 10)
 const getCheckins  = () => { try { return JSON.parse(localStorage.getItem(`ft_checkins_${todayKey()}`)) || {} } catch { return {} } }
 const saveCheckins = v  => { try { localStorage.setItem(`ft_checkins_${todayKey()}`, JSON.stringify(v)) } catch {} }
 
+function getHabitStreak(tid) {
+  try {
+    const todayDone = JSON.parse(localStorage.getItem(`ft_checkins_${todayKey()}`) || '{}')[tid] === true
+    let count = 0
+    for (let i = todayDone ? 0 : 1; i < 60; i++) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+      if (JSON.parse(localStorage.getItem(`ft_checkins_${d}`) || '{}')[tid] === true) {
+        count++
+      } else {
+        break
+      }
+    }
+    return count
+  } catch {
+    return 0
+  }
+}
+
 // Strip HTML tags and control chars from user-submitted text before sending to AI
+/* eslint-disable no-control-regex */
 const sanitizeInput = str =>
   str.replace(/<[^>]*>/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim().slice(0, 1000)
+/* eslint-enable no-control-regex */
 
 const XP_PER_TRIGGER = 10
 const XP_PER_LEVEL   = 100
-const MIN_PROOF_LEN  = 20
+const MIN_PROOF_LEN  = 10
 
 const getLevel   = xp => Math.floor((xp || 0) / XP_PER_LEVEL) + 1
 const getLevelXP = xp => (xp || 0) % XP_PER_LEVEL
@@ -66,7 +91,8 @@ function ConfettiBurst() {
 // ── XP Toast ───────────────────────────────────────────────────────
 
 function XPToast({ xp, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t) }, [onDone])
+  const doneRef = useRef(onDone)
+  useEffect(() => { const t = setTimeout(() => doneRef.current(), 2200); return () => clearTimeout(t) }, [])
   const isSignin = xp === 'signin'
   return (
     <div style={{ position: 'fixed', top: '5.5rem', left: '50%', transform: 'translateX(-50%)', background: isSignin ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#c4795a,#d4956e)', color: '#fff', borderRadius: 20, padding: '0.45rem 1.1rem', fontSize: '0.83rem', fontWeight: 800, zIndex: 9999, animation: 'xp-pop 0.35s cubic-bezier(.34,1.56,.64,1) forwards', boxShadow: isSignin ? '0 4px 20px rgba(245,158,11,0.5)' : '0 4px 20px rgba(196,121,90,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
@@ -77,11 +103,46 @@ function XPToast({ xp, onDone }) {
 
 // ── Proof Modal (shared for habits + challenges) ───────────────────
 
-function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', onConfirm, onClose }) {
-  const [text,     setText]     = useState('')
-  const [status,   setStatus]   = useState('idle')   // idle | verifying | approved | rejected
-  const [feedback, setFeedback] = useState('')
-  const canSubmit = text.trim().length >= MIN_PROOF_LEN && status === 'idle'
+function getTimeSlot() {
+  const h = new Date().getHours()
+  if (h < 12) return 'morning'
+  if (h < 18) return 'noon'
+  return 'evening'
+}
+
+const TIME_CONFIG = {
+  morning: {
+    icon: '🌅', label: 'כוונת בוקר', sublabel: 'הגדר מטרה אחת ברורה ליום',
+    inputLabel: 'מה המטרה שלך להיום?',
+    placeholder: 'מה המטרה האחת שתבצע היום? תכנן ופרט…',
+  },
+  noon: {
+    icon: '⚡', label: 'בלוק מיקוד', sublabel: '15+ דקות עשייה ממוקדת',
+    inputLabel: 'מה ביצעת בפועל?',
+    placeholder: 'תאר מה עשית — ספציפי ומדויד, ללא קיצורים…',
+  },
+  evening: {
+    icon: '🌙', label: 'סיכום יומי', sublabel: 'רפלקציה ולמידה מהיום',
+    inputLabel: 'מה עשיתי? מה למדתי?',
+    placeholder: 'מה עשיתי? מה עבד? מה הייתי עושה אחרת?',
+  },
+}
+
+function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', richContent, onConfirm, onClose }) {
+  const [text,         setText]         = useState('')
+  const [status,       setStatus]       = useState('idle')   // idle | verifying | approved | rejected
+  const [feedback,     setFeedback]     = useState('')
+  const [energyTagged, setEnergyTagged] = useState(false)
+  const confirmTimer = useRef(null)
+  const timeConfig   = TIME_CONFIG[getTimeSlot()]
+  const canSubmit    = text.trim().length >= MIN_PROOF_LEN && status === 'idle'
+
+  function handleEnergyTag(tagId) {
+    logEnergy(tagId)
+    setEnergyTagged(true)
+    clearTimeout(confirmTimer.current)
+    setTimeout(onConfirm, 500)
+  }
 
   async function handleSubmit() {
     setStatus('verifying')
@@ -90,7 +151,7 @@ function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', onConfir
       setFeedback(result.feedback)
       if (result.approved) {
         setStatus('approved')
-        setTimeout(onConfirm, 1400)
+        confirmTimer.current = setTimeout(onConfirm, 3500)
       } else {
         setStatus('rejected')
       }
@@ -103,68 +164,131 @@ function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', onConfir
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 3000 }} onClick={e => e.target === e.currentTarget && status === 'idle' && onClose()}>
-      <div style={{ width: '100%', maxWidth: 480, background: '#161622', borderRadius: '20px 20px 0 0', padding: '1.5rem 1.5rem 2.25rem', borderTop: `2px solid ${accentColor}55` }}>
+      <div style={{ width: '100%', maxWidth: 480, background: '#161622', borderRadius: '20px 20px 0 0', borderTop: `2px solid ${accentColor}55`, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.1rem' }}>
-          <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1rem' }}>בדיקת אחריות</span>
-          {status === 'idle' && <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(241,245,249,0.6)', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, minHeight: 44 }}>✕ סגור</button>}
-        </div>
-
-        <div style={{ background: `${accentColor}12`, border: `1px solid ${accentColor}30`, borderRadius: 11, padding: '0.75rem 0.9rem', marginBottom: '1.1rem' }}>
-          <p style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>משימה</p>
-          <p style={{ color: '#f1f5f9', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>{title}</p>
-        </div>
-
-        {status === 'verifying' && (
-          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-            <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${accentColor}33`, borderTopColor: accentColor, animation: 'spin 0.8s linear infinite', margin: '0 auto 0.6rem' }} />
-            <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.8rem' }}>בודק את תשובתך…</p>
-          </div>
-        )}
-
-        {status === 'approved' && (
-          <div style={{ textAlign: 'center', padding: '1.25rem 0', animation: 'fadeIn 0.3s ease' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>🎉</div>
-            <p style={{ color: '#10b981', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.25rem' }}>קיבלת +{xpAmount} XP!</p>
-            <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.78rem' }}>{feedback}</p>
-          </div>
-        )}
-
-        {status === 'rejected' && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 11, padding: '0.75rem 0.9rem', marginBottom: '0.85rem', animation: 'fadeIn 0.2s ease' }}>
-            <p style={{ color: '#f87171', fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.15rem' }}>לא מספיק ספציפי 👀</p>
-            <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.75rem', margin: 0 }}>{feedback}</p>
-          </div>
-        )}
-
-        {(status === 'idle' || status === 'rejected') && (
-          <>
-            <label style={{ display: 'block', color: 'rgba(241,245,249,0.38)', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-              מה עשית בפועל?
-            </label>
-            <textarea
-              autoFocus
-              value={text}
-              onChange={e => { setText(e.target.value); if (status === 'rejected') setStatus('idle') }}
-              placeholder="היה ספציפי — תאר מה עשית היום בפועל…"
-              rows={4}
-              className="glow-input"
-              style={{ width: '100%', boxSizing: 'border-box', padding: '0.85rem 0.95rem', borderRadius: 11, border: `1px solid ${text.trim().length >= MIN_PROOF_LEN ? accentColor + '66' : 'rgba(255,255,255,0.09)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.55, marginBottom: '0.45rem' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-              <span style={{ fontSize: '0.67rem', color: text.trim().length >= MIN_PROOF_LEN ? '#10b981' : 'rgba(241,245,249,0.22)' }}>
-                {text.trim().length} / {MIN_PROOF_LEN} תווים לפחות
-              </span>
+        {/* ── Zone 1: Sticky header ── */}
+        <div style={{ padding: '1rem 1.25rem 0.75rem', borderBottom: `1px solid rgba(255,255,255,0.06)`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ fontSize: '1rem' }}>{timeConfig.icon}</span>
+                <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.95rem' }}>{timeConfig.label}</span>
+              </div>
+              <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', marginTop: '0.1rem' }}>{timeConfig.sublabel}</div>
             </div>
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{ width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', background: canSubmit ? `linear-gradient(135deg,${accentColor},${accentColor}cc)` : 'rgba(255,255,255,0.05)', color: canSubmit ? '#fff' : 'rgba(255,255,255,0.18)', fontSize: '0.9rem', fontWeight: 700, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
-            >
-              אמת וקבל {xpAmount} XP ←
-            </button>
-          </>
-        )}
+            {status === 'idle' && <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(241,245,249,0.6)', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, minHeight: 44 }}>✕ סגור</button>}
+          </div>
+        </div>
+
+        {/* ── Zone 2: Scrollable task content ── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0.9rem 1.25rem 0.5rem' }}>
+
+          {/* Task steps */}
+          <div style={{ background: `${accentColor}12`, border: `1px solid ${accentColor}30`, borderRadius: 11, padding: '0.75rem 0.9rem', marginBottom: richContent?.realExample || richContent?.microTask ? '0.65rem' : 0 }}>
+            <p style={{ color: `${accentColor}cc`, fontSize: '0.57rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>⚡ משימה</p>
+            {richContent?.fieldAction?.length > 0
+              ? richContent.fieldAction.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', marginBottom: i < richContent.fieldAction.length - 1 ? '0.6rem' : 0 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: `${accentColor}22`, border: `1px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: accentColor, marginTop: '0.12rem' }}>
+                      {i + 1}
+                    </div>
+                    <p style={{ color: '#f1f5f9', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.55, margin: 0 }}>{step}</p>
+                  </div>
+                ))
+              : <p style={{ color: '#f1f5f9', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>{title}</p>
+            }
+          </div>
+
+          {/* Real example */}
+          {richContent?.realExample && (
+            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.7rem 0.85rem', marginTop: '0.65rem', marginBottom: richContent?.microTask ? '0.65rem' : 0 }}>
+              <p style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>📖 דוגמה אמיתית</p>
+              <p style={{ color: 'rgba(241,245,249,0.58)', fontSize: '0.78rem', lineHeight: 1.6, margin: 0 }}>{richContent.realExample}</p>
+            </div>
+          )}
+
+          {/* Micro task */}
+          {richContent?.microTask && (
+            <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 10, padding: '0.7rem 0.85rem', marginTop: '0.65rem' }}>
+              <p style={{ color: 'rgba(245,197,24,0.65)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>✏️ רפלקציה</p>
+              <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.8rem', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{richContent.microTask}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Zone 3: Pinned input section ── */}
+        <div style={{ padding: '0.85rem 1.25rem 2rem', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+
+          {status === 'verifying' && (
+            <div style={{ textAlign: 'center', padding: '1.25rem 0' }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${accentColor}33`, borderTopColor: accentColor, animation: 'spin 0.8s linear infinite', margin: '0 auto 0.6rem' }} />
+              <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.8rem' }}>בודק את תשובתך…</p>
+            </div>
+          )}
+
+          {status === 'approved' && (
+            <div style={{ textAlign: 'center', padding: '0.75rem 0', animation: 'fadeIn 0.3s ease' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.3rem' }}>🎉</div>
+              <p style={{ color: '#10b981', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>+{xpAmount} XP!</p>
+              <p style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.76rem', marginBottom: '1rem' }}>{feedback}</p>
+              {!energyTagged ? (
+                <div>
+                  <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>איך הרגשת היום?</p>
+                  <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                    {ENERGY_TAGS.map(tag => (
+                      <button
+                        key={tag.id}
+                        onClick={() => handleEnergyTag(tag.id)}
+                        className="btn-tactile"
+                        style={{ padding: '0.4rem 0.75rem', borderRadius: 20, border: `1px solid ${tag.color}40`, background: `${tag.color}10`, color: tag.color, fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        {tag.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.7rem' }}>✓ נשמר</span>
+              )}
+            </div>
+          )}
+
+          {status === 'rejected' && (
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 11, padding: '0.65rem 0.85rem', marginBottom: '0.75rem', animation: 'fadeIn 0.2s ease' }}>
+              <p style={{ color: '#f87171', fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.15rem' }}>נסה להוסיף פירוט קצר 💪</p>
+              <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.75rem', margin: 0 }}>{feedback}</p>
+            </div>
+          )}
+
+          {(status === 'idle' || status === 'rejected') && (
+            <>
+              <label style={{ display: 'block', color: 'rgba(241,245,249,0.38)', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                {timeConfig.inputLabel}
+              </label>
+              <textarea
+                autoFocus
+                value={text}
+                onChange={e => { setText(e.target.value); if (status === 'rejected') setStatus('idle') }}
+                placeholder={timeConfig.placeholder}
+                rows={3}
+                className="glow-input"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '0.85rem 0.95rem', borderRadius: 11, border: `1px solid ${text.trim().length >= MIN_PROOF_LEN ? accentColor + '66' : 'rgba(255,255,255,0.09)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.55, marginBottom: '0.4rem' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.67rem', color: text.trim().length >= MIN_PROOF_LEN ? '#10b981' : 'rgba(241,245,249,0.22)' }}>
+                  {text.trim().length} / {MIN_PROOF_LEN} תווים לפחות
+                </span>
+              </div>
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                style={{ width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', background: canSubmit ? `linear-gradient(135deg,${accentColor},${accentColor}cc)` : 'rgba(255,255,255,0.05)', color: canSubmit ? '#fff' : 'rgba(255,255,255,0.18)', fontSize: '0.9rem', fontWeight: 700, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
+              >
+                אמת וקבל {xpAmount} XP ←
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -201,189 +325,17 @@ function AddTriggerModal({ onSave, onClose, td, to }) {
   )
 }
 
-// ── Habit Card ─────────────────────────────────────────────────────
-
-function HabitCard({ trigger, index, done, onRequestComplete, onUncomplete, td }) {
-  const [showBurst, setShowBurst] = useState(false)
-
-  function handleComplete() {
-    setShowBurst(true)
-    setTimeout(() => setShowBurst(false), 1300)
-    onRequestComplete()
-  }
-
-  return (
-    <div style={{ position: 'relative', background: done ? 'rgba(196,121,90,0.08)' : 'rgba(255,255,255,0.025)', border: `1px solid ${done ? 'rgba(196,121,90,0.22)' : 'rgba(255,255,255,0.05)'}`, borderRadius: '20px 16px 19px 15px', padding: '1rem 1.1rem', transition: 'all 0.25s', overflow: 'visible', boxShadow: done ? '0 4px 16px rgba(196,121,90,0.15)' : '0 2px 10px rgba(0,0,0,0.18)' }}>
-      {showBurst && <ConfettiBurst />}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg,#c4795a,#d4956e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: '#fff' }}>{index + 1}</div>
-          <span style={{ color: 'rgba(212,149,110,0.7)', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{td.triggerLabel}</span>
-          {trigger.time && <span style={{ background: 'rgba(196,121,90,0.15)', borderRadius: 20, padding: '0.1rem 0.4rem', color: '#d4956e', fontSize: '0.64rem', fontWeight: 700 }}>🕐 {trigger.time}</span>}
-        </div>
-        <span style={{ background: 'rgba(196,121,90,0.1)', border: '1px solid rgba(196,121,90,0.18)', borderRadius: 20, padding: '0.08rem 0.45rem', color: '#d4956e', fontSize: '0.64rem', fontWeight: 700 }}>+{XP_PER_TRIGGER} XP</span>
-      </div>
-      <p style={{ color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.2rem', lineHeight: 1.4 }}>{trigger.cue}</p>
-      <p style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.8rem', marginBottom: '0.75rem', lineHeight: 1.4 }}>→ {trigger.habit}</p>
-      {trigger.note && <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '0.45rem 0.7rem', marginBottom: '0.7rem' }}><p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.74rem', fontStyle: 'italic', margin: 0 }}>"{trigger.note}"</p></div>}
-      <button
-        onClick={done ? onUncomplete : handleComplete}
-        style={{ width: '100%', padding: '0.65rem', borderRadius: 9, fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.15s', border: done ? '1px solid rgba(16,185,129,0.3)' : 'none', background: done ? 'rgba(16,185,129,0.1)' : 'linear-gradient(135deg,#e8b800,#facc15)', color: done ? '#34d399' : '#111', boxShadow: done ? 'none' : '0 4px 14px rgba(250,204,21,0.3)' }}
-      >
-        {done ? td.completed : td.markDone}
-      </button>
-    </div>
-  )
-}
-
-// ── Challenge Card ─────────────────────────────────────────────────
-
-function ChallengeCard({ challenge, progress, onOpenModal, level, isRecommended }) {
-  const daysCompleted     = progress?.daysCompleted || 0
-  const finished          = daysCompleted >= challenge.days
-  const doneToday         = progress?.lastCompletedDate === todayKey()
-  const nextDay           = daysCompleted + 1
-  const pct               = Math.round((daysCompleted / challenge.days) * 100)
-  const taskDesc          = getDayTask(challenge.id, nextDay)
-  const hasMilestone      = daysCompleted >= 1
-  const fightClubLevel    = 5
-  const fightClubUnlocked = level >= fightClubLevel
-
-  return (
-    <div style={{
-      background: isRecommended
-        ? `linear-gradient(145deg, rgba(196,121,90,0.09) 0%, rgba(212,149,110,0.05) 100%)`
-        : 'rgba(255,255,255,0.025)',
-      border: `1px solid ${isRecommended ? 'rgba(196,121,90,0.28)' : 'rgba(255,255,255,0.05)'}`,
-      borderRadius: '16px 22px 18px 20px',
-      padding: '1.1rem 1.15rem',
-      boxShadow: isRecommended
-        ? '0 4px 24px rgba(196,121,90,0.18), 0 1px 4px rgba(0,0,0,0.3)'
-        : '0 2px 12px rgba(0,0,0,0.2)',
-      transition: 'box-shadow 0.2s',
-    }}>
-
-      {/* Personalized badge */}
-      {isRecommended && (
-        <div style={{ marginBottom: '0.65rem' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            background: 'linear-gradient(90deg,#c4795a,#d4956e)',
-            borderRadius: 20, padding: '0.22rem 0.7rem',
-            color: '#fff', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.06em',
-            boxShadow: '0 2px 10px rgba(196,121,90,0.4)',
-          }}>
-            ✨ מותאם עבורך
-          </span>
-        </div>
-      )}
-
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-          background: `linear-gradient(135deg,${challenge.color}30,${challenge.color}18)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem',
-          boxShadow: `0 2px 8px ${challenge.color}30`,
-        }}>{challenge.emoji}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.3 }}>{challenge.title}</span>
-            {finished && <span style={{ color: '#10b981', fontSize: '0.58rem', fontWeight: 700, background: 'rgba(16,185,129,0.14)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>✓ הושלם</span>}
-          </div>
-          <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.7rem', marginTop: '0.15rem', lineHeight: 1.3 }}>{challenge.subtitle}</div>
-        </div>
-        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{ color: challenge.color, fontSize: '0.72rem', fontWeight: 800 }}>+{challenge.xpPerDay} XP</div>
-          <div style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.62rem' }}>/ יום</div>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: finished || doneToday ? (hasMilestone ? '0.7rem' : '0.3rem') : '0.7rem' }}>
-        <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', direction: 'ltr' }}>
-          <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${challenge.color}aa,${challenge.color})`, width: `${pct}%`, transition: 'width 0.5s cubic-bezier(.4,0,.2,1)' }} />
-        </div>
-        <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
-          {daysCompleted}/{challenge.days}d
-        </span>
-      </div>
-
-      {/* Today task preview */}
-      {!finished && !doneToday && (
-        <div style={{ background: `${challenge.color}0a`, borderRadius: 10, padding: '0.6rem 0.8rem', marginBottom: '0.65rem' }}>
-          <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.2rem' }}>Day {nextDay}</p>
-          <p style={{ color: 'rgba(241,245,249,0.58)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{taskDesc}</p>
-        </div>
-      )}
-
-      {/* Verify button */}
-      {!finished && (
-        <button
-          onClick={() => !doneToday && onOpenModal(challenge, nextDay, taskDesc)}
-          style={{
-            width: '100%', padding: '0.65rem', borderRadius: 11, border: 'none',
-            background: doneToday
-              ? 'rgba(16,185,129,0.08)'
-              : `linear-gradient(135deg,${challenge.color}22,${challenge.color}10)`,
-            color: doneToday ? '#10b981' : challenge.color,
-            fontSize: '0.78rem', fontWeight: 700, cursor: doneToday ? 'default' : 'pointer',
-            transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '0.3rem', marginBottom: hasMilestone ? '0.6rem' : 0,
-            outline: doneToday ? 'none' : `1px solid ${challenge.color}35`,
-          }}
-        >
-          {doneToday ? `✓ יום ${daysCompleted} הושלם` : `📝 השלם יום ${nextDay} · +${challenge.xpPerDay} XP`}
-        </button>
-      )}
-
-      {/* Fight Club */}
-      {hasMilestone && challenge.whatsappLink && (
-        fightClubUnlocked ? (
-          <a
-            href={challenge.whatsappLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              width: '100%', padding: '0.75rem', borderRadius: 11, border: 'none',
-              background: 'linear-gradient(135deg,#25d366,#128c7e)',
-              color: '#fff', fontSize: '0.82rem', fontWeight: 800,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: '0.5rem', textDecoration: 'none', letterSpacing: '0.01em', boxSizing: 'border-box',
-              boxShadow: '0 4px 16px rgba(37,211,102,0.35)',
-              animation: 'fight-club-pulse 2.5s ease-in-out infinite',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            הצטרף לפייט קלאב 💪
-          </a>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0.85rem', borderRadius: 11, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>🔒</span>
-            <div>
-              <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.71rem', fontWeight: 700 }}>
-                פייט קלאב — יפתח ברמה {fightClubLevel}
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.15)', fontSize: '0.62rem', marginTop: '0.1rem' }}>
-                רמה נוכחית: {level} · עוד {Math.max(0, fightClubLevel - level)} רמות
-              </div>
-            </div>
-          </div>
-        )
-      )}
-    </div>
-  )
-}
-
 // ── Workout Library ────────────────────────────────────────────────
 
 const WORKOUT_EXERCISES = [
-  { id: 'pushups',  emoji: '💪', name: 'שכיבות סמיכה', desc: 'כוח פלג גוף עליון',    trackId: 'self-discipline', available: true  },
-  { id: 'pullups',  emoji: '🔝', name: 'מתח',           desc: 'גב, כתפיים וזרועות',   trackId: 'self-discipline', available: true  },
-  { id: 'dips',     emoji: '⬇️', name: 'מקבילים',       desc: 'טריצפס וחזה',           trackId: 'self-discipline', available: true  },
-  { id: 'squats',   emoji: '🦵', name: 'סקווטים',       desc: 'כוח פלג גוף תחתון',    trackId: 'self-discipline', available: true  },
-  { id: 'boxing',   emoji: '🥊', name: 'איגרוף',        desc: 'ספורט קרב',             trackId: null,             available: false },
-  { id: 'muaythai', emoji: '🥋', name: 'מואי טאי',      desc: 'אמנות לחימה תאילנדית',  trackId: null,             available: false },
+  { id: 'pushups',  emoji: '💪', name: 'שכיבות סמיכה', desc: 'כוח פלג גוף עליון',         trackId: 'self-discipline',  available: true  },
+  { id: 'pullups',  emoji: '🔝', name: 'מתח',           desc: 'גב, כתפיים וזרועות',        trackId: 'self-discipline',  available: true  },
+  { id: 'dips',     emoji: '⬇️', name: 'מקבילים',       desc: 'טריצפס וחזה',                trackId: 'self-discipline',  available: true  },
+  { id: 'squats',   emoji: '🦵', name: 'סקווטים',       desc: 'כוח פלג גוף תחתון',         trackId: 'self-discipline',  available: true  },
+  { id: 'run',      emoji: '🏃', name: 'ריצה',           desc: 'טיימר + GPS מרחק בזמן אמת', trackId: 'cardio-run',       available: true  },
+  { id: 'walk',     emoji: '🚶', name: 'הליכה',          desc: 'קצב + מרחק עם GPS',          trackId: 'cardio-walk',      available: true  },
+  { id: 'boxing',   emoji: '🥊', name: 'בוקסינג',         desc: 'AI מאמן טכניקה בזמן אמת',  trackId: 'boxing-muaythai',  available: true },
+  { id: 'muaythai', emoji: '🥋', name: 'מואי תאי',       desc: 'AI מאמן טכניקה בזמן אמת',  trackId: 'boxing-muaythai',  available: true },
 ]
 
 function WorkoutLibraryModal({ onSelect, onClose }) {
@@ -464,7 +416,7 @@ function extractVideoFrame(blobUrl) {
 
 // ── Set Summary Modal ───────────────────────────────────────────────
 
-function SetSummaryModal({ exercise, onDone, onClose }) {
+function SetSummaryModal({ exercise, onDone, onClose, onAwardXP }) {
   const [reps,         setReps]         = useState('')
   const [focus,        setFocus]        = useState('')
   const [saved,        setSaved]        = useState(false)
@@ -526,6 +478,7 @@ function SetSummaryModal({ exercise, onDone, onClose }) {
       const prev = JSON.parse(localStorage.getItem('ft_workout_log') || '[]')
       localStorage.setItem('ft_workout_log', JSON.stringify([entry, ...prev].slice(0, 300)))
     } catch {}
+    onAwardXP?.()
     setSaved(true)
     setTimeout(onDone, 900)
   }
@@ -857,7 +810,7 @@ function MantraCard({ idx, onCycle }) {
       <button
         onClick={onCycle}
         className="btn-tactile"
-        style={{ background: 'none', border: 'none', color: 'rgba(245,197,24,0.35)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem 0.5rem', minHeight: 'unset', minWidth: 'unset', letterSpacing: '0.06em', fontFamily: "'SF Mono','Fira Code',monospace" }}
+        style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.28)', borderRadius: 20, color: 'rgba(245,197,24,0.85)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.3rem 0.9rem', minHeight: 36, letterSpacing: '0.06em', fontFamily: "'SF Mono','Fira Code',monospace" }}
         aria-label="מנטרה הבאה"
       >
         ↻ הבא
@@ -866,10 +819,36 @@ function MantraCard({ idx, onCycle }) {
   )
 }
 
+const NICHE_KEYWORDS = {
+  physical: ['gym','sport','fitness','strength','health','body','muscle','workout','train','nutrition','diet','running','כושר','בריאות','כוח','ספורט','גוף','שרירים','אימון','תזונה','ריצה','משמעת','discipline','weight','lifting'],
+  tech:     ['code','coding', 'ai','software','tech','developer','program','app','automation','קוד','בינה','פיתוח','טכנולוגיה','אפליקציה','מפתח','אוטומציה','claude','gpt','machine learning'],
+  finance:  ['trading','invest','investment','money','capital','market','stock','crypto','wealth','מסחר','השקעות','הון','כסף','מניות','בורסה','פיננסי','נדלן','real estate','portfolio'],
+  business: ['business','startup','company','brand','client','sale','product','entrepreneur','freelance','עסק','יזמות','מותג','לקוח','מכירות','מוצר','פרילנס','agency','revenue'],
+}
+const NICHE_TRACKS = {
+  physical: ['self-discipline', 'business-soul'],
+  tech:     ['ai-beginners', 'ai-pioneer', 'claude-code-mastery', 'product-builder'],
+  finance:  ['capital-markets', 'business-mind', 'deal-closer'],
+  business: ['business-mind', 'deal-closer', 'product-builder', 'business-soul'],
+}
+function detectNicheRecs(visionProfile) {
+  const text = [
+    visionProfile?.three_year_vision || '',
+    visionProfile?.the_gap || '',
+    ...(visionProfile?.core_values || []),
+    ...(visionProfile?.non_negotiables || []),
+  ].join(' ').toLowerCase()
+  const scores = Object.fromEntries(Object.keys(NICHE_KEYWORDS).map(k => [k, 0]))
+  for (const [niche, kws] of Object.entries(NICHE_KEYWORDS)) {
+    for (const kw of kws) { if (text.includes(kw)) scores[niche]++ }
+  }
+  const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]
+  return NICHE_TRACKS[top] || NICHE_TRACKS.business
+}
+
 export default function Dashboard() {
-  const { user, logout, isGuest }  = useAuth()
-  const { lang, setLang, t: tAll } = useLang()
-  const { prefs }                  = useUserPrefs()
+  const { user, isGuest }  = useAuth()
+  const { lang: _lang, t: tAll } = useLang()
   const td  = tAll.dashboard
   const to  = tAll.onboarding
 
@@ -882,20 +861,19 @@ export default function Dashboard() {
   const [saving,       setSaving]       = useState(false)
   const [xpToast,      setXPToast]      = useState(null)
   const [activeTab,    setActiveTab]    = useState('home')
-  const [isDayStarted, setIsDayStarted] = useState(false)
   const [showWorkoutLib,    setShowWorkoutLib]    = useState(false)
   const [workoutSession,    setWorkoutSession]    = useState(null)
+  const [boxingSession,     setBoxingSession]     = useState(null)  // { track, goal } | null
   const [showCombatTraining,setShowCombatTraining]= useState(false)
-  const [showProModal,      setShowProModal]      = useState(false)
-  const [waitlistEmail,     setWaitlistEmail]     = useState('')
-  const [waitlistStatus,    setWaitlistStatus]    = useState('idle') // idle | loading | done | error
   const [showDetails,       setShowDetails]       = useState(false)
-  const [contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
-  const [headerScore,    setHeaderScore]    = useState(getScore)
+  const [_contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
+  const [_headerScore,    setHeaderScore]    = useState(getScore)
   const [customPath,     setCustomPath]     = useState(null)
   const [showPathBuilder,setShowPathBuilder]= useState(false)
   const [pathLoading,    setPathLoading]    = useState(true)
   const [mirrorData,     setMirrorData]     = useState(null)   // { gapDays, message }
+  const [liveCardio,    setLiveCardio]    = useState(null)    // active cardio session from localStorage
+  const [liveTick,      setLiveTick]      = useState(0)       // increments every second for mini-bar
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
@@ -908,41 +886,112 @@ export default function Dashboard() {
   const [showAntiChurn,    setShowAntiChurn]    = useState(false)
   const [completingId,     setCompletingId]     = useState(null)
   const [showPathHistory,  setShowPathHistory]  = useState(false)
+  const [todayEnergy,      setTodayEnergy]      = useState(() => getTodayEnergy())
   const [sectionsOpen,     setSectionsOpen]     = useState(() => {
-    try { return JSON.parse(localStorage.getItem('prime_sections_open')) || {} } catch { return {} }
+    try { const saved = JSON.parse(localStorage.getItem('prime_sections_open')) || {}; return { roadmap: false, tracks: false, ...saved } } catch { return { roadmap: false, tracks: false } }
   })
 
-  const reflTimers = useRef({})
+  const regenRef    = useRef(false)  // prevents concurrent silent re-generations
+  const pathCardRef = useRef(null)
 
   useEffect(() => {
     if (!user || isGuest) { setPathLoading(false); return }
-    loadCustomPath(user.uid).then(p => {
-      setCustomPath(p)
-      if (p) checkAndGenerateMirror(p).then(data => { if (data) setMirrorData(data) }).catch(() => {})
-    }).finally(() => setPathLoading(false))
+    const pathRef = doc(db, 'userPaths', user.uid)
+    const unsub = onSnapshot(pathRef, snap => {
+      const rawData     = snap.exists() ? snap.data() : null
+      const hasValidPath = !!(rawData?.path?.daily_habits?.length > 0 && rawData?.path?.roadmap?.length > 0)
+
+      // Patch stale habit titles in-memory so old Firestore docs always show user's actual labels
+      let data = rawData
+      if (hasValidPath && rawData?.vision_profile) {
+        const vp    = rawData.vision_profile
+        const nnArr = (vp.non_negotiables || []).filter(Boolean)
+        const cvArr = (vp.core_values     || []).filter(Boolean)
+        const h1 = nnArr[0] || cvArr[0]
+        const h2 = nnArr[1] || cvArr[1] || cvArr[0]
+        const cv1 = cvArr[0]
+        const habits = rawData.path.daily_habits.map((h, i) => {
+          if (i === 0 && h1)  return { ...h, title: h1 }
+          if (i === 1 && h2)  return { ...h, title: h2 }
+          if (i === 2 && cv1) return { ...h, title: `גילום ${cv1}` }
+          return h
+        })
+        data = { ...rawData, path: { ...rawData.path, daily_habits: habits } }
+      }
+
+      // Only expose a path to state when it is structurally complete
+      setCustomPath(hasValidPath ? data : null)
+      setPathLoading(false)
+
+      if (hasValidPath) {
+        regenRef.current = false
+        checkAndGenerateMirror(data).then(d => { if (d) setMirrorData(d) }).catch(() => {})
+      }
+
+      // Silent re-generation: doc has vision_profile but no valid path yet
+      if (data && !hasValidPath && data.vision_profile && !regenRef.current) {
+        regenRef.current = true
+        buildCustomPath(user.uid, data.vision_profile)
+          .catch(() => {})
+          .finally(() => { regenRef.current = false })
+      }
+    }, () => setPathLoading(false))
+    return () => unsub()
   }, [user, isGuest])
 
-  // Auto-open PathBuilder for authenticated users who have no active Prime Path yet
+  // Auto-open PathBuilder for authenticated users who have no path and no regen in progress
   useEffect(() => {
-    if (loading || pathLoading || isGuest || customPath) return
+    if (loading || pathLoading || isGuest || customPath || regenRef.current) return
     setShowPathBuilder(true)
   }, [loading, pathLoading, isGuest, customPath])
 
   useEffect(() => {
     if (isGuest) { setProfile({ name: 'Guest', xp: 0, triggers: [], challenges: {} }); setLoading(false); return }
     if (!user) return
-    loadProfile(user.uid).then(p => setProfile(p || {})).catch(() => setProfile({})).finally(() => setLoading(false))
+    const unsub = subscribeProfile(user.uid, p => {
+      setProfile(p)
+      setLoading(false)
+    })
+    return unsub
   }, [user, isGuest])
 
   useEffect(() => {
     if (!profile) return
     requestPermission()
-    const triggers = profile?.triggers || []
-    const run = () => checkNotifications(triggers, profile)
+    const triggers     = profile?.triggers || []
+    const visionProf   = customPath?.vision_profile || null
+    const uid          = user?.uid || null
+    const run = () => {
+      checkNotifications(triggers, profile)
+      checkNudges(visionProf, uid)
+    }
     run()
     const id = setInterval(run, 60_000)
     return () => clearInterval(id)
-  }, [profile])
+  }, [profile, customPath, user])
+
+  // SW message handler for nudge action-button responses
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !user?.uid) return
+    const uid = user.uid
+    const handler = e => {
+      if (e.data?.type !== 'NUDGE_RESPONSE') return
+      const { action, data } = e.data
+      const habitLabel = data?.habitLabel
+      if (!habitLabel) return
+      if (action === 'done') {
+        markNudgeDone(habitLabel)
+        saveNudgeResponse(uid, habitLabel, 'done')
+      } else if (action === 'later') {
+        snoozeNudge(habitLabel, 60 * 60 * 1000)
+        saveNudgeResponse(uid, habitLabel, 'later')
+      } else if (action === 'help') {
+        saveNudgeResponse(uid, habitLabel, 'help')
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', handler)
+    return () => navigator.serviceWorker.removeEventListener('message', handler)
+  }, [user])
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -957,10 +1006,32 @@ export default function Dashboard() {
     return () => window.removeEventListener('prime:redeemed', onRedeemed)
   }, [])
 
+  // ── Live cardio session polling (for mini-bar + document.title) ──
+  useEffect(() => {
+    const check = () => {
+      try {
+        const s = JSON.parse(localStorage.getItem('prime_cardio_live'))
+        setLiveCardio(s?.running ? s : null)
+        if (s?.running) setLiveTick(t => t + 1)
+      } catch { setLiveCardio(null) }
+    }
+    check()
+    const id = setInterval(check, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (!liveCardio) { document.title = '1% Better — PRIME'; return }
+    const elapsed = Math.round((Date.now() - liveCardio.startTimestamp) / 1000)
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
+    const s = String(elapsed % 60).padStart(2, '0')
+    const d = liveCardio.distance > 0 ? ` · ${liveCardio.distance.toFixed(2)}ק"מ` : ''
+    document.title = `🏃‍♂️ ${m}:${s}${d} — PRIME`
+  }, [liveCardio, liveTick])
+
   const streak             = profile?.streak?.count || 0
   const winnerGlow         = streak >= 7
   const isAdvancedUnlocked = streak >= 3
-  const daysToUnlock       = Math.max(0, 3 - streak)
 
   // Anti-churn: show late-evening reminder when habits incomplete
   useEffect(() => {
@@ -1013,7 +1084,7 @@ export default function Dashboard() {
     await syncLeaderboard(user.uid, profile?.name || 'Anonymous', newXP).catch(() => {})
   }
 
-  async function deductXP(amount) {
+  async function _deductXP(amount) {
     if (isGuest) return
     const newXP   = Math.max(0, (profile?.xp || 0) - amount)
     setProfile(p => ({ ...p, xp: newXP }))
@@ -1021,13 +1092,25 @@ export default function Dashboard() {
     await syncLeaderboard(user.uid, profile?.name || 'Anonymous', newXP).catch(() => {})
   }
 
+  function bumpStreak() {
+    if (isGuest || !user) return
+    const today      = todayKey()
+    const yesterday  = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+    const s          = profile?.streak || {}
+    if (s.lastDate === today) return
+    const count = (s.lastDate === yesterday || s.lastDate === twoDaysAgo) ? (s.count || 0) + 1 : 1
+    setProfile(p => ({ ...p, streak: { count, lastDate: today } }))
+    saveProfile(user.uid, { streak: { count, lastDate: today } }).catch(() => {})
+  }
+
   function updateStreak(nextCheckins, triggers) {
     if (!triggers.length || !triggers.every(tr => nextCheckins[tr.id])) return
-    const today     = todayKey()
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-    const s         = profile?.streak || {}
-    if (s.lastDate === today) return
+    const today      = todayKey()
+    const yesterday  = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
     const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+    const s          = profile?.streak || {}
+    if (s.lastDate === today) return
     const count = (s.lastDate === yesterday || s.lastDate === twoDaysAgo)
       ? (s.count || 0) + 1
       : 1
@@ -1036,24 +1119,6 @@ export default function Dashboard() {
   }
 
   // ── Habit actions ─────────────────────────────────────────────
-
-  function requestHabitComplete(trigger) {
-    setProofModal({
-      type:     'habit',
-      id:       trigger.id,
-      title:    `${trigger.cue} → ${trigger.habit}`,
-      taskDesc: trigger.habit,
-      xp:       XP_PER_TRIGGER,
-      color:    '#6366f1',
-    })
-  }
-
-  function handleHabitUncomplete(id) {
-    const next = { ...checkins, [id]: false }
-    saveCheckins(next)
-    setCheckinsS(next)
-    deductXP(XP_PER_TRIGGER)
-  }
 
   function confirmHabitComplete() {
     const id   = proofModal.id
@@ -1129,6 +1194,9 @@ export default function Dashboard() {
   // ── Challenge actions ─────────────────────────────────────────
 
   function openChallengeModal(challenge, dayNum, taskDesc) {
+    const moduleIdx  = getModuleIndex(dayNum)
+    const dayInMod   = (dayNum - 1) % 5
+    const richContent = getDayContent(challenge.id, moduleIdx, dayInMod)
     setProofModal({
       type:     'challenge',
       id:       challenge.id,
@@ -1138,11 +1206,12 @@ export default function Dashboard() {
       color:    challenge.color,
       challenge,
       dayNum,
+      richContent,
     })
   }
 
   async function confirmChallengeComplete() {
-    const { challenge, dayNum } = proofModal
+    const { challenge, dayNum: _dayNum } = proofModal
     const today          = todayKey()
     const prev           = profile?.challenges?.[challenge.id] || {}
     if (prev.lastCompletedDate === today) { setProofModal(null); return }
@@ -1152,6 +1221,7 @@ export default function Dashboard() {
     setProofModal(null)
     if (!isGuest) await saveProfile(user.uid, { challenges: challengeUpdate })
     awardXP(challenge.xpPerDay)
+    bumpStreak()
   }
 
   // ── Derived ───────────────────────────────────────────────────
@@ -1160,15 +1230,18 @@ export default function Dashboard() {
   const doneCount = triggers.filter(tr => checkins[tr.id]).length
   const allDone   = triggers.length > 0 && doneCount === triggers.length
   const xp        = profile?.xp || 0
-  const level     = getLevel(xp)
-  const levelXP   = getLevelXP(xp)
   const toNext    = getToNext(xp)
-  const isHe      = lang === 'he'
   const hour      = new Date().getHours()
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
   const TAB_H     = 64
 
   // ── Personalized context ───────────────────────────────────────
+
+  const habitStreaks = useMemo(() => {
+    const map = {}
+    for (const tr of (profile?.triggers || [])) map[tr.id] = getHabitStreak(tr.id)
+    return map
+  }, [profile?.triggers, checkins])
 
   const activeTrack = useMemo(() => {
     const ch = profile?.challenges || {}
@@ -1178,7 +1251,6 @@ export default function Dashboard() {
   }, [profile?.challenges])
 
   const activeTrackDone = activeTrack ? (profile?.challenges?.[activeTrack.id]?.daysCompleted || 0) : 0
-  const activeTrackPct  = activeTrack ? Math.round((activeTrackDone / activeTrack.days) * 100) : 0
 
   const dynamicGreeting = useMemo(() => {
     const name  = profile?.name
@@ -1196,19 +1268,15 @@ export default function Dashboard() {
     return `${greet}${n}. יום חדש, סיבוב חדש. יאללה.`
   }, [profile?.name, hour, streak, activeTrack, activeTrackDone])
 
-  const whyQuote = useMemo(() => {
-    const ch = profile?.challenges || {}
-    const yesterdayTrack = CHALLENGES.find(c => ch[c.id]?.lastCompletedDate === yesterday)
-    if (yesterdayTrack) {
-      const done = ch[yesterdayTrack.id]?.daysCompleted || 0
-      return `אתמול השלמת יום ${done} ב${yesterdayTrack.title}. היום ממשיכים מאותה נקודה.`
+  const weeklyCompletedDays = useMemo(() => {
+    const log = new Set(profile?.activityLog || [])
+    let count = 0
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+      if (log.has(d)) count++
     }
-    if (new Set(profile?.activityLog || []).has(yesterday))
-      return 'הגעת אתמול. זה כל המשחק — בוא נעשה את זה שוב.'
-    if (streak >= 3)  return `${streak} ימים של נוכחות. כל אחד הופך את הבא לקל יותר.`
-    if (streak === 1) return 'יום 1 מאחוריך. ביום 2 רוב האנשים מוותרים. לא אתה.'
-    return 'כל פעולה היום היא הצבעה עבור האדם שאתה הופך להיות. תצביע.'
-  }, [profile?.challenges, profile?.activityLog, streak, yesterday])
+    return count
+  }, [profile?.activityLog])
 
   const activitySet     = new Set(profile?.activityLog || [])
   const isFirstTimer    = activitySet.size === 0
@@ -1274,7 +1342,21 @@ export default function Dashboard() {
     return (
       <PathBuilder
         user={user}
-        onDone={record => { setCustomPath(record); setShowPathBuilder(false) }}
+        onDone={record => {
+          const nicheRecs = detectNicheRecs(record.vision_profile)
+          try {
+            localStorage.removeItem('prime_track_quiz')
+            localStorage.setItem('prime_track_quiz', JSON.stringify({ v: 1, recommendations: nicheRecs }))
+            Object.keys(localStorage)
+              .filter(k => k.startsWith('prime_benchmarks_') && !nicheRecs.some(id => k.endsWith(id)))
+              .forEach(k => localStorage.removeItem(k))
+          } catch {}
+          if (!isGuest && user) {
+            saveProfile(user.uid, { trackQuizRecs: nicheRecs, challenges: {} }).catch(() => {})
+            setProfile(p => p ? { ...p, trackQuizRecs: nicheRecs, challenges: {} } : { trackQuizRecs: nicheRecs, challenges: {} })
+          }
+          setCustomPath(record); setShowPathBuilder(false); setPathLoading(false)
+        }}
       />
     )
   }
@@ -1293,7 +1375,25 @@ export default function Dashboard() {
             <img src="/prime-logo.svg" alt="PRIME" style={{ height: 26, width: 'auto', display: 'block' }} />
             <span style={{ color: '#b8966a', fontSize: '0.47rem', fontWeight: 800, letterSpacing: '0.17em', textTransform: 'uppercase' }}>Daily Discipline System</span>
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {/* אל המסלול — always-visible header shortcut when active path exists */}
+            {!isGuest && customPath?.path?.path_name && (
+              <button
+                onClick={() => {
+                  if (activeTab !== 'home') {
+                    setActiveTab('home')
+                    setTimeout(() => pathCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+                  } else {
+                    pathCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                }}
+                className="btn-tactile"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 20, padding: '0.3rem 0.7rem', cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: '0.72rem' }}>🗺️</span>
+                <span style={{ color: '#F5C518', fontSize: '0.68rem', fontWeight: 900 }}>אל המסלול ←</span>
+              </button>
+            )}
             {(() => {
               const rank = getRank(xp)
               return (
@@ -1324,6 +1424,34 @@ export default function Dashboard() {
         {activeTab === 'home' && (
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.75rem 1.35rem 0', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
 
+            {/* ── Prime Path — FIRST element, always expanded inline, no clicks required ── */}
+            <div ref={pathCardRef} style={{ scrollMarginTop: '4rem' }} />
+            {!isGuest && (
+              pathLoading
+                ? (
+                  <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 20, padding: '1.4rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'rgba(245,197,24,0.7)', fontSize: '0.82rem', fontWeight: 700 }}>
+                      <span style={{ fontSize: '1.1rem', animation: 'spin 1.2s linear infinite', display: 'inline-block' }}>⚡</span>
+                      בונה את המסלול שלך...
+                    </div>
+                    <div style={{ height: 10, borderRadius: 6, background: 'rgba(245,197,24,0.1)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: '60%', borderRadius: 6, background: 'linear-gradient(90deg, rgba(245,197,24,0.3), rgba(245,197,24,0.6))', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+                    </div>
+                    <div style={{ height: 8, borderRadius: 6, background: 'rgba(245,197,24,0.07)', width: '75%' }} />
+                    <div style={{ height: 8, borderRadius: 6, background: 'rgba(245,197,24,0.05)', width: '50%' }} />
+                  </div>
+                )
+                : (
+                  <CustomPathCard
+                    key={customPath?.createdAt || 'no-path'}
+                    user={user}
+                    pathRecord={customPath}
+                    onPathUpdate={setCustomPath}
+                    onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
+                  />
+                )
+            )}
+
             {/* ── MIRROR ── */}
             {mirrorData && (
               <MirrorCard
@@ -1338,8 +1466,8 @@ export default function Dashboard() {
 
             <ContractLock onRedeemed={() => setContractLocked(false)} />
 
-            {/* ── Personal Goal Tracker (Advanced) ── */}
-            {isAdvancedUnlocked && profile?.goal && (
+            {/* ── Personal Goal Tracker — shown whenever goal exists, no gate ── */}
+            {profile?.goal && (
               <GoalTracker goal={profile.goal} onEdit={() => setShowGoalEdit(true)} />
             )}
 
@@ -1356,10 +1484,10 @@ export default function Dashboard() {
 
             {/* ── Missed-day warning ── */}
             {missedYesterday && primaryAction.type !== 'all-done' && (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+              <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>💪</span>
                 <div>
-                  <div style={{ color: '#f87171', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>{td.missedYday}</div>
+                  <div style={{ color: '#fbbf24', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.15rem' }}>{td.missedYday}</div>
                   <div style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.78rem', lineHeight: 1.4 }}>{td.missedYdaySub}</div>
                 </div>
               </div>
@@ -1384,7 +1512,14 @@ export default function Dashboard() {
                   <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem', fontWeight: 700 }}>
                     ⚡ {td.habitsSection}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); setShowModal(true) }}
+                      className="btn-tactile"
+                      style={{ background: 'rgba(196,121,90,0.1)', border: '1px solid rgba(196,121,90,0.28)', borderRadius: 20, color: '#d4956e', fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.65rem', cursor: 'pointer', minHeight: 'unset' }}
+                    >
+                      + הוסף
+                    </button>
                     <span style={{ color: allDone ? '#34d399' : 'rgba(241,245,249,0.35)', fontSize: '0.78rem', fontWeight: 700 }}>
                       {doneCount}/{triggers.length}
                     </span>
@@ -1396,6 +1531,12 @@ export default function Dashboard() {
                 {sectionsOpen.habits !== false && triggers.map((tr, i) => {
                   const done = !!checkins[tr.id]
                   const completing = completingId === tr.id
+                  const habitStreak = habitStreaks[tr.id] ?? 0
+                  const habitSubtitle = done
+                    ? (habitStreak >= 2 ? `${habitStreak} ימים ברצף 🔥` : 'הושלם היום ✓')
+                    : habitStreak > 0
+                      ? `${habitStreak} ימים ברצף`
+                      : tr.habit
                   return (
                     <div
                       key={tr.id}
@@ -1436,13 +1577,18 @@ export default function Dashboard() {
                         }}>
                           {tr.cue}
                         </div>
-                        <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.74rem', marginTop: '0.15rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
-                          ← {tr.habit}
+                        <div style={{ color: habitStreak > 0 ? 'rgba(251,191,36,0.65)' : 'rgba(241,245,249,0.38)', fontSize: '0.74rem', marginTop: '0.15rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', direction: 'rtl' }}>
+                          {habitSubtitle}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                         {!done
-                          ? <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>התחל ←</div>
+                          ? <button
+                              aria-label={`התחל: ${tr.cue}`}
+                              onClick={e => { e.stopPropagation(); setQuickTask(tr) }}
+                              className="btn-tactile"
+                              style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}
+                            >התחל ←</button>
                           : <span style={{ color: 'rgba(6,182,212,0.7)', fontSize: '1.05rem' }}>✅</span>
                         }
                         <button
@@ -1459,37 +1605,91 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Monthly Roadmap (collapsible) ── */}
-            <div style={{ marginBottom: 0 }}>
-              <button
-                onClick={() => toggleSection('roadmap')}
-                className="btn-tactile"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: '0.4rem 0.2rem', cursor: 'pointer', marginBottom: sectionsOpen.roadmap !== false ? '0.4rem' : 0 }}
-              >
-                <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>🗓️ מפת דרכים חודשית</span>
-                <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.roadmap !== false ? '▲' : '▼'}</span>
-              </button>
-              {sectionsOpen.roadmap !== false && <MonthlyRoadmap />}
-            </div>
+            {/* ── Active Course Card (compact — full lesson lives in Tracks tab) ── */}
+            {primaryAction.type === 'track' && (() => {
+              const col      = primaryAction.track.color
+              const trackPrg = profile?.challenges?.[primaryAction.track.id]
+              const isLocked = (trackPrg?.daysCompleted || 0) > 0
+                && trackPrg?.lastCompletedDate !== yesterday
+                && trackPrg?.lastCompletedDate !== todayKey()
+              const pct = Math.round(((primaryAction.dayNum - 1) / primaryAction.track.days) * 100)
 
-            {/* ── Training Tracks (collapsible) ── */}
-            <div style={{ marginBottom: 0 }}>
-              <button
-                onClick={() => toggleSection('tracks')}
-                className="btn-tactile"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: '0.4rem 0.2rem', cursor: 'pointer', marginBottom: sectionsOpen.tracks !== false ? '0.4rem' : 0 }}
-              >
-                <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>📚 מסלולים ואימון</span>
-                <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.tracks !== false ? '▲' : '▼'}</span>
-              </button>
-              {sectionsOpen.tracks !== false && <TrackSelector uid={user?.uid} userName={profile?.name || 'PRIME User'} visionProfile={customPath?.vision_profile || null} />}
-            </div>
+              return (
+                <div
+                  style={{ background: `linear-gradient(145deg,${col}10,${col}04)`, border: `1px solid ${col}22`, borderRadius: 18, padding: '1.1rem 1.25rem', marginBottom: '1.25rem', animation: 'slide-up 0.3s ease both' }}
+                >
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.8rem' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${col}1e`, border: `1px solid ${col}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
+                      {primaryAction.track.emoji}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: col, fontSize: '0.57rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.11em', marginBottom: '0.1rem' }}>
+                        {isLocked ? td.missedDay : td.activeTrack}
+                      </div>
+                      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>{primaryAction.track.title}</div>
+                      <div style={{ color: 'rgba(241,245,249,0.33)', fontSize: '0.68rem', marginTop: '0.08rem' }}>
+                        {isLocked ? 'ממשיכים מכאן — לחץ להמשך' : `יום ${primaryAction.dayNum} מתוך ${primaryAction.track.days}`}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      <div style={{ color: col, fontSize: '0.7rem', fontWeight: 800 }}>+{primaryAction.xp} XP</div>
+                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.6rem' }}>/ יום</div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${col}80,${col})`, width: `${pct}%`, transition: 'width 0.7s ease' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.22rem' }}>
+                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{pct}% הושלם</span>
+                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{primaryAction.dayNum - 1}/{primaryAction.track.days} ימים</span>
+                    </div>
+                  </div>
+
+                  {/* Streak pill */}
+                  {streak > 0 && !isLocked && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.16)', borderRadius: 20, padding: '0.28rem 0.8rem' }}>
+                        <span style={{ fontSize: '0.82rem' }}>🔥</span>
+                        <span style={{ color: '#fbbf24', fontSize: '0.76rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CTA → ProofModal directly (or Tracks tab when locked) */}
+                  <button
+                    className="btn-primary btn-tactile"
+                    onClick={() => isLocked
+                      ? setActiveTab('tracks')
+                      : openChallengeModal(primaryAction.track, primaryAction.dayNum, primaryAction.taskDesc)
+                    }
+                    style={{ width: '100%', padding: '0.95rem', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900 }}
+                  >
+                    {isLocked ? 'עבור למסלולים ←' : `✅ השלם יום ${primaryAction.dayNum} ←`}
+                  </button>
+                </div>
+              )
+            })()}
 
             {/* ── Habits-only primary action ── */}
             {primaryAction.type === 'habit' && (
               <div style={{ textAlign: 'center', padding: '0.75rem 0 0.5rem', animation: 'fadeIn 0.3s ease' }}>
                 <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.78rem', margin: 0 }}>סמן הרגלים כמושלמים כדי להמשיך</p>
               </div>
+            )}
+
+            {/* ── Add Habit CTA when no habits exist ── */}
+            {triggers.length === 0 && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-tactile"
+                style={{ width: '100%', padding: '0.85rem', borderRadius: 14, border: '1px dashed rgba(196,121,90,0.35)', background: 'rgba(196,121,90,0.05)', color: '#d4956e', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+              >
+                + הוסף הרגל יומי
+              </button>
             )}
 
             {/* ── All done ── */}
@@ -1525,138 +1725,63 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Active Course Card (compact — full lesson lives in Tracks tab) ── */}
-            {primaryAction.type === 'track' && (() => {
-              const col      = primaryAction.track.color
-              const trackPrg = profile?.challenges?.[primaryAction.track.id]
-              const isLocked = (trackPrg?.daysCompleted || 0) > 0
-                && trackPrg?.lastCompletedDate !== yesterday
-                && trackPrg?.lastCompletedDate !== todayKey()
-              const pct = Math.round(((primaryAction.dayNum - 1) / primaryAction.track.days) * 100)
-
-              return (
-                <div
-                  style={{ background: `linear-gradient(145deg,${col}10,${col}04)`, border: `1px solid ${col}22`, borderRadius: 18, padding: '1.1rem 1.25rem', marginBottom: '1.25rem', animation: 'slide-up 0.3s ease both' }}
-                >
-                  {/* Header row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.8rem' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${col}1e`, border: `1px solid ${col}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
-                      {primaryAction.track.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: col, fontSize: '0.57rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.11em', marginBottom: '0.1rem' }}>
-                        {isLocked ? td.missedDay : td.activeTrack}
-                      </div>
-                      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>{primaryAction.track.title}</div>
-                      <div style={{ color: 'rgba(241,245,249,0.33)', fontSize: '0.68rem', marginTop: '0.08rem' }}>
-                        {isLocked ? 'פספסת יום — המשך מהמסלולים' : `יום ${primaryAction.dayNum} מתוך ${primaryAction.track.days}`}
-                      </div>
-                    </div>
-                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                      <div style={{ color: col, fontSize: '0.7rem', fontWeight: 800 }}>+{primaryAction.xp} XP</div>
-                      <div style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.6rem' }}>/ יום</div>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div style={{ marginBottom: '0.85rem' }}>
-                    <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${col}80,${col})`, width: `${pct}%`, transition: 'width 0.7s ease' }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.22rem' }}>
-                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{pct}% הושלם</span>
-                      <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.58rem' }}>{primaryAction.dayNum - 1}/{primaryAction.track.days} ימים</span>
-                    </div>
-                  </div>
-
-                  {/* Streak pill */}
-                  {streak > 0 && !isLocked && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.16)', borderRadius: 20, padding: '0.28rem 0.8rem' }}>
-                        <span style={{ fontSize: '0.82rem' }}>🔥</span>
-                        <span style={{ color: '#fbbf24', fontSize: '0.76rem', fontWeight: 800 }}>{streak} ימים ברצף</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CTA → Tracks tab */}
-                  <button
-                    className="btn-primary btn-tactile"
-                    onClick={() => setActiveTab('tracks')}
-                    style={{ width: '100%', padding: '0.95rem', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900 }}
-                  >
-                    {isLocked ? 'עבור למסלולים ←' : `המשך יום ${primaryAction.dayNum} ←`}
-                  </button>
-                </div>
-              )
-            })()}
-
-            {/* ── Combat Training (PRO gated) ── */}
-            <div style={{ position: 'relative', marginTop: '1.25rem' }}>
-              <button
-                className="btn-tactile"
-                onClick={() => (isGuest || profile?.tier !== 'pro') ? setShowProModal(true) : setShowCombatTraining(true)}
-                style={{ width: '100%', padding: '1.05rem', borderRadius: 14, border: '1.5px solid rgba(239,68,68,0.4)', background: 'linear-gradient(135deg, rgba(239,68,68,0.14), rgba(239,68,68,0.06))', color: '#f87171', fontSize: '0.92rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 2px 16px rgba(239,68,68,0.12)', whiteSpace: 'nowrap' }}
-              >
-                <span>🥊</span> אימון לחימה ←
-              </button>
-              <div
-                style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 20, padding: '0.18rem 0.55rem', color: '#fff', fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.09em', lineHeight: 1.4, boxShadow: '0 2px 8px rgba(99,102,241,0.5)', zIndex: 2, pointerEvents: 'none' }}
-              >
-                PRO ✦
+            {/* ── Daily Energy Log ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.1rem 0' }}>
+              <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.68rem', fontWeight: 700, flexShrink: 0 }}>אנרגיה:</span>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                {ENERGY_TAGS.map(tag => {
+                  const selected = todayEnergy === tag.id
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => { logEnergy(tag.id); setTodayEnergy(tag.id) }}
+                      className="btn-tactile"
+                      style={{ padding: '0.3rem 0.65rem', borderRadius: 20, border: `1px solid ${selected ? tag.color + '55' : tag.color + '22'}`, background: selected ? `${tag.color}18` : 'transparent', color: selected ? tag.color : `${tag.color}70`, fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                    >
+                      {tag.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            {/* ── Mantra ── */}
-            <MantraCard idx={mantraIdx} onCycle={() => setMantraIdx(i => (i + 1) % MANTRAS.length)} />
+            {/* ── Training buttons ── */}
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button
+                className="btn-tactile"
+                onClick={() => setShowWorkoutLib(true)}
+                style={{ flex: 1, padding: '0.85rem 0.75rem', borderRadius: 14, border: '1px solid rgba(196,121,90,0.32)', background: 'linear-gradient(135deg,rgba(196,121,90,0.09),rgba(196,121,90,0.04))', color: '#d4956e', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+              >
+                💪 אימוני כושר ←
+              </button>
+              <button
+                className="btn-tactile"
+                onClick={() => setShowCombatTraining(true)}
+                style={{ flex: 1, padding: '0.85rem 0.75rem', borderRadius: 14, border: '1px solid rgba(239,68,68,0.32)', background: 'linear-gradient(135deg,rgba(239,68,68,0.09),rgba(239,68,68,0.04))', color: '#f87171', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+              >
+                🥊 זירת לחימה ←
+              </button>
+            </div>
 
-            {/* ── Advanced Features (Feature Gated) ── */}
-            {!isAdvancedUnlocked ? (
-              <div style={{ marginTop: '1.5rem', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18, padding: '1.25rem 1.35rem', background: 'rgba(255,255,255,0.01)' }}>
+            {/* ── Monthly Roadmap (collapsible) ── */}
+            <div style={{ marginBottom: 0 }}>
+              <button
+                onClick={() => toggleSection('roadmap')}
+                className="btn-tactile"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: '0.4rem 0.2rem', cursor: 'pointer', marginBottom: sectionsOpen.roadmap !== false ? '0.4rem' : 0 }}
+              >
+                <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>🗓️ מפת דרכים חודשית</span>
+                <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.roadmap !== false ? '▲' : '▼'}</span>
+              </button>
+              {sectionsOpen.roadmap !== false && <MonthlyRoadmap />}
+            </div>
 
-                {/* Header row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.95rem' }}>🔓</span>
-                    <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.8rem', fontWeight: 800 }}>כלים מתקדמים</span>
-                  </div>
-                  <span style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 20, padding: '0.18rem 0.65rem', color: '#a5b4fc', fontSize: '0.62rem', fontWeight: 800 }}>
-                    {daysToUnlock === 1 ? 'יום אחד לפתיחה' : `${daysToUnlock} ימים לפתיחה`}
-                  </span>
-                </div>
 
-                {/* 3-step progress */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                  {[1, 2, 3].map((d, i) => {
-                    const done = streak >= d
-                    return (
-                      <div key={d} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: d < 3 ? 1 : undefined }}>
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: done ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)', border: `1.5px solid ${done ? '#6366f1' : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: done ? '#a5b4fc' : 'rgba(241,245,249,0.18)', fontWeight: 900, flexShrink: 0, transition: 'all 0.4s ease' }}>
-                          {done ? '✓' : d}
-                        </div>
-                        {d < 3 && <div style={{ flex: 1, height: 2, borderRadius: 99, background: done ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.07)', transition: 'background 0.4s ease' }} />}
-                      </div>
-                    )
-                  })}
-                </div>
+            {/* ── Weekly Spark ── */}
+            <WeeklySpark completedDays={weeklyCompletedDays} />
 
-                {/* What unlocks */}
-                <p style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.72rem', lineHeight: 1.6, margin: '0 0 0.8rem' }}>
-                  {daysToUnlock === 0 ? 'בוא מחר ותפתח כלים מתקדמים!' : `עוד ${daysToUnlock === 1 ? 'יום אחד' : `${daysToUnlock} ימים`} ברצף כדי לפתוח:`}
-                </p>
-                {[
-                  { icon: '🤖', label: 'מסלול AI אישי — תוכנית מותאמת לך' },
-                  { icon: '👥', label: 'צוות ולוח שיאים' },
-                  { icon: '🎯', label: 'מטרה אישית עם מעקב' },
-                  { icon: '📊', label: 'ניתוח ביצועים מתקדם' },
-                ].map(item => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.4rem', opacity: 0.4 }}>
-                    <span style={{ fontSize: '0.82rem', flexShrink: 0 }}>{item.icon}</span>
-                    <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.74rem' }}>{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
+            {/* ── Advanced Features (unlocked after 3-day streak) ── */}
+            {isAdvancedUnlocked && (
               <>
                 {/* Unlock celebration banner */}
                 {showUnlockBanner && (
@@ -1677,25 +1802,25 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Toggle button */}
                 <button
                   onClick={() => setShowDetails(v => !v)}
                   className="btn-tactile"
                   style={{ width: '100%', marginTop: '1.5rem', marginBottom: showDetails ? '1rem' : 0, padding: '0.65rem', background: 'none', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, color: 'rgba(165,180,252,0.4)', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
                 >
-                  {showDetails ? '▲ סגור' : '▼ כלים מתקדמים · AI · צוות'}
+                  {showDetails ? '▲ סגור' : '▼ כלים מתקדמים · AI · אימון'}
                 </button>
 
                 {showDetails && (
                   <div style={{ animation: 'fadeIn 0.22s ease' }}>
                     <DailyBrief />
-                    {!pathLoading && !isGuest && (
-                      <CustomPathCard
-                        user={user}
-                        pathRecord={customPath}
-                        onPathUpdate={setCustomPath}
-                        onRebuild={() => { setCustomPath(null); setShowPathBuilder(true) }}
-                      />
+                    {!isGuest && customPath && (
+                      <button
+                        onClick={() => { setCustomPath(null); setShowPathBuilder(true) }}
+                        className="btn-tactile"
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.65rem 1rem', borderRadius: 12, border: '1px dashed rgba(245,197,24,0.25)', background: 'rgba(245,197,24,0.04)', color: 'rgba(245,197,24,0.55)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                      >
+                        ♻️ בנה מסלול מחדש
+                      </button>
                     )}
                     {!profile?.goal && !isGuest && (
                       <button
@@ -1707,7 +1832,7 @@ export default function Dashboard() {
                       </button>
                     )}
                     <DisciplineGoalCard />
-                    <div style={{ marginBottom: '1.1rem' }}>
+                    <div style={{ marginBottom: '1.1rem', marginTop: '0.75rem' }}>
                       <h2 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.4, letterSpacing: '-0.01em', margin: 0, ...(winnerGlow ? { textShadow: '0 0 32px rgba(251,191,36,0.25)' } : {}) }}>
                         {dynamicGreeting}
                       </h2>
@@ -1720,6 +1845,9 @@ export default function Dashboard() {
               </>
             )}
 
+            {/* ── Mantra ── */}
+            <MantraCard idx={mantraIdx} onCycle={() => setMantraIdx(i => (i + 1) % MANTRAS.length)} />
+
             <div style={{ height: TAB_H + 16 }} />
           </div>
         )}
@@ -1728,14 +1856,14 @@ export default function Dashboard() {
         {activeTab === 'tracks' && (
           <TracksPage
             profile={profile}
-            onAwardXP={(amount, guestMode) => { if (!guestMode) awardXP(amount); else setXPToast('signin') }}
+            onAwardXP={(amount, guestMode) => { if (!guestMode) { awardXP(amount); bumpStreak() } else setXPToast('signin') }}
             onSaveProfile={update => setProfile(p => ({ ...p, ...update }))}
           />
         )}
 
         {/* ── STATS TAB ── */}
         {activeTab === 'stats' && (
-          <AnalyticsTab profile={profile} currentUid={user?.uid} />
+          <AnalyticsTab profile={profile} currentUid={user?.uid} activePathName={customPath?.path_name || null} customPath={customPath} />
         )}
 
         {/* ── ARENA TAB ── */}
@@ -1751,7 +1879,20 @@ export default function Dashboard() {
         {activeTab === 'settings' && (
           <div style={{ paddingBottom: TAB_H + 16 }}>
             <Settings
-              onRebuildPath={() => { setCustomPath(null); setShowPathBuilder(true); setActiveTab('home') }}
+              activePathName={customPath?.path_name || null}
+              onRebuildPath={() => {
+                try {
+                  localStorage.removeItem('prime_track_quiz')
+                  Object.keys(localStorage)
+                    .filter(k => k.startsWith('lessonCache_') || k.startsWith('prime_lesson_') || k.startsWith('prime_benchmarks_'))
+                    .forEach(k => localStorage.removeItem(k))
+                } catch {}
+                if (!isGuest && user) {
+                  saveProfile(user.uid, { challenges: {}, trackQuizRecs: [] }).catch(() => {})
+                  setProfile(p => p ? { ...p, challenges: {}, trackQuizRecs: [] } : p)
+                }
+                setCustomPath(null); setShowPathBuilder(true); setActiveTab('home')
+              }}
             />
             {!isGuest && (
               <div style={{ padding: '0 1.25rem 1.25rem' }}>
@@ -1783,22 +1924,84 @@ export default function Dashboard() {
       {showCombatTraining && (
         <TrainingMode
           onClose={() => setShowCombatTraining(false)}
-          onAwardXP={amount => { setShowCombatTraining(false); awardXP(amount) }}
+          onAwardXP={amount => { setShowCombatTraining(false); awardXP(amount); bumpStreak() }}
         />
       )}
       {showWorkoutLib && (
         <WorkoutLibraryModal
-          onSelect={ex => { setShowWorkoutLib(false); setWorkoutSession(ex) }}
+          onSelect={ex => {
+            setShowWorkoutLib(false)
+            const trackDef = ex.trackId ? TRACK_MAP[ex.trackId] : null
+            if (trackDef && (trackDef.useCamera || trackDef.category === 'cardio')) {
+              setBoxingSession({ track: trackDef, goal: trackDef.startGoal })
+            } else {
+              setWorkoutSession(ex)
+            }
+          }}
           onClose={() => setShowWorkoutLib(false)}
         />
       )}
       {workoutSession && (
         <SetSummaryModal
           exercise={workoutSession}
+          onAwardXP={() => { awardXP(20); bumpStreak() }}
           onDone={() => setWorkoutSession(null)}
           onClose={() => setWorkoutSession(null)}
         />
       )}
+      {boxingSession && (
+        <ActiveWorkout
+          track={boxingSession.track}
+          goal={boxingSession.goal}
+          uid={user?.uid}
+          userName={profile?.name || 'PRIME User'}
+          visionProfile={customPath?.vision_profile || null}
+          onComplete={({ amount = 0 } = {}) => {
+              const track = boxingSession?.track
+              setBoxingSession(null)
+              if (!track || !amount) return
+              let xp
+              if (track.category === 'cardio') {
+                xp = Math.max(10, Math.round(amount * 4))         // minutes × 4
+              } else if (track.poseType === 'boxing') {
+                xp = Math.max(10, Math.round(amount * 0.5))       // punches × 0.5
+              } else {
+                xp = Math.max(10, Math.round(amount * 2))         // reps × 2
+              }
+              awardXP(xp)
+              bumpStreak()
+            }}
+          onClose={() => setBoxingSession(null)}
+        />
+      )}
+      {/* ── Live Cardio Mini-bar — shows when workout active but overlay closed ── */}
+      {liveCardio && !boxingSession && (() => {
+        const elapsed = Math.round((Date.now() - liveCardio.startTimestamp) / 1000)
+        const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
+        const s = String(elapsed % 60).padStart(2, '0')
+        const track = TRACK_MAP[liveCardio.trackId]
+        return (
+          <div
+            onClick={() => { if (track) setBoxingSession({ track, goal: liveCardio.goal }) }}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9000,
+              background: 'rgba(10,12,26,0.92)', backdropFilter: 'blur(14px)',
+              borderBottom: '1px solid rgba(245,197,24,0.25)',
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              padding: '0.55rem 1.1rem', cursor: 'pointer',
+              animation: 'fadeIn 0.3s ease',
+            }}
+          >
+            <span style={{ fontSize: '1.1rem', animation: 'cam-pulse 1.5s ease infinite' }}>🏃‍♂️</span>
+            <span style={{ color: '#F5C518', fontWeight: 900, fontSize: '1rem', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>{m}:{s}</span>
+            {liveCardio.distance > 0 && (
+              <span style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.78rem', fontWeight: 700 }}>{liveCardio.distance.toFixed(2)} ק"מ</span>
+            )}
+            <span style={{ flex: 1, color: 'rgba(241,245,249,0.35)', fontSize: '0.72rem' }}>{liveCardio.trackName || 'ריצה פעילה'}</span>
+            <span style={{ color: 'rgba(196,121,90,0.8)', fontSize: '0.7rem', fontWeight: 700 }}>הרחב ←</span>
+          </div>
+        )
+      })()}
       {showModal && <AddTriggerModal onSave={handleAddTrigger} onClose={() => setShowModal(false)} td={td} to={to} />}
       {showGoalEdit && (
         <GoalEditModal
@@ -1822,6 +2025,7 @@ export default function Dashboard() {
           prompt={proofModal.taskDesc}
           xpAmount={proofModal.xp}
           accentColor={proofModal.color}
+          richContent={proofModal.richContent}
           onConfirm={proofModal.type === 'habit' ? confirmHabitComplete : confirmChallengeComplete}
           onClose={() => setProofModal(null)}
         />
@@ -1923,14 +2127,6 @@ export default function Dashboard() {
               <div style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.88rem', lineHeight: 1.55 }}>{quickTask.habit}</div>
             </div>
 
-            {/* Why */}
-            <div style={{ background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.1)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
-              <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ למה זה עובד</div>
-              <p style={{ color: 'rgba(241,245,249,0.48)', fontSize: '0.78rem', lineHeight: 1.6, margin: 0 }}>
-                {LESSON_WHY[triggers.indexOf(quickTask) % LESSON_WHY.length]}
-              </p>
-            </div>
-
             {/* CTA */}
             {checkins[quickTask.id] ? (
               <div style={{ width: '100%', padding: '1rem', borderRadius: 14, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', textAlign: 'center', color: '#34d399', fontSize: '0.97rem', fontWeight: 800 }}>
@@ -1944,97 +2140,6 @@ export default function Dashboard() {
               >
                 ✅ ביצעתי · +{XP_PER_TRIGGER} XP
               </button>
-            )}
-          </div>
-        </div>
-      )}
-      {/* ── Pro Coming Soon Modal ── */}
-      {showProModal && (
-        <div
-          onClick={() => { setShowProModal(false); setWaitlistEmail(''); setWaitlistStatus('idle') }}
-          style={{ position: 'fixed', inset: 0, zIndex: 6100, background: 'rgba(5,5,12,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 480, background: '#161626', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(99,102,241,0.45)', padding: '1.6rem 1.5rem 2.6rem', animation: 'slide-up 0.25s ease both' }}
-          >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.4rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 20, padding: '0.2rem 0.65rem', color: '#fff', fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.1em' }}>PRO ✦</span>
-                <span style={{ color: '#a5b4fc', fontWeight: 900, fontSize: '1rem' }}>בקרוב</span>
-              </div>
-              <button
-                onClick={() => { setShowProModal(false); setWaitlistEmail(''); setWaitlistStatus('idle') }}
-                className="btn-tactile"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.5)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}
-              >✕</button>
-            </div>
-
-            {/* Tagline */}
-            <p style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.82rem', lineHeight: 1.65, marginBottom: '1.4rem' }}>
-              אנחנו בונים רמה חדשה לחלוטין של אימון. מצב Pro יכלול:
-            </p>
-
-            {/* Feature list */}
-            {[
-              { icon: '🤖', title: 'סימולציית יריב',      desc: 'AI שמדמה יריב אמיתי — זרוק ג׳אב, החלק, תגובה, קאונטר' },
-              { icon: '📊', title: 'דו"ח חולשות',         desc: 'ניתוח AI של הביצועים שלך אחרי כל אימון' },
-              { icon: '📷', title: 'ניתוח תנועה בזמן אמת', desc: 'המצלמה מזהה האם ביצעת את הפעולה הנכונה' },
-            ].map(f => (
-              <div key={f.title} style={{ display: 'flex', gap: '0.85rem', marginBottom: '1rem', padding: '0.85rem 1rem', borderRadius: 14, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.14)' }}>
-                <span style={{ fontSize: '1.4rem', flexShrink: 0, marginTop: '0.05rem' }}>{f.icon}</span>
-                <div>
-                  <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.2rem' }}>{f.title}</div>
-                  <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.74rem', lineHeight: 1.5 }}>{f.desc}</div>
-                </div>
-              </div>
-            ))}
-
-            {/* Waitlist form */}
-            {waitlistStatus === 'done' ? (
-              <div style={{ marginTop: '0.5rem', padding: '1rem', borderRadius: 14, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: '0.3rem' }}>✅</div>
-                <div style={{ color: '#34d399', fontSize: '0.82rem', fontWeight: 700 }}>נרשמת לרשימת המתנה!</div>
-                <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem', marginTop: '0.25rem' }}>נעדכן אותך כשPro יעלה לאוויר</div>
-              </div>
-            ) : (
-              <div style={{ marginTop: '0.5rem' }}>
-                <div style={{ color: 'rgba(165,180,252,0.65)', fontSize: '0.77rem', fontWeight: 600, marginBottom: '0.6rem', textAlign: 'center' }}>
-                  השאר אימייל — נעדכן אותך ראשון כשPro יוצא
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={waitlistEmail}
-                    onChange={e => { setWaitlistEmail(e.target.value); setWaitlistStatus('idle') }}
-                    style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, color: '#f1f5f9', fontSize: '0.82rem', padding: '0.65rem 0.9rem', outline: 'none', direction: 'ltr' }}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!user?.uid || !waitlistEmail.trim()) return
-                      setWaitlistStatus('loading')
-                      try {
-                        await joinWaitlist(user.uid, waitlistEmail.trim())
-                        setWaitlistStatus('done')
-                      } catch {
-                        setWaitlistStatus('error')
-                      }
-                    }}
-                    disabled={waitlistStatus === 'loading' || !waitlistEmail.trim()}
-                    className="btn-tactile"
-                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 800, padding: '0 1.1rem', minHeight: 44, opacity: (!waitlistEmail.trim() || waitlistStatus === 'loading') ? 0.5 : 1 }}
-                  >
-                    {waitlistStatus === 'loading' ? '...' : 'הצטרף'}
-                  </button>
-                </div>
-                {waitlistStatus === 'error' && (
-                  <div style={{ color: '#f87171', fontSize: '0.73rem', marginTop: '0.4rem', textAlign: 'center' }}>
-                    משהו השתבש — בדוק את האימייל ונסה שוב
-                  </div>
-                )}
-              </div>
             )}
           </div>
         </div>

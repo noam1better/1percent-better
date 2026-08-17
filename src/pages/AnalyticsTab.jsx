@@ -5,7 +5,7 @@ import { getDailyNudgeMessage } from '../services/notificationService'
 const WHATSAPP_LINK = 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4'
 const APP_URL       = 'https://1percent-better-app.web.app'
 
-function Toast({ icon, msg, onDone }) {
+function Toast({ icon, msg, onDone: _onDone }) {
   return (
     <div
       style={{
@@ -167,7 +167,7 @@ function generateInsight(activitySet, streak, totalXP, challengeCount) {
   return { icon: '💡', text: 'עקביות עולה על עצימות. אפילו הרגל אחד שהושלם ביום מצטבר ל-365× יתרון לאורך שנה.' }
 }
 
-export default function AnalyticsTab({ profile, currentUid }) {
+export default function AnalyticsTab({ profile, currentUid: _currentUid, activePathName, customPath: _customPath }) {
   const [showCeremony, setShowCeremony] = useState(false)
   const [toast, setToast]               = useState(null)
   const hasSigned = !!localStorage.getItem('ft_fight_club_signed')
@@ -221,9 +221,32 @@ export default function AnalyticsTab({ profile, currentUid }) {
   const streak         = profile?.streak?.count || 0
   const level          = Math.floor(xp / 100) + 1
   const challenges     = profile?.challenges || {}
-  const challengesDone = Object.values(challenges).filter(c => (c.daysCompleted || 0) >= 30).length
+  const _challengesDone = Object.values(challenges).filter(c => (c.daysCompleted || 0) >= 30).length
   const challengeActive = Object.values(challenges).filter(c => (c.daysCompleted || 0) > 0).length
   const totalLessons   = Object.values(challenges).reduce((s, c) => s + (c.daysCompleted || 0), 0)
+
+  // Only show tracks relevant to user's current niche (quiz recs or most active track)
+  const quizRecs = useMemo(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('prime_track_quiz'))
+      return Array.isArray(stored?.recommendations) ? stored.recommendations : []
+    } catch { return [] }
+  }, [])
+  const relevantTrackIds = useMemo(() => {
+    const recs = profile?.trackQuizRecs || quizRecs
+    if (recs.length > 0) return new Set(recs)
+    // fallback: most recently active track by lastCompletedDate
+    const top = CHALLENGES
+      .filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0)
+      .sort((a, b) => {
+        const da = challenges[a.id]?.lastCompletedDate || ''
+        const db = challenges[b.id]?.lastCompletedDate || ''
+        return db.localeCompare(da)
+      })
+      .slice(0, 1)
+      .map(ch => ch.id)
+    return new Set(top)
+  }, [profile?.trackQuizRecs, quizRecs, challenges])
 
   // Longest streak from log
   const insight      = useMemo(() => generateInsight(activitySet, streak, xp, challengeActive), [activitySet, streak, xp, challengeActive])
@@ -234,12 +257,12 @@ export default function AnalyticsTab({ profile, currentUid }) {
   const clubProgress = Math.min(100, Math.round((xp / FIGHT_CLUB_XP) * 100))
 
   // 14-day bar data
-  const maxActive = 1
+  const _maxActive = 1
   const barData = days14.map(d => {
     const key    = dateKey(d)
     const active = activitySet.has(key)
     const isToday = key === dateKey(new Date())
-    const label  = d.getDate() === 1 ? MONTH_SHORT[d.getMonth()] : (d.getDay() === 0 ? DAY_LABELS[0] : '')
+    const _label  = d.getDate() === 1 ? MONTH_SHORT[d.getMonth()] : (d.getDay() === 0 ? DAY_LABELS[0] : '')
     const dayLbl = DAY_SHORT[d.getDay()]
     return { key, active, isToday, dayLbl, date: d }
   })
@@ -335,7 +358,7 @@ export default function AnalyticsTab({ profile, currentUid }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem' }}>
               <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.63rem' }}>{xp} XP</span>
-              <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.63rem' }}>{FIGHT_CLUB_XP} XP needed</span>
+              <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.63rem' }}>נדרש {FIGHT_CLUB_XP} XP</span>
             </div>
           </div>
         )}
@@ -424,7 +447,8 @@ export default function AnalyticsTab({ profile, currentUid }) {
       {/* ── Future Trajectory ── */}
       {xp > 0 && (() => {
         const activeChallenge = CHALLENGES
-          .filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0 && (challenges[ch.id]?.daysCompleted || 0) < ch.days)[0]
+          .filter(ch => relevantTrackIds.has(ch.id) && (challenges[ch.id]?.daysCompleted || 0) > 0 && (challenges[ch.id]?.daysCompleted || 0) < ch.days)[0]
+          || CHALLENGES.filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0 && (challenges[ch.id]?.daysCompleted || 0) < ch.days)[0]
         const dailyXP  = activeChallenge?.xpPerDay || 50
         const proj = [
           { days: 30, label: '30 יום',  xp: xp + dailyXP * 30 },
@@ -475,22 +499,25 @@ export default function AnalyticsTab({ profile, currentUid }) {
         )
       })()}
 
-      {/* ── Tracks progress breakdown ── */}
-      {challengeActive > 0 && (
+      {/* ── Tracks progress breakdown — always shows niche tracks ── */}
+      {relevantTrackIds.size > 0 && (
         <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '1rem 1.1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.85rem' }}>
-            <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>התקדמות במסלולים</span>
-            <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.68rem' }}>{challengesDone} הושלמו</span>
+            <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>מסלול פעיל</span>
+            {activePathName && <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePathName}</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {CHALLENGES.filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0).map(ch => {
+            {CHALLENGES.filter(ch => relevantTrackIds.has(ch.id)).map(ch => {
               const done = challenges[ch.id]?.daysCompleted || 0
               const pct  = Math.round((done / ch.days) * 100)
+              const isActive = done > 0 && done < ch.days
               return (
                 <div key={ch.id}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                     <span style={{ color: 'rgba(241,245,249,0.55)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <span>{ch.emoji}</span>{ch.title}
+                      {isActive && <span style={{ background: `${ch.color}18`, border: `1px solid ${ch.color}30`, borderRadius: 20, padding: '0.05rem 0.4rem', color: ch.color, fontSize: '0.55rem', fontWeight: 800 }}>פעיל</span>}
+                      {done === 0 && <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>טרם התחיל</span>}
                     </span>
                     <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{done}/{ch.days}d · {pct}%</span>
                   </div>

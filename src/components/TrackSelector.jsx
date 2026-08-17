@@ -97,7 +97,7 @@ export default function TrackSelector({ uid, userName, visionProfile }) {
     setWorkout({ track, goal })
   }
 
-  function handleWorkoutComplete({ amount, unit, distance }) {
+  function handleWorkoutComplete({ amount, unit: _unit, distance }) {
     const track     = TRACK_MAP[state.activeTrackId]
     const ts        = state.tracks[state.activeTrackId] || { goalAmount: track.startGoal, history: [] }
     const today     = TODAY()

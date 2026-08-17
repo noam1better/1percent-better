@@ -50,11 +50,15 @@ const VISION_QUESTIONS = [
 
 const TOTAL_STEPS = VISION_QUESTIONS.length  // 4
 
-const BUILDING_STEPS = [
-  'מנתח את החזון שלך...',
-  'ממפה את הפער ובונה גשר...',
-  'יוצר מפת דרכים ל-30 יום...',
-  'מוסיף מגע אישי אחרון...',
+const VALUE_CHIPS = ['גדילה', 'משמעת', 'יצירה', 'חופש', 'חיבור', 'בריאות', 'יושרה', 'מצוינות', 'העזה', 'מיקוד']
+const HABIT_CHIPS = ['ספורט יומי', 'שינה 7+ שעות', 'ללא סושיאל בבוקר', 'מדיטציה', 'קריאה יומית', '2L מים', 'ללא מסך לפני שינה', 'תכנון ערב']
+
+const DEFAULT_BUILDING_STEPS = [
+  '🔍 קורא את הפרופיל שלך...',
+  '⛰️ ממפה את הפער...',
+  '🔒 קושר את ה-Non-Negotiables ל-30 יום...',
+  '💎 מגלם את ערכי הליבה בכל משימה...',
+  '🎯 מכייל את המסלול הסופי בשבילך...',
 ]
 
 // ── Chat bubbles ──────────────────────────────────────────────────────
@@ -105,8 +109,26 @@ function VisionLabelChip({ q, stepNum }) {
 
 function PathPreview({ pathRecord, onConfirm }) {
   const { path } = pathRecord
+  const vp       = pathRecord.vision_profile || {}
+  const vision   = (vp.three_year_vision || '').trim()
+  const gap      = (vp.the_gap || '').trim()
+
   return (
     <div style={{ animation: 'slide-up 0.35s ease both' }}>
+
+      {/* ── Built-for-you banner ── */}
+      {(vision || gap) && (
+        <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 14, padding: '0.75rem 1rem', marginBottom: '0.85rem' }}>
+          <div style={{ color: 'rgba(16,185,129,0.7)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.35rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>🎯 נבנה בשבילך — ורק בשבילך</div>
+          {vision && <div style={{ color: 'rgba(241,245,249,0.7)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: gap ? '0.25rem' : 0 }}>
+            <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem' }}>חזון: </span>{vision.slice(0, 80)}{vision.length > 80 ? '...' : ''}
+          </div>}
+          {gap && <div style={{ color: 'rgba(241,245,249,0.7)', fontSize: '0.78rem', lineHeight: 1.5 }}>
+            <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.65rem' }}>הפער: </span>{gap.slice(0, 80)}{gap.length > 80 ? '...' : ''}
+          </div>}
+        </div>
+      )}
+
       <div style={{ background: 'linear-gradient(145deg,rgba(245,197,24,0.12),rgba(245,197,24,0.04))', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 20, padding: '1.25rem', marginBottom: '1rem' }}>
         <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.4rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ המסלול האישי שלך</div>
         <div style={{ color: '#F5C518', fontSize: '1.35rem', fontWeight: 900, lineHeight: 1.25, marginBottom: '0.4rem' }}>{path.path_name}</div>
@@ -151,7 +173,7 @@ function PathPreview({ pathRecord, onConfirm }) {
         className="btn-primary btn-tactile"
         style={{ width: '100%', padding: '1.3rem', borderRadius: 18, fontSize: '1rem', fontWeight: 900 }}
       >
-        מתחיל את המסלול שלי ←
+        🔥 יאללה, מתחיל!
       </button>
     </div>
   )
@@ -230,7 +252,7 @@ const ERROR_MESSAGES = {
 
 export default function PathBuilder({ user, onDone }) {
   const [chatItems,      setChatItems]      = useState([
-    { type: 'agent', text: 'ברוך הבא למסלול הפריים.\n\nאני אשאל אותך 4 שאלות — ואבנה עבורך מסלול אישי ל-30 יום שמחבר בין מי שאתה עכשיו לבין מי שאתה רוצה להיות.\n\nתהיה כן. ככל שתהיה כן, כך המסלול יהיה מדויק יותר.' },
+    { type: 'agent', text: 'יאללה, בואנה נבנה משהו אמיתי 🚀\n\n4 שאלות מהירות ו-AI בונה לך תוכנית אישית ל-30 יום.\nאין נכון או לא נכון — רק תהיה כנה עם עצמך.' },
     { type: 'vision_q', qIdx: 0 },
   ])
   const [visionQ,        setVisionQ]        = useState(0)
@@ -239,6 +261,7 @@ export default function PathBuilder({ user, onDone }) {
   const [multiValues,    setMultiValues]    = useState(['', '', ''])
   const [phase,          setPhase]          = useState('vision')
   const [buildStep,      setBuildStep]      = useState(0)
+  const [buildSteps,     setBuildSteps]     = useState(DEFAULT_BUILDING_STEPS)
   const [apiStatus,      setApiStatus]      = useState(null)
   const [error,          setError]          = useState(null)
   const [pathRecord,     setPathRecord]     = useState(null)
@@ -263,14 +286,30 @@ export default function PathBuilder({ user, onDone }) {
   }, [user?.uid])
 
   async function runBuild(visionProfile) {
+    const visionSlice = (visionProfile.three_year_vision || 'החזון שלך').slice(0, 32)
+    const gapSlice    = (visionProfile.the_gap           || 'הפער שלך' ).slice(0, 32)
+    const nnArr       = Array.isArray(visionProfile.non_negotiables) ? visionProfile.non_negotiables.filter(Boolean) : []
+    const cvArr       = Array.isArray(visionProfile.core_values)     ? visionProfile.core_values.filter(Boolean)     : []
+    const nn1         = nnArr[0] ? `"${nnArr[0].slice(0, 25)}"` : 'Non-Negotiable'
+    const nn2         = nnArr[1] ? ` + "${nnArr[1].slice(0, 20)}"` : ''
+    const cv1         = cvArr[0] ? `"${cvArr[0]}"` : 'ערך הליבה'
+    const cv2         = cvArr[1] ? ` + "${cvArr[1]}"` : ''
+    const dynamicSteps = [
+      `🔍 קורא: "${visionSlice}${visionSlice.length >= 32 ? '...' : ''}"`,
+      `⛰️ ממפה את הפער: "${gapSlice}${gapSlice.length >= 32 ? '...' : ''}"`,
+      `🔒 קושר ${nn1}${nn2} ל-30 ימים...`,
+      `💎 מגלם ${cv1}${cv2} בכל משימה...`,
+      `🎯 מכייל את המסלול הסופי בדיוק בשבילך...`,
+    ]
+    setBuildSteps(dynamicSteps)
     setPhase('building')
     setError(null)
     setApiStatus(null)
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       setBuildStep(i)
-      await new Promise(r => setTimeout(r, 900))
+      await new Promise(r => setTimeout(r, 750))
     }
-    setBuildStep(3)
+    setBuildStep(4)
     try {
       const record = await buildCustomPath(user.uid, visionProfile, status => setApiStatus(status))
       setPathRecord(record)
@@ -330,6 +369,12 @@ export default function PathBuilder({ user, onDone }) {
   const canSubmitTextarea = textInput.trim().length >= (activeQ?.minChars || 1)
   const canSubmitMulti    = multiValues.filter(v => v.trim()).length >= (activeQ?.minFilled || 1)
 
+  function handleChipSelect(chipText) {
+    const next     = [...multiValues]
+    const emptyIdx = next.findIndex((v, i) => i < (activeQ?.count || 3) && !v.trim())
+    if (emptyIdx !== -1) { next[emptyIdx] = chipText; setMultiValues(next) }
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,10,0.98)', display: 'flex', flexDirection: 'column', zIndex: 5000 }}>
 
@@ -375,9 +420,9 @@ export default function PathBuilder({ user, onDone }) {
         {/* ── Building / Error ── */}
         {(phase === 'building' || phase === 'error') && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {BUILDING_STEPS.slice(0, buildStep + 1).map((step, i) => {
+            {buildSteps.slice(0, buildStep + 1).map((step, i) => {
               const isCurrent = i === buildStep && phase === 'building'
-              const isDone    = i < buildStep || phase === 'error'
+              const _isDone   = i < buildStep || phase === 'error'
               return (
                 <div key={i} style={{ animation: 'fadeIn 0.3s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -390,7 +435,7 @@ export default function PathBuilder({ user, onDone }) {
                     )}
                     <span style={{ color: isCurrent ? '#f1f5f9' : 'rgba(241,245,249,0.35)', fontSize: '0.85rem', fontWeight: isCurrent ? 700 : 400 }}>{step}</span>
                   </div>
-                  {isCurrent && i === 3 && apiStatus && (
+                  {isCurrent && i === buildSteps.length - 1 && apiStatus && (
                     <div style={{ marginTop: '0.35rem', marginRight: '1.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.68rem', fontFamily: "'SF Mono','Fira Code',monospace", fontWeight: 600 }}>
                         {apiStatus === 'ai'     ? '→ שולח ל-Gemini AI...' : ''}
@@ -480,6 +525,21 @@ export default function PathBuilder({ user, onDone }) {
       {/* ── Bottom input: multi-input (Q3 values, Q4 habits) ── */}
       {phase === 'vision' && (activeQ?.inputType === 'values' || activeQ?.inputType === 'habits') && (
         <div style={{ padding: '0.85rem 1.25rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(5,5,10,0.95)' }}>
+          {/* Quick-select chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.65rem' }}>
+            {(activeQ.inputType === 'values' ? VALUE_CHIPS : HABIT_CHIPS).map(chip => {
+              const used = multiValues.slice(0, activeQ.count).map(v => v.trim()).includes(chip)
+              return (
+                <button
+                  key={chip}
+                  onClick={() => !used && handleChipSelect(chip)}
+                  style={{ padding: '0.35rem 0.7rem', borderRadius: 99, border: `1px solid ${used ? 'rgba(245,197,24,0.4)' : 'rgba(255,255,255,0.12)'}`, background: used ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.04)', color: used ? '#F5C518' : 'rgba(241,245,249,0.55)', fontSize: '0.75rem', fontWeight: used ? 700 : 500, cursor: used ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                >
+                  {used ? `✓ ${chip}` : chip}
+                </button>
+              )
+            })}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.5rem' }}>
             {Array.from({ length: activeQ.count }, (_, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -515,7 +575,7 @@ export default function PathBuilder({ user, onDone }) {
             className="btn-primary btn-tactile"
             style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.9rem', fontWeight: 800, opacity: canSubmitMulti ? 1 : 0.4 }}
           >
-            {visionQ === VISION_QUESTIONS.length - 1 ? 'בנה את המסלול שלי ←' : 'המשך ←'}
+            {visionQ === VISION_QUESTIONS.length - 1 ? '🚀 בנה את המסלול שלי!' : 'המשך ←'}
           </button>
         </div>
       )}

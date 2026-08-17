@@ -9,32 +9,28 @@ const MIN_GAP     = 2   // days missed before mirror fires
 
 // ── Fallback (no API key or Gemini failure) ───────────────────────────
 function buildFallbackMessage(gapDays, motivation) {
-  const why      = motivation?.deep_why           ? `"${motivation.deep_why}"`        : null
-  const identity = motivation?.identity_statement ? motivation.identity_statement      : null
-
-  let msg = `עברו ${gapDays} ימים מאז שהתקדמת.`
-  if (why)      msg += ` אמרת: ${why}.`
-  if (identity) msg += ` האם אתה עדיין ${identity}?`
-  else          msg += ' האם אתה עדיין מחויב?'
-
-  return msg
+  const identity = motivation?.identity_statement || null
+  if (identity) {
+    return `הפסקה קטנה, לא סוף הדרך. עברו ${gapDays} ימים — ואתה עדיין ${identity}. עכשיו זה הרגע לחזור לעצמך.`
+  }
+  return `הפסקה קטנה, לא סוף הדרך. ${gapDays} ימים חלפו — עכשיו זה הרגע לאפס ולהמשיך קדימה.`
 }
 
-// ── Mirror prompt — direct, no fluff ─────────────────────────────────
+// ── Mirror prompt — empowering, reset-and-forward ────────────────────
 function buildMirrorPrompt(gapDays, motivation) {
   return (
-    `אתה מראה, לא מאמן. אל תנחם ואל תציע פתרונות.\n` +
+    `אתה מאמן שמחזיר משתמשים למסלול בטון מעצים ולא מאשים.\n` +
     `המשתמש לא התקדם ${gapDays} ימים במסלול 30 הימים שלו.\n\n` +
-    `הסיבה העמוקה שלו (מילותיו שלו): "${motivation.deep_why || '—'}"\n` +
-    `הזהות שרצה לבנות (מילותיו שלו): "${motivation.identity_statement || '—'}"\n\n` +
+    `הסיבה העמוקה שלו: "${motivation.deep_why || '—'}"\n` +
+    `הזהות שרצה לבנות: "${motivation.identity_statement || '—'}"\n\n` +
     `כתוב משפט אחד בלבד בעברית. חוקים מוחלטים:\n` +
-    `1. ציין את מספר הימים כעובדה קרה\n` +
-    `2. צטט את מילותיו מילה במילה — ללא פרפרוז\n` +
-    `3. סיים בשאלת כן/לא ישירה על מחויבותו לזהות\n` +
-    `4. ללא הקדמה. ללא הזדהות. ללא "אני מבין". ללא הצעות.\n` +
-    `5. מקסימום 35 מילה. החזר רק את המשפט — ללא מרכאות חיצוניות.\n\n` +
-    `דוגמה לפורמט הנכון:\n` +
-    `"עברו 3 ימים. אמרת שאתה 'אדם שמכבד את גופו'. האם אתה עדיין הוא?"`
+    `1. פתח עם "הפסקה קטנה, לא סוף הדרך"\n` +
+    `2. ציין את מספר הימים כעובדה ניטרלית — ללא האשמה\n` +
+    `3. סיים עם קריאה חיובית לחזרה ("עכשיו זה הרגע לחזור לעצמך")\n` +
+    `4. ללא שאלות. ללא "האם". ללא האשמה. ללא פרפרוז.\n` +
+    `5. מקסימום 30 מילה. החזר רק את המשפט — ללא מרכאות חיצוניות.\n\n` +
+    `דוגמה לפורמט:\n` +
+    `"הפסקה קטנה, לא סוף הדרך. ${gapDays} ימים חלפו — עכשיו זה הרגע לחזור לעצמך."`
   )
 }
 

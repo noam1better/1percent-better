@@ -4,6 +4,7 @@ import { hapticRep, hapticMilestone, hapticGoal } from '../services/hapticServic
 import { syncWeeklyReps } from '../services/squadService'
 import { analyzeSession, coachConfigured } from '../services/coachService'
 import FeedbackModal from './FeedbackModal'
+import BoxingWorkout from './BoxingWorkout'
 
 // ── Haversine — great-circle distance between two GPS coords (km) ────
 function haversine(lat1, lon1, lat2, lon2) {
@@ -18,18 +19,68 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 // ── Cardio (timer + GPS distance) ───────────────────────────────────
 
-function CardioWorkout({ track, goal, onComplete, onClose }) {
-  const [elapsed,   setElapsed]   = useState(0)
-  const [running,   setRunning]   = useState(false)
+const CARDIO_KEY = 'prime_cardio_live'
+
+function CardioWorkout({ track, goal, onComplete, onClose: _onClose }) {
+  const [elapsed,   setElapsed]   = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(CARDIO_KEY))
+      if (s?.trackId === track.id && s?.running && s?.startTimestamp) {
+        return Math.round((Date.now() - s.startTimestamp) / 1000)
+      }
+    } catch {}
+    return 0
+  })
+  const [running,   setRunning]   = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(CARDIO_KEY))
+      return !!(s?.trackId === track.id && s?.running)
+    } catch { return false }
+  })
   const [finished,  setFinished]  = useState(false)
-  const [distance,  setDistance]  = useState(0)          // km, live GPS
+  const [distance,  setDistance]  = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(CARDIO_KEY))
+      if (s?.trackId === track.id) { return s?.distance || 0 }
+    } catch {}
+    return 0
+  })
   const [geoStatus, setGeoStatus] = useState('idle')     // idle|requesting|tracking|denied|unavailable
   const [distInput, setDistInput] = useState('')         // manual fallback
 
-  const timerRef    = useRef(null)
-  const watchIdRef  = useRef(null)
-  const lastPosRef  = useRef(null)   // { lat, lng } — cleared on pause to avoid jump
-  const distRef     = useRef(0)      // accumulator ref (no stale-closure issue in watchPosition cb)
+  const timerRef     = useRef(null)
+  const watchIdRef   = useRef(null)
+  const lastPosRef   = useRef(null)
+  const distRef      = useRef(distance)
+  const startTsRef   = useRef(null)  // timestamp when current run-segment started
+
+  // ── Restore GPS distance ref from initial state ──
+  useEffect(() => { distRef.current = distance }, []) // eslint-disable-line
+
+  // ── Persist to localStorage while running ──
+  useEffect(() => {
+    if (!running || finished) {
+      localStorage.removeItem(CARDIO_KEY)
+      return
+    }
+    const ts = Date.now() - elapsed * 1000
+    startTsRef.current = ts
+    const save = () => {
+      try {
+        localStorage.setItem(CARDIO_KEY, JSON.stringify({
+          trackId: track.id,
+          trackName: track.name,
+          goal,
+          startTimestamp: startTsRef.current,
+          distance: distRef.current,
+          running: true,
+        }))
+      } catch {}
+    }
+    save()
+    const id = setInterval(save, 5000)
+    return () => clearInterval(id)
+  }, [running, finished]) // eslint-disable-line
 
   // ── Timer ──
   useEffect(() => {
@@ -82,12 +133,23 @@ function CardioWorkout({ track, goal, onComplete, onClose }) {
     }
   }, [running, finished])
 
+  // ── Dynamic tab title while running ──
+  useEffect(() => {
+    if (!running || finished) { document.title = '1% Better — PRIME'; return }
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
+    const s = String(elapsed % 60).padStart(2, '0')
+    const d = distRef.current > 0 ? ` · ${distRef.current.toFixed(2)}ק"מ` : ''
+    document.title = `🏃‍♂️ ${m}:${s}${d} — PRIME`
+    return () => { document.title = '1% Better — PRIME' }
+  }, [running, finished, elapsed])
+
   function handleDone() {
     clearInterval(timerRef.current)
     if (watchIdRef.current != null) {
       navigator.geolocation?.clearWatch(watchIdRef.current)
       watchIdRef.current = null
     }
+    localStorage.removeItem(CARDIO_KEY)
     setRunning(false)
     setFinished(true)
   }
@@ -462,7 +524,7 @@ function calcSummary(reps, goal, caveInCount) {
 }
 
 // ── Post-set summary panel ────────────────────────────────────────────
-function SetSummaryPanel({ track, reps, goal, score, headline, tips, onSave }) {
+function SetSummaryPanel({ track: _track, reps, goal, score, headline, tips, onSave }) {
   const scoreColor = score >= 90 ? '#34d399' : score >= 70 ? '#F5C518' : score >= 50 ? '#f59e0b' : '#ef4444'
   return (
     <div style={{ animation: 'slide-up 0.3s ease both' }}>
@@ -770,7 +832,14 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
 
   // ── Error / manual fallback ──
   if (phase === 'error' || phase === 'manual') return (
-    <div style={{ padding: '1rem 0' }}>
+    <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <FutureVsNowWidget
+        reps={0}
+        sessionGoal={goal}
+        trackId={track.id}
+        visionProfile={visionProfile}
+        repFlash={false}
+      />
       <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
         <p style={{ color: '#f87171', fontSize: '0.82rem', fontWeight: 700, margin: '0 0 0.5rem' }}>
           {phase === 'error' ? '⚠️ הרשאת מצלמה נדחתה' : '⚠️ לא ניתן לטעון את המצלמה'}
@@ -863,41 +932,35 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
-        <video ref={videoRef} muted playsInline autoPlay
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} />
-        <canvas ref={canvasRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
+      {/* Outer wrapper — position:relative so widget can overlay camera without being clipped */}
+      <div style={{ position: 'relative' }}>
+        {/* Camera clip div — overflow:hidden only for video corner rounding */}
+        <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', aspectRatio: '4/3' }}>
+          <video ref={videoRef} muted playsInline autoPlay
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} />
+          <canvas ref={canvasRef}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
 
-        {/* Corner brackets — red when confidence low */}
-        {!goalReached && (<>
-          <div style={corner(8,  null, null, 8)}  />
-          <div style={corner(8,  8,    null, null)} />
-          <div style={corner(null, null, 8,   8)}  />
-          <div style={corner(null, 8,   8,   null)} />
-        </>)}
+          {/* Corner brackets — red when confidence low */}
+          {!goalReached && (<>
+            <div style={corner(8,  null, null, 8)}  />
+            <div style={corner(8,  8,    null, null)} />
+            <div style={corner(null, null, 8,   8)}  />
+            <div style={corner(null, 8,   8,   null)} />
+          </>)}
 
-        {/* Squat depth bar — right edge */}
-        {isSquat && !goalReached && (
-          <div style={{ position: 'absolute', right: 8, top: '12%', bottom: '12%', width: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
-            <div style={{
-              position: 'absolute', bottom: 0, width: '100%',
-              height: `${squatDepth * 100}%`,
-              background: depthColor,
-              borderRadius: 99,
-              transition: 'height 0.05s linear, background 0.2s ease',
-            }} />
-          </div>
-        )}
-
-        {/* Me vs. Future Self widget — top left */}
-        <FutureVsNowWidget
-          reps={reps}
-          sessionGoal={goal}
-          trackId={track.id}
-          visionProfile={visionProfile}
-          repFlash={repFlash}
-        />
+          {/* Squat depth bar — right edge */}
+          {isSquat && !goalReached && (
+            <div style={{ position: 'absolute', right: 8, top: '12%', bottom: '12%', width: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute', bottom: 0, width: '100%',
+                height: `${squatDepth * 100}%`,
+                background: depthColor,
+                borderRadius: 99,
+                transition: 'height 0.05s linear, background 0.2s ease',
+              }} />
+            </div>
+          )}
 
         {/* State / angle badge — top right */}
         {angle !== null && (
@@ -966,7 +1029,17 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
             </div>
           </div>
         )}
-      </div>
+        </div>{/* ← closes inner clip div (overflow:hidden) */}
+
+        {/* Me vs. Future Self widget — outside overflow:hidden, so expanded state never clips */}
+        <FutureVsNowWidget
+          reps={reps}
+          sessionGoal={goal}
+          trackId={track.id}
+          visionProfile={visionProfile}
+          repFlash={repFlash}
+        />
+      </div>{/* ← closes outer position:relative wrapper */}
 
       <button onClick={handleDone} className="btn-primary btn-tactile"
         style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 800 }}>
@@ -994,9 +1067,11 @@ export default function ActiveWorkout({ track, goal, uid, userName, visionProfil
           <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(241,245,249,0.5)', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, minHeight: 44 }}>✕</button>
         </div>
 
-        {track.useCamera
-          ? <StrengthWorkout track={track} goal={goal} uid={uid} userName={userName} visionProfile={visionProfile} onComplete={onComplete} onClose={onClose} />
-          : <CardioWorkout   track={track} goal={goal} onComplete={onComplete} onClose={onClose} />
+        {!track.useCamera
+          ? <CardioWorkout   track={track} goal={goal} onComplete={onComplete} onClose={onClose} />
+          : track.poseType === 'boxing'
+            ? <BoxingWorkout track={track} goal={goal} uid={uid} userName={userName} visionProfile={visionProfile} onComplete={onComplete} onClose={onClose} />
+            : <StrengthWorkout track={track} goal={goal} uid={uid} userName={userName} visionProfile={visionProfile} onComplete={onComplete} onClose={onClose} />
         }
       </div>
     </div>

@@ -219,6 +219,145 @@ export function analyzeFrame(poseType, landmarks, prevState) {
   return { angle: null, depth: 0, state: prevState, confidence: 0, kneeCaveIn: false, repCompleted: false }
 }
 
+// ── Boxing AI Technical Coach ─────────────────────────────────────────
+//
+// Detects 4 error types in real time:
+//   armPunch   — wrist extension without shoulder/hip rotation
+//   dropHand   — guard hand falls below chin during opposite punch
+//   elbowFlare — elbow wing > 55% of shoulder width
+//   guardSlip  — both wrists below chin while not punching
+//
+// State (opaque object caller must pass back each frame):
+//   { lastPunchTs: number, consecutiveGuardDropFrames: number }
+//
+// Returns:
+//   { errors, punchDetected, punchType, punchHand, confidence, nextState }
+export function analyzeBoxingTechnique(lm, prevLm, state = {}) {
+  const vis = pt => pt?.visibility ?? 0
+
+  const nose   = lm[0]
+  const lShldr = lm[11], rShldr = lm[12]
+  const lElbow = lm[13], rElbow = lm[14]
+  const lWrist = lm[15], rWrist = lm[16]
+  const lHip   = lm[23], rHip   = lm[24]
+
+  const conf = (vis(nose) + vis(lShldr) + vis(rShldr) + vis(lWrist) + vis(rWrist)) / 5
+  if (conf < 0.30) {
+    return { errors: [], punchDetected: false, punchType: null, punchHand: null, confidence: conf, nextState: state }
+  }
+
+  const errors = []
+  let punchDetected = false
+  let punchType     = null
+  let punchHand     = null
+
+  const now = performance.now()
+
+  // ── Chin guard line ───────────────────────────────────────────────
+  const chinY          = nose.y + 0.07
+  const guardDropLine  = chinY + 0.12   // >12% below chin = dropped guard
+
+  // ── Punch detection via wrist velocity ───────────────────────────
+  // Threshold: 0.0049 = 0.07² (7% frame per frame ≈ fast punch)
+  const PUNCH_THRESHOLD   = 0.0049
+  const PUNCH_COOLDOWN_MS = 220  // min time between counted punches per hand
+
+  let leftSpeed = 0, rightSpeed = 0
+  if (prevLm) {
+    const pl = prevLm[15], pr = prevLm[16]
+    if (vis(lWrist) > 0.35 && vis(pl) > 0.35) {
+      const dx = lWrist.x - pl.x, dy = lWrist.y - pl.y
+      leftSpeed = dx * dx + dy * dy
+    }
+    if (vis(rWrist) > 0.35 && vis(pr) > 0.35) {
+      const dx = rWrist.x - pr.x, dy = rWrist.y - pr.y
+      rightSpeed = dx * dx + dy * dy
+    }
+  }
+
+  const maxSpeed = Math.max(leftSpeed, rightSpeed)
+
+  if (maxSpeed > PUNCH_THRESHOLD) {
+    const lastPunchTs = state.lastPunchTs || 0
+    if (now - lastPunchTs >= PUNCH_COOLDOWN_MS) {
+      punchDetected = true
+      punchHand     = leftSpeed >= rightSpeed ? 'left' : 'right'
+
+      // Classify punch type by velocity direction
+      const wrist  = punchHand === 'left' ? lWrist : rWrist
+      const pWrist = punchHand === 'left' ? prevLm?.[15] : prevLm?.[16]
+      if (pWrist && vis(wrist) > 0.35) {
+        const dy = wrist.y - pWrist.y
+        const dx = Math.abs(wrist.x - pWrist.x)
+        if      (dy < -0.04)             punchType = 'uppercut'
+        else if (dx > 0.06)              punchType = 'hook'
+        else if (punchHand === 'left')   punchType = 'jab'
+        else                             punchType = 'cross'
+      } else {
+        punchType = punchHand === 'left' ? 'jab' : 'cross'
+      }
+
+      // ── Arm punch check: shoulder/hip displacement ratio ──────────
+      // During jab/cross the punching shoulder should rotate forward.
+      // Front-cam proxy: wristDx should track shoulderDx + hipDx.
+      // High ratio = wrist moved a lot but body stayed still → arm punch.
+      if (prevLm && (punchType === 'jab' || punchType === 'cross')) {
+        const shldr  = punchHand === 'left' ? lShldr : rShldr
+        const pShldr = punchHand === 'left' ? prevLm[11] : prevLm[12]
+        const hip    = punchHand === 'left' ? lHip : rHip
+        const pHip   = punchHand === 'left' ? prevLm[23] : prevLm[24]
+
+        if (vis(shldr) > 0.35 && vis(pShldr) > 0.35) {
+          const wristDx  = Math.sqrt(maxSpeed)
+          const shldrDx  = Math.abs(shldr.x - pShldr.x)
+          const hipDx    = (vis(hip) > 0.3 && pHip) ? Math.abs(hip.x - pHip.x) : 0
+          const bodyMove = Math.max(shldrDx, hipDx, 0.004)
+          if (wristDx / bodyMove > 4.5) errors.push('armPunch')
+        }
+      }
+
+      // ── Drop guard check: non-punching hand falls during punch ────
+      if (punchHand && vis(lWrist) > 0.35 && vis(rWrist) > 0.35) {
+        const guardWrist = punchHand === 'left' ? rWrist : lWrist
+        if (guardWrist.y > guardDropLine) errors.push('dropHand')
+      }
+    }
+  }
+
+  // ── Elbow flare (always checked) ─────────────────────────────────
+  const shoulderW = Math.max(0.08, Math.abs(lShldr.x - rShldr.x))
+  const lFlare    = vis(lElbow) > 0.35 && Math.abs(lElbow.x - lShldr.x) > shoulderW * 0.55
+  const rFlare    = vis(rElbow) > 0.35 && Math.abs(rElbow.x - rShldr.x) > shoulderW * 0.55
+  if (lFlare || rFlare) errors.push('elbowFlare')
+
+  // ── Guard slip at rest: both wrists below chin > 2 frames ────────
+  let consecutiveGuardDropFrames = state.consecutiveGuardDropFrames || 0
+  if (!punchDetected) {
+    const lDrop = vis(lWrist) > 0.35 && lWrist.y > guardDropLine
+    const rDrop = vis(rWrist) > 0.35 && rWrist.y > guardDropLine
+    if (lDrop && rDrop) {
+      consecutiveGuardDropFrames++
+      if (consecutiveGuardDropFrames >= 3) errors.push('guardSlip')
+    } else {
+      consecutiveGuardDropFrames = 0
+    }
+  } else {
+    consecutiveGuardDropFrames = 0
+  }
+
+  return {
+    errors,
+    punchDetected,
+    punchType,
+    punchHand,
+    confidence: conf,
+    nextState: {
+      lastPunchTs:                punchDetected ? now : (state.lastPunchTs || 0),
+      consecutiveGuardDropFrames,
+    },
+  }
+}
+
 // ── Boxing form (front-facing camera) ────────────────────────────────
 // Detects guard height, elbow tuck, and punch velocity.
 // lm: 33 landmarks from PoseLandmarker; prevLm: previous frame (for punch velocity)

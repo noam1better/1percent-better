@@ -76,6 +76,19 @@ export const TRAINING_TRACKS = [
     poseType:     'dips',
     levelUpDays:  3,
   },
+  {
+    id:           'boxing-muaythai',
+    name:         'בוקסינג / מואי תאי',
+    emoji:        '🥊',
+    category:     'strength',
+    description:  'AI מאמן טכניקה בזמן אמת — ניתוח מכות, גארד ושגיאות',
+    startGoal:    30,
+    increment:    10,
+    unit:         'מכות',
+    useCamera:    true,
+    poseType:     'boxing',
+    levelUpDays:  3,
+  },
 ]
 
 export const TRACK_MAP = Object.fromEntries(TRAINING_TRACKS.map(t => [t.id, t]))
