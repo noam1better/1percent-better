@@ -1669,7 +1669,7 @@ export default function Dashboard() {
 
         {/* ── STATS TAB ── */}
         {activeTab === 'stats' && (
-          <AnalyticsTab profile={profile} currentUid={user?.uid} activePathName={customPath?.path_name || null} customPath={customPath} />
+          <AnalyticsTab profile={profile} currentUid={user?.uid} activePathName={customPath?.path?.path_name || null} customPath={customPath} />
         )}
 
         {/* ── ARENA TAB ── */}
