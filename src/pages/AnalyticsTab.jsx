@@ -292,6 +292,14 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         </button>
       </div>
 
+      {/* ── Network / no-profile guard ── */}
+      {!profile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 12, padding: '0.8rem 1rem', marginBottom: '1.25rem' }}>
+          <div style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid rgba(245,158,11,0.25)', borderTopColor: '#f59e0b', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />
+          <span style={{ color: 'rgba(245,158,11,0.8)', fontSize: '0.76rem', fontWeight: 600 }}>מתחבר לנתונים… אם הנתונים לא נטענים — רענן את הדף</span>
+        </div>
+      )}
+
       {/* ── Stat pills ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1.5rem' }}>
         {[

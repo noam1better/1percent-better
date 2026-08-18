@@ -153,8 +153,8 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebui
 
   const { path, progress, status, consistency } = record
   const vp           = record.vision_profile || {}
-  const vision       = (vp.three_year_vision || '').slice(0, 60)
-  const gap          = (vp.the_gap           || '').slice(0, 55)
+  const vision       = (vp.three_year_vision || '').slice(0, 130)
+  const gap          = (vp.the_gap           || '').slice(0, 110)
   const currentDay   = progress?.currentDay || 1
   const completedDs  = progress?.completedDays || []
   const todayDone    = completedDs.some(d => d.completedAt === TODAY())
@@ -286,7 +286,7 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebui
           {/* Victory identity line */}
           {vision && (
             <div style={{ padding: '0.75rem 1.15rem 0', fontSize: '0.75rem', color: 'rgba(52,211,153,0.55)', lineHeight: 1.4, fontStyle: 'italic' }}>
-              "{vision}{vision.length >= 60 ? '...' : ''}"
+              "{vision}{vision.length >= 130 ? '...' : ''}"
             </div>
           )}
 
@@ -301,7 +301,7 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebui
               <div style={{ color: 'rgba(251,146,60,0.45)', fontSize: '0.46rem', fontWeight: 800, marginTop: '0.2rem', letterSpacing: '0.1em' }}>ימים ברצף</div>
             </div>
             <div style={{ flex: 1, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '0.65rem 0.5rem', textAlign: 'center' }}>
-              <div style={{ color: '#34d399', fontSize: '1.15rem', fontWeight: 900, lineHeight: 1 }}>{currentDay}/30</div>
+              <div style={{ color: '#34d399', fontSize: '1.15rem', fontWeight: 900, lineHeight: 1 }}>{completedDs.length}/30</div>
               <div style={{ color: 'rgba(52,211,153,0.45)', fontSize: '0.46rem', fontWeight: 800, marginTop: '0.2rem', letterSpacing: '0.1em' }}>ימים הושלמו</div>
             </div>
           </div>
@@ -448,7 +448,7 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebui
               <div>
                 <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem', fontWeight: 600 }}>מוביל ל: </span>
                 <span style={{ color: 'rgba(241,245,249,0.55)', fontSize: '0.68rem', lineHeight: 1.4, fontStyle: 'italic' }}>
-                  "{vision}{vision.length >= 60 ? '...' : ''}"
+                  "{vision}{vision.length >= 130 ? '...' : ''}"
                 </span>
               </div>
             </div>
@@ -460,7 +460,7 @@ export default function CustomPathCard({ user, pathRecord, onPathUpdate, onRebui
               <div>
                 <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem', fontWeight: 600 }}>הפער שנסגר: </span>
                 <span style={{ color: 'rgba(241,245,249,0.5)', fontSize: '0.68rem', lineHeight: 1.4 }}>
-                  "{gap}{gap.length >= 55 ? '...' : ''}"
+                  "{gap}{gap.length >= 110 ? '...' : ''}"
                 </span>
               </div>
             </div>

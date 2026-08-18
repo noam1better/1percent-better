@@ -1195,7 +1195,11 @@ export default function Dashboard() {
             {(() => {
               const rank = getRank(xp)
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: `${rank.color}15`, border: `1px solid ${rank.color}40`, borderRadius: 20, padding: '0.22rem 0.6rem' }}>
+                <div
+                  onClick={() => setActiveTab('stats')}
+                  className="btn-tactile"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: `${rank.color}15`, border: `1px solid ${rank.color}40`, borderRadius: 20, padding: '0.22rem 0.6rem', cursor: 'pointer' }}
+                >
                   <span style={{ fontSize: '0.72rem' }}>{rank.icon}</span>
                   <span style={{ color: rank.color, fontSize: '0.68rem', fontWeight: 900, letterSpacing: '0.05em' }}>{rank.label}</span>
                   <span style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.58rem' }}>·</span>
@@ -1613,7 +1617,10 @@ export default function Dashboard() {
                     <DailyBrief />
                     {!isGuest && customPath && (
                       <button
-                        onClick={() => { setCustomPath(null); setShowPathBuilder(true) }}
+                        onClick={() => {
+                          if (!window.confirm('שים לב: בנייה מחדש תמחק את המסלול הנוכחי ואת ההתקדמות שלך במסלול זה. להמשיך?')) return
+                          setCustomPath(null); setShowPathBuilder(true)
+                        }}
                         className="btn-tactile"
                         style={{ width: '100%', marginBottom: '0.5rem', padding: '0.65rem 1rem', borderRadius: 12, border: '1px dashed rgba(245,197,24,0.25)', background: 'rgba(245,197,24,0.04)', color: 'rgba(245,197,24,0.55)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
                       >

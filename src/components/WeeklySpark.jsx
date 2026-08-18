@@ -86,7 +86,10 @@ export default function WeeklySpark({ completedDays = 0 }) {
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 0' }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(245,197,24,0.2)', borderTopColor: '#F5C518', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-              <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.76rem' }}>מנתח את השבוע שלך…</span>
+              <div>
+                <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.76rem', display: 'block' }}>מנתח את השבוע שלך…</span>
+                <span style={{ color: 'rgba(241,245,249,0.15)', fontSize: '0.63rem' }}>עד 30 שניות</span>
+              </div>
             </div>
           ) : spark ? (
             <div style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 12, padding: '0.85rem 1rem' }}>

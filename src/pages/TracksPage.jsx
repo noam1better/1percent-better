@@ -719,8 +719,8 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
         'הגדר מטרה אחת קריטית שתבצע היום',
         'קבע מה לא ייכנס ליום שלך (Non-Negotiable)',
       ],
-      cta: 'כוון את הבוקר ←',
-      onCta: null,
+      cta: topTrack && !trackDoneToday ? `פתח מסלול: ${topTrack.title} ←` : 'כוון את הבוקר ←',
+      onCta: topTrack && !trackDoneToday ? () => setSelected(topTrack) : null,
     },
     {
       id: 'noon', icon: '⚡', color: '#fb923c',
