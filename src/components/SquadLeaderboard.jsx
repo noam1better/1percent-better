@@ -160,7 +160,12 @@ export default function SquadLeaderboard({ uid, userName }) {
   }
 
   // ── Still loading ──
-  if (squad === undefined) return null
+  if (squad === undefined) return (
+    <div style={{ padding: '1.25rem', textAlign: 'center', color: 'rgba(241,245,249,0.3)', fontSize: '0.76rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+      <div style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid rgba(245,197,24,0.2)', borderTopColor: '#F5C518', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+      טוען את הסקווד…
+    </div>
+  )
 
   // ── No squad: arena waiting CTA ──
   if (!squad) return (

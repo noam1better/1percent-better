@@ -755,10 +755,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (isGuest) { setProfile({ name: 'Guest', xp: 0, triggers: [], challenges: {} }); setLoading(false); return }
     if (!user) return
-    const unsub = subscribeProfile(user.uid, p => {
-      setProfile(p)
-      setLoading(false)
-    })
+    const unsub = subscribeProfile(
+      user.uid,
+      p => { setProfile(p); setLoading(false) },
+      () => { setLoading(false) }  // network error: stop spinner, keep last profile
+    )
     return unsub
   }, [user, isGuest])
 
@@ -1575,7 +1576,7 @@ export default function Dashboard() {
                 <span style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>🗓️ מפת דרכים חודשית</span>
                 <span style={{ color: 'rgba(241,245,249,0.2)', fontSize: '0.72rem' }}>{sectionsOpen.roadmap !== false ? '▲' : '▼'}</span>
               </button>
-              {sectionsOpen.roadmap !== false && <MonthlyRoadmap />}
+              {sectionsOpen.roadmap !== false && <MonthlyRoadmap currentDay={customPath?.progress?.currentDay} />}
             </div>
 
 

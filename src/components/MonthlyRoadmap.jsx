@@ -50,7 +50,10 @@ function getMonthLabel(m) {
   return new Date(y, mo - 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 }
 
-function getCurrentWeekIndex() {
+function getCurrentWeekIndex(currentDay) {
+  if (currentDay && currentDay > 0) {
+    return Math.min(Math.ceil(currentDay / 7) - 1, 3)
+  }
   return Math.min(Math.floor((new Date().getDate() - 1) / 7), 3)
 }
 
@@ -179,13 +182,13 @@ function SetupModal({ month, existing, onSave, onClose }) {
 
 // ── Main Component ────────────────────────────────────────────────────
 
-export default function MonthlyRoadmap() {
+export default function MonthlyRoadmap({ currentDay } = {}) {
   const month      = CURRENT_MONTH()
   const [roadmap,   setRoadmap]   = useState(() => loadRoadmap(month))
   const [showSetup, setShowSetup] = useState(false)
   const [expanded,  setExpanded]  = useState(false)
 
-  const weekIdx       = getCurrentWeekIndex()
+  const weekIdx       = getCurrentWeekIndex(currentDay)
   const activePillars = roadmap
     ? PILLARS.filter(p => roadmap.goals?.[p.id]?.trim())
     : []

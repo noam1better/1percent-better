@@ -31,7 +31,7 @@ function validateDate(date) {
   return date
 }
 
-export function subscribeProfile(uid, callback) {
+export function subscribeProfile(uid, callback, onError) {
   const ref = profileDoc(uid)
   return onSnapshot(ref, snap => {
     if (snap.exists()) {
@@ -41,7 +41,7 @@ export function subscribeProfile(uid, callback) {
       setDoc(ref, defaults, { merge: true }).catch(() => {})
       callback(defaults)
     }
-  }, () => callback({}))
+  }, onError || (() => {}))
 }
 
 export async function loadProfile(uid) {
