@@ -4,7 +4,7 @@ import { useLang } from '../context/LangContext'
 import { subscribeProfile, saveProfile, syncLeaderboard } from '../services/focusTriggerService'
 import { checkContractStatus, getRank, getScore } from '../services/disciplineScore'
 import { requestPermission, checkNotifications, checkNudges, saveNudgeResponse, snoozeNudge, markNudgeDone } from '../services/notificationService'
-import { verifyDayCompletion, analyzeVideoForm } from '../services/coachService'
+import { analyzeVideoForm } from '../services/coachService'
 import { CHALLENGES, getDayTask, getModuleIndex } from '../data/challenges'
 import { getDayContent } from '../data/lessonContent'
 import { MANTRAS } from '../data/mantras'
@@ -29,6 +29,7 @@ import { checkAndGenerateMirror, setMirrorTriggered } from '../services/mirrorSe
 import MonthlyRoadmap from '../components/MonthlyRoadmap'
 import WeeklySpark from '../components/WeeklySpark'
 import { logEnergy, getTodayEnergy, ENERGY_TAGS } from '../services/energyLogService'
+import ProofOfActionModal from '../components/ProofOfActionModal'
 import PathHistory from '../components/PathHistory'
 import ActiveWorkout from '../components/ActiveWorkout'
 import { TRACK_MAP } from '../data/trainingTracks'
@@ -65,7 +66,6 @@ const sanitizeInput = str =>
 
 const XP_PER_TRIGGER = 10
 const XP_PER_LEVEL   = 100
-const MIN_PROOF_LEN  = 10
 
 const getLevel   = xp => Math.floor((xp || 0) / XP_PER_LEVEL) + 1
 const getLevelXP = xp => (xp || 0) % XP_PER_LEVEL
@@ -97,199 +97,6 @@ function XPToast({ xp, onDone }) {
   return (
     <div style={{ position: 'fixed', top: '5.5rem', left: '50%', transform: 'translateX(-50%)', background: isSignin ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#c4795a,#d4956e)', color: '#fff', borderRadius: 20, padding: '0.45rem 1.1rem', fontSize: '0.83rem', fontWeight: 800, zIndex: 9999, animation: 'xp-pop 0.35s cubic-bezier(.34,1.56,.64,1) forwards', boxShadow: isSignin ? '0 4px 20px rgba(245,158,11,0.5)' : '0 4px 20px rgba(196,121,90,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
       {isSignin ? '🔒 התחבר כדי לשמור XP' : `+${xp} XP ✨`}
-    </div>
-  )
-}
-
-// ── Proof Modal (shared for habits + challenges) ───────────────────
-
-function getTimeSlot() {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 18) return 'noon'
-  return 'evening'
-}
-
-const TIME_CONFIG = {
-  morning: {
-    icon: '🌅', label: 'כוונת בוקר', sublabel: 'הגדר מטרה אחת ברורה ליום',
-    inputLabel: 'מה המטרה שלך להיום?',
-    placeholder: 'מה המטרה האחת שתבצע היום? תכנן ופרט…',
-  },
-  noon: {
-    icon: '⚡', label: 'בלוק מיקוד', sublabel: '15+ דקות עשייה ממוקדת',
-    inputLabel: 'מה ביצעת בפועל?',
-    placeholder: 'תאר מה עשית — ספציפי ומדויד, ללא קיצורים…',
-  },
-  evening: {
-    icon: '🌙', label: 'סיכום יומי', sublabel: 'רפלקציה ולמידה מהיום',
-    inputLabel: 'מה עשיתי? מה למדתי?',
-    placeholder: 'מה עשיתי? מה עבד? מה הייתי עושה אחרת?',
-  },
-}
-
-function ProofModal({ title, prompt, xpAmount, accentColor = '#6366f1', richContent, onConfirm, onClose }) {
-  const [text,         setText]         = useState('')
-  const [status,       setStatus]       = useState('idle')   // idle | verifying | approved | rejected
-  const [feedback,     setFeedback]     = useState('')
-  const [energyTagged, setEnergyTagged] = useState(false)
-  const confirmTimer = useRef(null)
-  const timeConfig   = TIME_CONFIG[getTimeSlot()]
-  const canSubmit    = text.trim().length >= MIN_PROOF_LEN && status === 'idle'
-
-  function handleEnergyTag(tagId) {
-    logEnergy(tagId)
-    setEnergyTagged(true)
-    clearTimeout(confirmTimer.current)
-    setTimeout(onConfirm, 500)
-  }
-
-  async function handleSubmit() {
-    setStatus('verifying')
-    try {
-      const result = await verifyDayCompletion(title, '—', prompt, sanitizeInput(text))
-      setFeedback(result.feedback)
-      if (result.approved) {
-        setStatus('approved')
-        confirmTimer.current = setTimeout(onConfirm, 3500)
-      } else {
-        setStatus('rejected')
-      }
-    } catch (err) {
-      console.error('[ProofModal] verifyDayCompletion error:', err?.message || err)
-      setStatus('rejected')
-      setFeedback('שגיאת תקשורת — נסה שוב.')
-    }
-  }
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 3000 }} onClick={e => e.target === e.currentTarget && status === 'idle' && onClose()}>
-      <div style={{ width: '100%', maxWidth: 480, background: '#161622', borderRadius: '20px 20px 0 0', borderTop: `2px solid ${accentColor}55`, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-
-        {/* ── Zone 1: Sticky header ── */}
-        <div style={{ padding: '1rem 1.25rem 0.75rem', borderBottom: `1px solid rgba(255,255,255,0.06)`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '1rem' }}>{timeConfig.icon}</span>
-                <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.95rem' }}>{timeConfig.label}</span>
-              </div>
-              <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', marginTop: '0.1rem' }}>{timeConfig.sublabel}</div>
-            </div>
-            {status === 'idle' && <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(241,245,249,0.6)', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, minHeight: 44 }}>✕ סגור</button>}
-          </div>
-        </div>
-
-        {/* ── Zone 2: Scrollable task content ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0.9rem 1.25rem 0.5rem' }}>
-
-          {/* Task steps */}
-          <div style={{ background: `${accentColor}12`, border: `1px solid ${accentColor}30`, borderRadius: 11, padding: '0.75rem 0.9rem', marginBottom: richContent?.realExample || richContent?.microTask ? '0.65rem' : 0 }}>
-            <p style={{ color: `${accentColor}cc`, fontSize: '0.57rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>⚡ משימה</p>
-            {richContent?.fieldAction?.length > 0
-              ? richContent.fieldAction.map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', marginBottom: i < richContent.fieldAction.length - 1 ? '0.6rem' : 0 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: `${accentColor}22`, border: `1px solid ${accentColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: accentColor, marginTop: '0.12rem' }}>
-                      {i + 1}
-                    </div>
-                    <p style={{ color: '#f1f5f9', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.55, margin: 0 }}>{step}</p>
-                  </div>
-                ))
-              : <p style={{ color: '#f1f5f9', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>{title}</p>
-            }
-          </div>
-
-          {/* Real example */}
-          {richContent?.realExample && (
-            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.7rem 0.85rem', marginTop: '0.65rem', marginBottom: richContent?.microTask ? '0.65rem' : 0 }}>
-              <p style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>📖 דוגמה אמיתית</p>
-              <p style={{ color: 'rgba(241,245,249,0.58)', fontSize: '0.78rem', lineHeight: 1.6, margin: 0 }}>{richContent.realExample}</p>
-            </div>
-          )}
-
-          {/* Micro task */}
-          {richContent?.microTask && (
-            <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 10, padding: '0.7rem 0.85rem', marginTop: '0.65rem' }}>
-              <p style={{ color: 'rgba(245,197,24,0.65)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>✏️ רפלקציה</p>
-              <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.8rem', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{richContent.microTask}</p>
-            </div>
-          )}
-        </div>
-
-        {/* ── Zone 3: Pinned input section ── */}
-        <div style={{ padding: '0.85rem 1.25rem 2rem', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-
-          {status === 'verifying' && (
-            <div style={{ textAlign: 'center', padding: '1.25rem 0' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${accentColor}33`, borderTopColor: accentColor, animation: 'spin 0.8s linear infinite', margin: '0 auto 0.6rem' }} />
-              <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.8rem' }}>בודק את תשובתך…</p>
-            </div>
-          )}
-
-          {status === 'approved' && (
-            <div style={{ textAlign: 'center', padding: '0.75rem 0', animation: 'fadeIn 0.3s ease' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.3rem' }}>🎉</div>
-              <p style={{ color: '#10b981', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>+{xpAmount} XP!</p>
-              <p style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.76rem', marginBottom: '1rem' }}>{feedback}</p>
-              {!energyTagged ? (
-                <div>
-                  <p style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>איך הרגשת היום?</p>
-                  <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                    {ENERGY_TAGS.map(tag => (
-                      <button
-                        key={tag.id}
-                        onClick={() => handleEnergyTag(tag.id)}
-                        className="btn-tactile"
-                        style={{ padding: '0.4rem 0.75rem', borderRadius: 20, border: `1px solid ${tag.color}40`, background: `${tag.color}10`, color: tag.color, fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      >
-                        {tag.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.7rem' }}>✓ נשמר</span>
-              )}
-            </div>
-          )}
-
-          {status === 'rejected' && (
-            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 11, padding: '0.65rem 0.85rem', marginBottom: '0.75rem', animation: 'fadeIn 0.2s ease' }}>
-              <p style={{ color: '#f87171', fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.15rem' }}>נסה להוסיף פירוט קצר 💪</p>
-              <p style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.75rem', margin: 0 }}>{feedback}</p>
-            </div>
-          )}
-
-          {(status === 'idle' || status === 'rejected') && (
-            <>
-              <label style={{ display: 'block', color: 'rgba(241,245,249,0.38)', fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                {timeConfig.inputLabel}
-              </label>
-              <textarea
-                autoFocus
-                value={text}
-                onChange={e => { setText(e.target.value); if (status === 'rejected') setStatus('idle') }}
-                placeholder={timeConfig.placeholder}
-                rows={3}
-                className="glow-input"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '0.85rem 0.95rem', borderRadius: 11, border: `1px solid ${text.trim().length >= MIN_PROOF_LEN ? accentColor + '66' : 'rgba(255,255,255,0.09)'}`, background: 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'none', lineHeight: 1.55, marginBottom: '0.4rem' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.67rem', color: text.trim().length >= MIN_PROOF_LEN ? '#10b981' : 'rgba(241,245,249,0.22)' }}>
-                  {text.trim().length} / {MIN_PROOF_LEN} תווים לפחות
-                </span>
-              </div>
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                style={{ width: '100%', padding: '0.9rem', borderRadius: 12, border: 'none', background: canSubmit ? `linear-gradient(135deg,${accentColor},${accentColor}cc)` : 'rgba(255,255,255,0.05)', color: canSubmit ? '#fff' : 'rgba(255,255,255,0.18)', fontSize: '0.9rem', fontWeight: 700, cursor: canSubmit ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
-              >
-                אמת וקבל {xpAmount} XP ←
-              </button>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
@@ -877,7 +684,7 @@ export default function Dashboard() {
 
   // proofModal: { type: 'habit'|'challenge', id, title, taskDesc, xp, color }
   const [proofModal,   setProofModal]   = useState(null)
-  const [quickTask,    setQuickTask]    = useState(null)
+  // quickTask merged into proofModal
   const [editHabit,    setEditHabit]    = useState(null)
   const [showGoalEdit, setShowGoalEdit] = useState(false)
   const [levelUpModal, setLevelUpModal] = useState(null)
@@ -1056,13 +863,12 @@ export default function Dashboard() {
   useEffect(() => {
     function onKey(e) {
       if (e.key !== 'Escape') return
-      if (quickTask)      setQuickTask(null)
-      else if (proofModal) setProofModal(null)
-      else if (editHabit)  setEditHabit(null)
+      if (proofModal)  setProofModal(null)
+      else if (editHabit) setEditHabit(null)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [quickTask, proofModal, editHabit])
+  }, [proofModal, editHabit])
 
   // ── XP helpers ────────────────────────────────────────────────
 
@@ -1126,21 +932,12 @@ export default function Dashboard() {
     saveCheckins(next)
     setCheckinsS(next)
     setProofModal(null)
-    awardXP(XP_PER_TRIGGER)
-    updateStreak(next, profile?.triggers || [])
-  }
-
-  function confirmQuickTask(trigger) {
-    if (checkins[trigger.id]) return
-    const next = { ...checkins, [trigger.id]: true }
-    saveCheckins(next)
-    setCheckinsS(next)
-    setQuickTask(null)
-    setCompletingId(trigger.id)
+    setCompletingId(id)
     setTimeout(() => setCompletingId(null), 850)
     awardXP(XP_PER_TRIGGER)
     updateStreak(next, profile?.triggers || [])
   }
+
 
   async function handleAddTrigger(data) {
     if (isGuest) { setShowModal(false); return }
@@ -1200,7 +997,8 @@ export default function Dashboard() {
     setProofModal({
       type:     'challenge',
       id:       challenge.id,
-      title:    `${challenge.emoji} ${challenge.title} — Day ${dayNum}`,
+      emoji:    challenge.emoji,
+      title:    `${challenge.title} — יום ${dayNum}`,
       taskDesc,
       xp:       challenge.xpPerDay,
       color:    challenge.color,
@@ -1540,13 +1338,13 @@ export default function Dashboard() {
                   return (
                     <div
                       key={tr.id}
-                      onClick={() => setQuickTask(tr)}
+                      onClick={() => !done && setProofModal({ type: 'habit', id: tr.id, emoji: '⚡', title: tr.cue, taskDesc: tr.habit, xp: XP_PER_TRIGGER, color: '#6366f1' })}
                       style={{
                         position: 'relative',
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                         padding: '1rem 1.1rem',
                         borderBottom: i < triggers.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                        cursor: 'pointer',
+                        cursor: done ? 'default' : 'pointer',
                         minHeight: 58,
                         background: done ? 'rgba(255,255,255,0.015)' : 'transparent',
                       }}
@@ -1585,14 +1383,14 @@ export default function Dashboard() {
                         {!done
                           ? <button
                               aria-label={`התחל: ${tr.cue}`}
-                              onClick={e => { e.stopPropagation(); setQuickTask(tr) }}
+                              onClick={e => { e.stopPropagation(); setProofModal({ type: 'habit', id: tr.id, emoji: '⚡', title: tr.cue, taskDesc: tr.habit, xp: XP_PER_TRIGGER, color: '#6366f1' }) }}
                               className="btn-tactile"
                               style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, padding: '0.3rem 0.7rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}
                             >התחל ←</button>
                           : <span style={{ color: 'rgba(6,182,212,0.7)', fontSize: '1.05rem' }}>✅</span>
                         }
                         <button
-                          onClick={e => { e.stopPropagation(); e.preventDefault(); setQuickTask(null); setEditHabit(tr) }}
+                          onClick={e => { e.stopPropagation(); e.preventDefault(); setEditHabit(tr) }}
                           className="btn-tactile"
                           title="ערוך הרגל"
                           aria-label="ערוך הרגל"
@@ -2020,12 +1818,14 @@ export default function Dashboard() {
         />
       )}
       {proofModal && (
-        <ProofModal
+        <ProofOfActionModal
           title={proofModal.title}
-          prompt={proofModal.taskDesc}
-          xpAmount={proofModal.xp}
-          accentColor={proofModal.color}
-          richContent={proofModal.richContent}
+          taskDesc={proofModal.taskDesc}
+          emoji={proofModal.emoji || '⚡'}
+          accentColor={proofModal.color || '#F5C518'}
+          taskId={proofModal.id}
+          type={proofModal.type}
+          uid={user?.uid}
           onConfirm={proofModal.type === 'habit' ? confirmHabitComplete : confirmChallengeComplete}
           onClose={() => setProofModal(null)}
         />
@@ -2097,50 +1897,6 @@ export default function Dashboard() {
             </div>
             <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.74rem' }}>{toNext} XP לרמה הבאה</div>
             <div style={{ marginTop: '2.5rem', color: 'rgba(241,245,249,0.18)', fontSize: '0.65rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>לחץ בכל מקום להמשך</div>
-          </div>
-        </div>
-      )}
-
-      {quickTask && (
-        <div
-          onClick={() => setQuickTask(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 7000, background: 'rgba(5,5,12,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', animation: 'fadeIn 0.18s ease both' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 440, background: '#161626', borderRadius: 24, border: '1px solid rgba(99,102,241,0.28)', boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)', padding: '1.5rem 1.4rem 1.75rem', animation: 'slide-up 0.25s ease both' }}
-          >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.9rem' }}>⚡</span>
-                <span style={{ color: 'rgba(99,102,241,0.7)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>הרגל יומי</span>
-              </div>
-              <button onClick={() => setQuickTask(null)} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(241,245,249,0.55)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}>✕</button>
-            </div>
-
-            {/* Cue → Habit */}
-            <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.85rem' }}>
-              <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '0.45rem' }}>כשאני...</div>
-              <div style={{ color: '#f1f5f9', fontSize: '1rem', fontWeight: 800, marginBottom: '0.55rem' }}>{quickTask.cue}</div>
-              <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.58rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.3rem' }}>אני אבצע →</div>
-              <div style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.88rem', lineHeight: 1.55 }}>{quickTask.habit}</div>
-            </div>
-
-            {/* CTA */}
-            {checkins[quickTask.id] ? (
-              <div style={{ width: '100%', padding: '1rem', borderRadius: 14, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', textAlign: 'center', color: '#34d399', fontSize: '0.97rem', fontWeight: 800 }}>
-                ✅ הושלם היום!
-              </div>
-            ) : (
-              <button
-                onClick={() => confirmQuickTask(quickTask)}
-                className="btn-primary btn-tactile"
-                style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '0.97rem', fontWeight: 900 }}
-              >
-                ✅ ביצעתי · +{XP_PER_TRIGGER} XP
-              </button>
-            )}
           </div>
         </div>
       )}

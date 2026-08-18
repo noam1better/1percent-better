@@ -516,6 +516,16 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   const [quizRecs,           setQuizRecs]           = useState(() => loadQuizData()?.recommendations || [])
   const [expandedSlot,       setExpandedSlot]       = useState(null)
   const [showTracksArchive,  setShowTracksArchive]  = useState(false)
+  const [slotChecks,         setSlotChecks]         = useState(() => {
+    try { return JSON.parse(localStorage.getItem('prime_protocol_checks_' + todayKey())) || {} } catch { return {} }
+  })
+
+  function toggleStepCheck(slotId, stepIdx) {
+    const key = `${slotId}:${stepIdx}`
+    const next = { ...slotChecks, [key]: !slotChecks[key] }
+    setSlotChecks(next)
+    try { localStorage.setItem('prime_protocol_checks_' + todayKey(), JSON.stringify(next)) } catch {}
+  }
 
   // Priority: Firestore trackQuizRecs (set by PathBuilder niche detection) > localStorage > legacy OnboardingFlow fallback
   const recommendedIds = (profile?.trackQuizRecs?.length > 0)
@@ -755,18 +765,19 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
         {PROTOCOL_SLOTS.map(slot => {
           const isActive   = slot.id === currentSlot
           const isExpanded = expandedSlot === slot.id
+          const stepsDone  = slot.steps.filter((_, i) => slotChecks[`${slot.id}:${i}`]).length
+          const allSteps   = slot.steps.length
+          const slotComplete = stepsDone === allSteps
 
           return (
             <div
               key={slot.id}
               style={{
-                background: isActive
-                  ? `linear-gradient(145deg,${slot.color}10,${slot.color}04)`
-                  : 'rgba(255,255,255,0.025)',
-                border: `1.5px solid ${isActive ? slot.color + '38' : 'rgba(255,255,255,0.07)'}`,
+                background: `linear-gradient(145deg,${slot.color}08,${slot.color}02)`,
+                border: `1.5px solid ${isExpanded ? slot.color + '45' : slot.color + '22'}`,
                 borderRadius: 18,
                 overflow: 'hidden',
-                boxShadow: isActive ? `0 4px 24px ${slot.color}10` : 'none',
+                boxShadow: isActive ? `0 4px 24px ${slot.color}12` : 'none',
                 transition: 'border 0.2s, box-shadow 0.2s',
               }}
             >
@@ -783,13 +794,16 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                 <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{slot.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ color: isActive ? slot.color : '#f1f5f9', fontWeight: 800, fontSize: '0.88rem' }}>{slot.title}</span>
+                    <span style={{ color: slot.color, fontWeight: 800, fontSize: '0.88rem' }}>{slot.title}</span>
                     {isActive && (
                       <span style={{ background: `${slot.color}18`, border: `1px solid ${slot.color}30`, borderRadius: 20, padding: '0.08rem 0.45rem', color: slot.color, fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>עכשיו</span>
                     )}
+                    {slotComplete && (
+                      <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 20, padding: '0.08rem 0.45rem', color: '#10b981', fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>✓ הושלם</span>
+                    )}
                   </div>
                   <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.67rem', marginTop: '0.08rem' }}>
-                    {slot.subtitle} · {slot.timeLabel}
+                    {slot.subtitle} · {slot.timeLabel}{stepsDone > 0 && !slotComplete ? ` · ${stepsDone}/${allSteps}` : ''}
                   </div>
                 </div>
                 <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.75rem', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>▾</span>
@@ -799,34 +813,58 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
               {isExpanded && (
                 <div style={{ padding: '0 1rem 1rem', animation: 'fadeIn 0.18s ease' }}>
 
-                  {/* Steps */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '0.9rem' }}>
-                    {slot.steps.map((step, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
-                        <div style={{
-                          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                          background: `${slot.color}18`, border: `1px solid ${slot.color}35`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.58rem', fontWeight: 900, color: slot.color, marginTop: '0.1rem',
-                        }}>{i + 1}</div>
-                        <p style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.82rem', lineHeight: 1.55, margin: 0 }}>{step}</p>
-                      </div>
-                    ))}
+                  {/* Steps with checkboxes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: slot.onCta ? '0.9rem' : 0 }}>
+                    {slot.steps.map((step, i) => {
+                      const checked = !!slotChecks[`${slot.id}:${i}`]
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => toggleStepCheck(slot.id, i)}
+                          className="btn-tactile"
+                          style={{
+                            display: 'flex', gap: '0.55rem', alignItems: 'flex-start',
+                            background: checked ? `${slot.color}0c` : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${checked ? slot.color + '35' : 'rgba(255,255,255,0.06)'}`,
+                            borderRadius: 10, padding: '0.55rem 0.65rem',
+                            cursor: 'pointer', textAlign: 'right', width: '100%',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            background: checked ? slot.color : 'transparent',
+                            border: `2px solid ${checked ? slot.color : 'rgba(255,255,255,0.2)'}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.6rem', color: '#0e0e16', fontWeight: 900,
+                            transition: 'all 0.15s', marginTop: '0.1rem',
+                          }}>{checked ? '✓' : ''}</div>
+                          <p style={{
+                            color: checked ? `${slot.color}99` : 'rgba(241,245,249,0.75)',
+                            fontSize: '0.82rem', lineHeight: 1.5, margin: 0,
+                            textDecoration: checked ? 'line-through' : 'none',
+                            textDecorationColor: `${slot.color}55`,
+                          }}>{step}</p>
+                        </button>
+                      )
+                    })}
                   </div>
 
-                  {/* CTA */}
-                  <button
-                    onClick={slot.onCta || undefined}
-                    className="btn-tactile"
-                    style={{
-                      width: '100%', padding: '0.85rem', borderRadius: 13, border: 'none',
-                      background: `linear-gradient(135deg,${slot.color}cc,${slot.color})`,
-                      color: '#0e0e16', fontSize: '0.85rem', fontWeight: 900,
-                      cursor: 'pointer', letterSpacing: '0.01em',
-                    }}
-                  >
-                    {slot.cta}
-                  </button>
+                  {/* CTA — only for slots that have an action */}
+                  {slot.onCta && (
+                    <button
+                      onClick={slot.onCta}
+                      className="btn-tactile"
+                      style={{
+                        width: '100%', padding: '0.85rem', borderRadius: 13, border: 'none',
+                        background: `linear-gradient(135deg,${slot.color}cc,${slot.color})`,
+                        color: '#0e0e16', fontSize: '0.85rem', fontWeight: 900,
+                        cursor: 'pointer', letterSpacing: '0.01em', marginTop: '0.75rem',
+                      }}
+                    >
+                      {slot.cta}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

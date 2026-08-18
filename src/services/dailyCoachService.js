@@ -1,7 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI   = new GoogleGenerativeAI(API_KEY)
+import { callGemini, geminiAvailable } from './geminiClient'
 
 const LOG_KEY = 'prime_coaching_log'
 const TODAY   = () => new Date().toISOString().slice(0, 10)
@@ -102,7 +99,7 @@ export async function generateDailyMessage() {
 
   const fallback = FALLBACKS[new Date().getDate() % FALLBACKS.length]
 
-  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') {
+  if (!geminiAvailable()) {
     const entry = {
       date: TODAY(),
       message: fallback,
@@ -139,10 +136,7 @@ export async function generateDailyMessage() {
     `- בדיוק 2 משפטים. לא יותר. לא פחות.`
 
   try {
-    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
-    const message = result.response.text().trim()
-
+    const message = await callGemini({ prompt })
     const entry = {
       date: TODAY(),
       message,

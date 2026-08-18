@@ -1,9 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { callGemini, geminiAvailable } from './geminiClient'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from './firebase'
-
-const API_KEY     = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI       = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 const TODAY       = () => new Date().toISOString().slice(0, 10)
 const MIN_GAP     = 2   // days missed before mirror fires
 
@@ -54,16 +51,11 @@ export async function checkAndGenerateMirror(pathRecord) {
 
   // Generate mirror message
   let message
-  if (!genAI || !core_motivation?.deep_why) {
+  if (!geminiAvailable() || !core_motivation?.deep_why) {
     message = buildFallbackMessage(gapDays, core_motivation)
   } else {
     try {
-      const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await Promise.race([
-        model.generateContent(buildMirrorPrompt(gapDays, core_motivation)),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ])
-      message = result.response.text().trim().replace(/^["״]|["״]$/g, '')
+      message = (await callGemini({ prompt: buildMirrorPrompt(gapDays, core_motivation) })).replace(/^["״]|["״]$/g, '')
       if (!message || message.length < 10) throw new Error('empty')
     } catch {
       message = buildFallbackMessage(gapDays, core_motivation)

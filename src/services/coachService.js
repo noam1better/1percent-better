@@ -1,17 +1,7 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI   = new GoogleGenerativeAI(API_KEY)
-
-function withTimeout(promise, ms = 15000) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ])
-}
+import { callGemini, geminiAvailable } from './geminiClient'
 
 export function coachConfigured() {
-  return !!API_KEY && API_KEY !== 'YOUR_KEY_HERE'
+  return geminiAvailable()
 }
 
 const EXERCISE_PROMPTS = {
@@ -49,26 +39,15 @@ export async function analyzeForm(base64Image, exercise, focusGoal) {
     `Look at this image carefully and give specific, actionable coaching feedback. ` +
     `Be encouraging but precise. Keep your response to 2–4 sentences. Plain text only, no markdown.`
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-  const result = await withTimeout(model.generateContent({
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-      ],
-    }],
-  }))
-  return result.response.text()
+  return callGemini({ prompt, imageBase64: base64Image, imageMimeType: 'image/jpeg' })
 }
 
 export async function verifyDayCompletion(challengeTitle, dayNum, taskDesc, userText) {
-  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') {
-    // No key — approve if answer is at least 25 chars
+  if (!geminiAvailable()) {
     const ok = userText.trim().length >= 25
     return { approved: ok, feedback: ok ? 'Great work! Keep it up.' : 'Please write at least a sentence describing what you did.' }
   }
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt =
     `You are a strict accountability coach for the "${challengeTitle}" challenge.\n` +
     `Today is Day ${dayNum}. The task was: "${taskDesc}".\n` +
@@ -80,12 +59,11 @@ export async function verifyDayCompletion(challengeTitle, dayNum, taskDesc, user
     `Reply ONLY with valid JSON (no markdown): {"approved": true/false, "feedback": "one short sentence"}`
 
   try {
-    const result  = await withTimeout(model.generateContent(prompt))
-    const raw     = result.response.text().trim().replace(/```json|```/g, '').trim()
-    const start   = raw.indexOf('{')
-    const end     = raw.lastIndexOf('}')
+    const raw    = (await callGemini({ prompt })).replace(/```json|```/g, '').trim()
+    const start  = raw.indexOf('{')
+    const end    = raw.lastIndexOf('}')
     if (start === -1 || end === -1) throw new Error('no json')
-    const parsed  = JSON.parse(raw.slice(start, end + 1))
+    const parsed = JSON.parse(raw.slice(start, end + 1))
     if (typeof parsed.approved !== 'boolean') throw new Error('bad schema')
     return parsed
   } catch (err) {
@@ -96,12 +74,10 @@ export async function verifyDayCompletion(challengeTitle, dayNum, taskDesc, user
 }
 
 export async function getFocusTip(taskTitle) {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+  return callGemini({
+    prompt: `Task: ${taskTitle}`,
     systemInstruction: 'You are a professional focus coach. Provide a single, punchy, actionable sentence on how to start this specific task immediately. Be motivating but direct.',
   })
-  const result = await model.generateContent(`Task: ${taskTitle}`)
-  return result.response.text().trim()
 }
 
 const CHALLENGE_FALLBACK = {
@@ -117,9 +93,8 @@ const VALID_IDS = ['ai-beginners','business-mind','product-builder','deal-closer
 
 export async function suggestChallenge(energy, timeAvail, focusGoal) {
   const fallback = CHALLENGE_FALLBACK[focusGoal] || 'ai-beginners'
-  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return fallback
+  if (!geminiAvailable()) return fallback
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt =
     `You are a personal growth coach. Pick the single best challenge track for this user.\n` +
     `Energy level: ${energy}\n` +
@@ -136,8 +111,7 @@ export async function suggestChallenge(energy, timeAvail, focusGoal) {
     `Reply with ONLY the track ID. No explanation, no punctuation.`
 
   try {
-    const result = await model.generateContent(prompt)
-    const id     = result.response.text().trim().toLowerCase().replace(/[^a-z-]/g, '')
+    const id = (await callGemini({ prompt })).toLowerCase().replace(/[^a-z-]/g, '')
     return VALID_IDS.includes(id) ? id : fallback
   } catch {
     return fallback
@@ -145,9 +119,8 @@ export async function suggestChallenge(energy, timeAvail, focusGoal) {
 }
 
 export async function analyzeVideoForm(base64Frame, exerciseName) {
-  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return null
+  if (!geminiAvailable()) return null
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt =
     `You are an expert strength and conditioning coach. Analyze the provided workout image for the exercise: ${exerciseName}.\n` +
     `Respond ONLY in Hebrew. Give exactly 3 numbered lines with NO markdown:\n` +
@@ -157,11 +130,7 @@ export async function analyzeVideoForm(base64Frame, exerciseName) {
     `Be direct and specific. Plain text only — no asterisks, no bold, no bullet symbols.`
 
   try {
-    const result = await model.generateContent([
-      { inlineData: { mimeType: 'image/jpeg', data: base64Frame } },
-      { text: prompt },
-    ])
-    return result.response.text().trim()
+    return await callGemini({ prompt, imageBase64: base64Frame, imageMimeType: 'image/jpeg' })
   } catch {
     return null
   }
@@ -172,7 +141,7 @@ export async function getDisciplineCoachMessage({ goalMinutes, activity, streak,
     .map(h => `${h.date}: ${h.completed ? `✓ ${h.minutesDone} דקות` : '✗ לא הושלם'}`)
     .join('\n')
 
-  const levelUpTrigger = completed && streak > 0 && streak % 3 === 0
+  const levelUpTrigger    = completed && streak > 0 && streak % 3 === 0
   const newGoalSuggestion = goalMinutes + 5
 
   const prompt =
@@ -190,9 +159,7 @@ export async function getDisciplineCoachMessage({ goalMinutes, activity, streak,
     `השב בעברית בלבד. 2–3 משפטים. ללא markdown. ישיר ומוטיבציוני.`
 
   try {
-    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
-    return result.response.text().trim()
+    return await callGemini({ prompt })
   } catch {
     return completed
       ? 'כל הכבוד על ההשלמה. שמור על הקצב — המשמעת בנויה יום אחד בכל פעם.'
@@ -209,17 +176,15 @@ export async function getFutureSelfReminder(currentXP, projectedXP, streak) {
     `30 ימים מהיום: ${projectedXP.toLocaleString()} XP, רמה ${Math.floor(projectedXP / 100) + 1}. זה לא חלום — זו מתמטיקה. הצעד הבא שלך קובע.`,
   ]
   const idx = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % MESSAGES.length
-  if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') return MESSAGES[idx]
+  if (!geminiAvailable()) return MESSAGES[idx]
 
   try {
-    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
     const prompt =
       `You are a psychological performance coach speaking directly to the user in Hebrew.\n` +
       `Current XP: ${currentXP}, Projected XP in 30 days: ${projectedXP}, Streak: ${streak} days.\n` +
       `Write ONE punchy, direct Hebrew sentence (max 25 words) that makes them feel the gap between their current self and future self.\n` +
       `Be motivating but visceral — not fluffy. Plain text only.`
-    const result = await model.generateContent(prompt)
-    return result.response.text().trim()
+    return await callGemini({ prompt })
   } catch {
     return MESSAGES[idx]
   }
@@ -238,7 +203,5 @@ export async function analyzeSession(exercise, { reps, duration, formScore }) {
     `כתוב משוב מאמן בעברית בלבד. 3-4 משפטים. היה מעודד וספציפי. ` +
     `ציין מה הלך טוב ו-1-2 נקודות לשיפור על סמך הנתונים. טקסט רגיל בלבד, ללא markdown.`
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-  const result = await model.generateContent(prompt)
-  return result.response.text()
+  return callGemini({ prompt })
 }

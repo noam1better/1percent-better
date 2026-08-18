@@ -1,9 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { callGemini, geminiAvailable } from './geminiClient'
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI   = new GoogleGenerativeAI(API_KEY)
 const TODAY   = () => new Date().toISOString().slice(0, 10)
 
 const pathDoc           = uid => doc(db, 'userPaths', uid)
@@ -425,18 +422,15 @@ export async function buildCustomPath(uid, visionProfile, onStatus) {
 
   onStatus?.('ai')
 
-  if (!API_KEY) {
+  if (!geminiAvailable()) {
     pathData = synthesizeDynamicPath(visionProfile)
   } else {
     try {
-      const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await withTimeout(
-        model.generateContent(buildPathPrompt(visionProfile)),
+      const raw = (await withTimeout(
+        callGemini({ prompt: buildPathPrompt(visionProfile) }),
         35000,
         'GEMINI_TIMEOUT'
-      )
-      const raw = result.response.text().trim()
-        .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+      )).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       const parsed = JSON.parse(raw)
       pathData = normalizePathData(parsed)
       pathData = enforceUserHabits(pathData, visionProfile)
@@ -520,13 +514,11 @@ export async function generateDayLesson(uid, pathRecord, dayIndex) {
   }
 
   let lesson
-  if (!API_KEY) {
+  if (!geminiAvailable()) {
     lesson = buildFallbackLesson(dayEntry, pathRecord)
   } else {
     try {
-      const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await model.generateContent(buildLessonPrompt(dayEntry, pathRecord))
-      const raw    = result.response.text().trim()
+      const raw = (await callGemini({ prompt: buildLessonPrompt(dayEntry, pathRecord) }))
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       lesson = JSON.parse(raw)
       if (!lesson.title || !lesson.deep_dive) throw new Error('Invalid lesson')

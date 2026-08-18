@@ -1,8 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { callGemini, geminiAvailable } from './geminiClient'
 import { getEnergyLog, ENERGY_TAGS } from './energyLogService'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI   = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 const KEY     = 'prime_weekly_spark'
 const TTL     = 20 * 60 * 60 * 1000  // 20 hours
 
@@ -48,15 +45,10 @@ export async function generateWeeklySpark(completedDays = 0) {
 
   const log = getEnergyLog(7)
 
-  if (!genAI) return buildFallback(log)
+  if (!geminiAvailable()) return buildFallback(log)
 
   try {
-    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await Promise.race([
-      model.generateContent(buildPrompt(log, completedDays)),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-    ])
-    const spark = result.response.text().trim().replace(/^["״]|["״]$/g, '')
+    const spark = (await callGemini({ prompt: buildPrompt(log, completedDays) })).replace(/^["״]|["״]$/g, '')
     if (!spark || spark.length < 10) throw new Error('empty')
     localStorage.setItem(KEY, JSON.stringify({ spark, ts: Date.now() }))
     return spark

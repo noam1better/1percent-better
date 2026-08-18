@@ -1,12 +1,84 @@
 'use strict';
 
-const { onSchedule }        = require('firebase-functions/v2/scheduler');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
-const { initializeApp }     = require('firebase-admin/app');
-const { getFirestore }      = require('firebase-admin/firestore');
-const { getMessaging }      = require('firebase-admin/messaging');
+const { onSchedule }              = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten }       = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError }      = require('firebase-functions/v2/https');
+const { initializeApp }           = require('firebase-admin/app');
+const { getFirestore }            = require('firebase-admin/firestore');
+const { getMessaging }            = require('firebase-admin/messaging');
+const { GoogleGenerativeAI }      = require('@google/generative-ai');
 
 initializeApp();
+
+// ── analyzeWithGemini — secure Gemini proxy ───────────────────────────────────
+// Callable from the frontend. Requires Firebase Auth (blocks unauthenticated
+// and guest callers — those fall back to static responses on the client).
+//
+// Request data:
+//   prompt          string | object[]  — text prompt or pre-built content array
+//   imageBase64     string?            — base64-encoded image (no data: prefix)
+//   imageMimeType   string?            — e.g. "image/jpeg"
+//   systemInstruction string?          — optional model system instruction
+//   model           string?            — default "gemini-1.5-flash"
+//
+// Response: { text: string }
+
+exports.analyzeWithGemini = onCall(
+  {
+    region:          'europe-west1',
+    memory:          '512MiB',
+    timeoutSeconds:  30,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required.');
+    }
+
+    const {
+      prompt,
+      imageBase64,
+      imageMimeType = 'image/jpeg',
+      systemInstruction,
+      model: modelName = 'gemini-1.5-flash',
+    } = request.data || {};
+
+    if (!prompt && !imageBase64) {
+      throw new HttpsError('invalid-argument', 'prompt or imageBase64 required.');
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'Gemini API key not configured.');
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      ...(systemInstruction ? { systemInstruction } : {}),
+    });
+
+    // Build content array
+    let contents;
+    if (imageBase64) {
+      contents = [{
+        parts: [
+          ...(prompt ? [{ text: prompt }] : []),
+          { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
+        ],
+      }];
+    } else {
+      contents = prompt;  // string or pre-built content array
+    }
+
+    try {
+      const result = await model.generateContent(contents);
+      return { text: result.response.text().trim() };
+    } catch (err) {
+      console.error('[analyzeWithGemini] Gemini error:', err?.message);
+      throw new HttpsError('internal', 'Gemini request failed.');
+    }
+  }
+);
 
 // ── Accountability copy ────────────────────────────────────────────────────────
 

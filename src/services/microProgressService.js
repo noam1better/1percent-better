@@ -1,9 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { callGemini, geminiAvailable } from './geminiClient'
 import { doc, setDoc } from 'firebase/firestore'
 import { db } from './firebase'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const genAI   = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 const TODAY   = () => new Date().toISOString().slice(0, 10)
 const pathDoc = uid => doc(db, 'userPaths', uid)
 
@@ -64,16 +61,11 @@ export async function generateMicroSteps(uid, pathRecord, dayIndex) {
 
   // 2. Generate via Gemini
   let steps
-  if (!genAI) {
+  if (!geminiAvailable()) {
     steps = buildFallbackSteps(task)
   } else {
     try {
-      const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-      const result = await Promise.race([
-        model.generateContent(buildMicroPrompt(task, goal)),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
-      ])
-      const raw = result.response.text().trim()
+      const raw = (await callGemini({ prompt: buildMicroPrompt(task, goal) }))
         .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       steps = normalizeSteps(JSON.parse(raw))
       if (!steps) throw new Error('empty')
