@@ -92,6 +92,26 @@ service cloud.firestore {
                   && (!('questionnaire' in request.resource.data) || request.resource.data.questionnaire is map)
                   && (!('progress' in request.resource.data)      || request.resource.data.progress is map)
                   && (!('status' in request.resource.data)        || request.resource.data.status in ['active','completed','pending','reset']);
+
+      // Path archive — previous 30-day programs stored per-uid.
+      match /history/{archiveId} {
+        allow read:   if isOwner(uid);
+        allow create: if isOwner(uid);
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    // ── PROOF OF ACTION ────────────────────────────────
+    // Owner-only. Immutable completion records; no overwrite after save.
+    // text capped at 1000 chars; imageUrl must be a string if present.
+    match /proofs/{uid}/entries/{entryId} {
+      allow read:   if isOwner(uid);
+      allow create: if isOwner(uid)
+                   && (!('text'     in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 1000))
+                   && (!('imageUrl' in request.resource.data) || request.resource.data.imageUrl is string);
+      allow update: if false;
+      allow delete: if isOwner(uid);
     }
 
     // ── SQUADS ─────────────────────────────────────────
