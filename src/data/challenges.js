@@ -1,4 +1,5 @@
 export const CHALLENGES = [
+  { id: 'hobby-discovery',    emoji: '🔍', title: 'גלה תחביב שמתאים לך',    subtitle: 'נסה 14 תחומים שונים וגלה מה מדבר אליך',   days: 14, xpPerDay: 50, color: '#a78bfa', isHobbyDiscovery: true },
   { id: 'ai-beginners',    emoji: '🤖', title: 'AI למתחילים',            subtitle: 'שלוט בכלי AI ב-30 יום',                     days: 30, xpPerDay: 50, color: '#6366f1', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
   { id: 'business-mind',   emoji: '💼', title: 'חשיבת עסקים',            subtitle: 'חשיבה של יזם ב-30 יום',                     days: 30, xpPerDay: 60, color: '#8b5cf6', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
   { id: 'product-builder', emoji: '🏗️', title: 'בוני מוצרים',            subtitle: 'שגר את המוצר הראשון שלך ב-30 יום',          days: 30, xpPerDay: 65, color: '#10b981', whatsappLink: 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4' },
