@@ -41,6 +41,11 @@ import HobbyDiscoveryProgress from '../components/HobbyDiscoveryProgress'
 import { HOBBY_DISCOVERY_ID, getHobbyDay } from '../data/hobbyDiscovery'
 import { DEFAULT_PILLARS } from '../data/pillars'
 import { shouldShowLateReminder, getIncompleteCount } from '../utils/habitReminder'
+import BoxingPathScreen from '../components/boxing/BoxingPathScreen'
+import BoxingWorkoutPreview from '../components/boxing/BoxingWorkoutPreview'
+import BoxingActiveWorkout from '../components/boxing/BoxingActiveWorkout'
+import BoxingCompletion from '../components/boxing/BoxingCompletion'
+import { getBoxingState, getNextWorkout, completeWorkout } from '../utils/boxingProgress'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -684,6 +689,10 @@ export default function Dashboard() {
   const [boxingSession,     setBoxingSession]     = useState(null)  // { track, goal } | null
   const [showCombatTraining,setShowCombatTraining]= useState(false)
   const [showCombatProtocols, setShowCombatProtocols] = useState(false)
+  const [showBoxingPath,      setShowBoxingPath]      = useState(false)
+  const [boxingPreview,       setBoxingPreview]       = useState(null)   // workout object
+  const [boxingActive,        setBoxingActive]        = useState(null)   // { workout, trainingType }
+  const [boxingCompletion,    setBoxingCompletion]    = useState(null)   // completion data
   const [_showDetails,      setShowDetails]       = useState(false)
   const [_contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
   const [_headerScore,    setHeaderScore]    = useState(getScore)
@@ -1654,6 +1663,7 @@ export default function Dashboard() {
                 }
               }}
               onCombat={() => setShowCombatProtocols(true)}
+              onBoxing={() => setShowBoxingPath(true)}
             />
           </div>
         )}
@@ -1872,6 +1882,61 @@ export default function Dashboard() {
           onClose={() => setShowCombatProtocols(false)}
           onAwardXP={amount => { setShowCombatProtocols(false); awardXP(amount); bumpStreak() }}
           onOpenFreeSession={() => { setShowCombatProtocols(false); setShowCombatTraining(true) }}
+        />
+      )}
+      {showBoxingPath && (
+        <BoxingPathScreen
+          profile={profile}
+          onStartWorkout={workout => { setShowBoxingPath(false); setBoxingPreview(workout) }}
+          onFreeTraining={() => { setShowBoxingPath(false); setShowCombatTraining(true) }}
+          onClose={() => setShowBoxingPath(false)}
+        />
+      )}
+      {boxingPreview && (
+        <BoxingWorkoutPreview
+          workout={boxingPreview}
+          levelNum={boxingPreview.level}
+          onStart={trainingType => { setBoxingActive({ workout: boxingPreview, trainingType }); setBoxingPreview(null) }}
+          onBack={() => { setBoxingPreview(null); setShowBoxingPath(true) }}
+        />
+      )}
+      {boxingActive && (
+        <BoxingActiveWorkout
+          workout={boxingActive.workout}
+          trainingType={boxingActive.trainingType}
+          onComplete={stats => {
+            const workout = boxingActive.workout
+            setBoxingActive(null)
+            const xpKey = `prime_boxing_done_${todayKey()}`
+            const alreadyEarned = !!localStorage.getItem(xpKey)
+            const xpAwarded = alreadyEarned ? 0 : XP.WORKOUT
+            if (!alreadyEarned) {
+              localStorage.setItem(xpKey, '1')
+              awardXP(xpAwarded)
+              bumpStreak()
+            }
+            const boxState = getBoxingState(profile)
+            const newBoxState = completeWorkout(boxState, workout.id, todayKey())
+            if (!isGuest && user) {
+              saveProfile(user.uid, { training: { boxing: newBoxState } })
+                .catch(() => {})
+              setProfile(p => ({ ...p, training: { ...(p?.training || {}), boxing: newBoxState } }))
+            }
+            const nextWorkout = getNextWorkout(newBoxState)
+            const levelJustCompleted = newBoxState.currentLevel > boxState.currentLevel ? boxState.currentLevel : null
+            setBoxingCompletion({ workout, stats, xpAwarded, nextWorkout, levelJustCompleted })
+          }}
+          onExit={() => setBoxingActive(null)}
+        />
+      )}
+      {boxingCompletion && (
+        <BoxingCompletion
+          workout={boxingCompletion.workout}
+          stats={boxingCompletion.stats}
+          xpAwarded={boxingCompletion.xpAwarded}
+          nextWorkout={boxingCompletion.nextWorkout}
+          levelJustCompleted={boxingCompletion.levelJustCompleted}
+          onDone={() => { setBoxingCompletion(null); setShowBoxingPath(true) }}
         />
       )}
       {showWorkoutLib && (
