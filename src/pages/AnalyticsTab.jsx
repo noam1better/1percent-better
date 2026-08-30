@@ -47,25 +47,24 @@ function InitiationModal({ level, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(160deg,#0f172a,#0a0f1e)',
-          border: '1px solid rgba(37,211,102,0.25)',
+          background: '#111114',
+          border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 24,
           padding: '2.5rem 2rem',
           maxWidth: 380,
           width: '100%',
           textAlign: 'center',
-          boxShadow: '0 0 80px rgba(37,211,102,0.12), 0 20px 60px rgba(0,0,0,0.6)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
           animation: 'initiation-slide 0.35s cubic-bezier(.34,1.56,.64,1) both',
         }}
       >
         {/* Icon */}
         <div style={{
           width: 80, height: 80, borderRadius: 24,
-          background: 'linear-gradient(135deg,#25d366,#128c7e)',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '2.4rem', margin: '0 auto 1.5rem',
-          boxShadow: '0 8px 32px rgba(37,211,102,0.4)',
-          animation: 'fight-club-pulse 2.5s ease-in-out infinite',
         }}>🥊</div>
 
         {/* Label */}
@@ -83,15 +82,15 @@ function InitiationModal({ level, onClose }) {
           5+ ימים של נוכחות. אתה בין ה-1% הטובים.
         </p>
         <p style={{ color: 'rgba(241,245,249,0.75)', fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.6, margin: '0 0 2rem' }}>
-          ברוך הבא לפייט קלאב.<br />
+          ברוך הבא למועדון הקרב.<br />
           מוכן לשמור על הסטנדרט הזה?
         </p>
 
         {/* Divider */}
-        <div style={{ height: 1, background: 'rgba(37,211,102,0.15)', marginBottom: '1.75rem' }} />
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginBottom: '1.75rem' }} />
 
         {/* Pledge */}
-        <div style={{ background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.15)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
           <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>ההתחייבות שלך</div>
           <div style={{ color: 'rgba(241,245,249,0.7)', fontSize: '0.8rem', lineHeight: 1.6, fontStyle: 'italic' }}>
             "אגיע כל יום, אחזיק את עצמי בסטנדרט הגבוה ואסייע לאחרים בקהילה."
@@ -104,11 +103,11 @@ function InitiationModal({ level, onClose }) {
           disabled={signed}
           style={{
             width: '100%',
-            background: signed ? 'rgba(37,211,102,0.2)' : 'linear-gradient(135deg,#25d366,#128c7e)',
-            border: 'none', borderRadius: 14,
-            color: '#fff', fontWeight: 800, fontSize: '1rem',
+            background: signed ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14,
+            color: '#25d366', fontWeight: 800, fontSize: '1rem',
             padding: '1rem', cursor: signed ? 'default' : 'pointer',
-            boxShadow: signed ? 'none' : '0 6px 24px rgba(37,211,102,0.35)',
+            boxShadow: 'none',
             transition: 'all 0.3s ease',
             letterSpacing: '0.03em',
           }}
@@ -274,27 +273,26 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
 
       <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
         <div>
-          <h2 style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.15rem', margin: 0 }}>האנליטיקה שלך</h2>
+          <h2 style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.15rem', margin: 0 }}>ההתקדמות שלך</h2>
           <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.78rem', marginTop: '0.2rem' }}>מבט כללי על ההתקדמות</p>
         </div>
         <button
           className="btn-tactile"
           onClick={handleShare}
           style={{
-            flexShrink: 0, background: 'linear-gradient(135deg,#c4795a,#d4956e)',
-            border: 'none', borderRadius: 12, padding: '0.5rem 0.9rem',
-            color: '#fff', fontSize: '0.75rem', fontWeight: 800,
+            flexShrink: 0, background: '#171717',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '0.5rem 0.9rem',
+            color: '#f0f0f0', fontSize: '0.75rem', fontWeight: 800,
             display: 'flex', alignItems: 'center', gap: '0.35rem',
-            boxShadow: '0 4px 16px rgba(196,121,90,0.35)',
           }}
         >
-          <span>📤</span> שתף
+          <span>📋</span> העתק סיכום
         </button>
       </div>
 
       {/* ── Network / no-profile guard ── */}
       {!profile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 12, padding: '0.8rem 1rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '0.8rem 1rem', marginBottom: '1.25rem' }}>
           <div style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid rgba(245,158,11,0.25)', borderTopColor: '#f59e0b', animation: 'spin 0.9s linear infinite', flexShrink: 0 }} />
           <span style={{ color: 'rgba(245,158,11,0.8)', fontSize: '0.76rem', fontWeight: 600 }}>מתחבר לנתונים… אם הנתונים לא נטענים — רענן את הדף</span>
         </div>
@@ -308,7 +306,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
           { label: 'רמה',               value: level,                 icon: '⭐', color: '#8b5cf6' },
           { label: 'שיעורים שהושלמו',    value: totalLessons,          icon: '📚', color: '#10b981' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '0.9rem 1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }}>
+          <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '0.9rem 1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
               <span style={{ fontSize: '0.9rem' }}>{s.icon}</span>
               <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
@@ -320,32 +318,31 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
 
       {/* ── Consistency Badge ── */}
       {hasBadge && (
-        <div style={{ marginBottom: '1rem', background: 'linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06))', border: '1px solid rgba(251,191,36,0.28)', borderRadius: 16, padding: '1rem 1.15rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 20px rgba(251,191,36,0.15)', animation: 'badge-glow 3s ease-in-out infinite', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 40%,rgba(251,191,36,0.08) 50%,transparent 60%)', animation: 'shimmer 2.8s ease-in-out infinite', pointerEvents: 'none' }} />
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0, boxShadow: '0 4px 14px rgba(251,191,36,0.4)' }}>🏅</div>
+        <div style={{ marginBottom: '1rem', background: '#111114', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 16, padding: '1rem 1.15rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(212,168,67,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🏅</div>
           <div>
-            <div style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.15rem' }}>אלוף העקביות</div>
-            <div style={{ color: 'rgba(241,245,249,0.45)', fontSize: '0.75rem' }}>{streak} ימים ברצף · אל תשבור את השרשרת</div>
+            <div style={{ color: '#d4a843', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.12rem' }}>אלוף העקביות</div>
+            <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.73rem' }}>{streak} ימים ברצף</div>
           </div>
-          <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ color: '#fbbf24', fontWeight: 800, fontSize: '1.4rem', lineHeight: 1 }}>{streak}</div>
-            <div style={{ color: 'rgba(251,191,36,0.5)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase' }}>days</div>
+          <div style={{ marginInlineStart: 'auto', textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ color: '#d4a843', fontWeight: 900, fontSize: '1.35rem', lineHeight: 1, fontFamily: "'SF Mono','Fira Code',monospace" }}>{streak}</div>
+            <div style={{ color: 'rgba(212,168,67,0.5)', fontSize: '0.58rem', fontWeight: 700 }}>ימים</div>
           </div>
         </div>
       )}
 
       {/* ── Club Status card ── */}
-      <div style={{ marginBottom: '1rem', borderRadius: 16, overflow: 'hidden', boxShadow: inFightClub ? '0 4px 24px rgba(37,211,102,0.2)' : '0 2px 10px rgba(0,0,0,0.18)' }}>
+      <div style={{ marginBottom: '1rem', borderRadius: 16, overflow: 'hidden' }}>
         {inFightClub ? (
-          <div style={{ background: 'linear-gradient(135deg,rgba(37,211,102,0.12),rgba(18,140,126,0.08))', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 16, padding: '1rem 1.15rem', display: 'flex', alignItems: 'center', gap: '1rem', animation: 'fight-club-pulse 2.5s ease-in-out infinite' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#25d366,#128c7e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0, boxShadow: '0 4px 14px rgba(37,211,102,0.4)' }}>🥊</div>
+          <div style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '1rem 1.15rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🥊</div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: '#25d366', fontWeight: 800, fontSize: '0.92rem', marginBottom: '0.15rem' }}>חבר בפייט קלאב</div>
-              <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.75rem' }}>רמה {level} · גישה מלאה לקהילה</div>
+              <div style={{ color: '#25d366', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.12rem' }}>מועדון הקרב</div>
+              <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.73rem' }}>רמה {level} · גישה פתוחה</div>
             </div>
             <button
               onClick={() => hasSigned ? window.open(WHATSAPP_LINK, '_blank', 'noopener,noreferrer') : setShowCeremony(true)}
-              style={{ background: 'linear-gradient(135deg,#25d366,#128c7e)', border: 'none', borderRadius: 10, padding: '0.45rem 0.8rem', color: '#fff', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 10px rgba(37,211,102,0.3)' }}
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '0.45rem 0.8rem', color: 'rgba(232,232,232,0.7)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
             >{hasSigned ? 'פתח ←' : 'הצטרף ←'}</button>
           </div>
         ) : (
@@ -353,7 +350,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🔒</div>
               <div>
-                <div style={{ color: 'rgba(241,245,249,0.6)', fontWeight: 700, fontSize: '0.88rem' }}>פייט קלאב</div>
+                <div style={{ color: 'rgba(241,245,249,0.6)', fontWeight: 700, fontSize: '0.88rem' }}>מועדון הקרב</div>
                 <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.72rem' }}>הגע לרמה {FIGHT_CLUB_LEVEL} כדי לפתוח · נותרו {xpToClub} XP</div>
               </div>
               <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
@@ -362,7 +359,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
               </div>
             </div>
             <div style={{ height: 7, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
-              <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', width: `${clubProgress}%`, transition: 'width 0.6s cubic-bezier(.4,0,.2,1)' }} />
+              <div style={{ height: '100%', borderRadius: 99, background: '#6366f1', width: `${clubProgress}%`, transition: 'width 0.6s cubic-bezier(.4,0,.2,1)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem' }}>
               <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.63rem' }}>{xp} XP</span>
@@ -381,7 +378,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
           </div>
           <button
             onClick={handlePreviewNudge}
-            style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 8, padding: '0.2rem 0.55rem', color: '#a5b4fc', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '0.2rem 0.55rem', color: 'rgba(240,240,240,0.5)', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
           >▶ תצוגה מקדימה</button>
         </div>
         <div style={{ color: '#f1f5f9', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.15rem' }}>{nudge.title}</div>
@@ -389,7 +386,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
       </div>
 
       {/* ── 14-day consistency chart ── */}
-      <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '1.1rem 1.1rem 0.85rem', marginBottom: '1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }}>
+      <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1.1rem 1.1rem 0.85rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
           <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>עקביות יומית</span>
           <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.68rem' }}>14 הימים האחרונים</span>
@@ -407,11 +404,11 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
                   borderRadius: 4,
                   background: d.active
                     ? d.isToday
-                      ? 'linear-gradient(180deg,#a5b4fc,#6366f1)'
-                      : 'linear-gradient(180deg,#6366f188,#6366f144)'
+                      ? '#d4a843'
+                      : 'rgba(212,168,67,0.45)'
                     : 'rgba(255,255,255,0.06)',
                   transition: 'height 0.4s ease',
-                  boxShadow: d.active && d.isToday ? '0 2px 8px rgba(99,102,241,0.5)' : 'none',
+                  boxShadow: 'none',
                 }}
               />
             </div>
@@ -421,7 +418,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         {/* Day labels */}
         <div style={{ display: 'flex', gap: '4px' }}>
           {barData.map(d => (
-            <div key={d.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.55rem', color: d.isToday ? '#a5b4fc' : 'rgba(241,245,249,0.2)', fontWeight: d.isToday ? 800 : 400 }}>
+            <div key={d.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.55rem', color: d.isToday ? '#d4a843' : 'rgba(241,245,249,0.2)', fontWeight: d.isToday ? 800 : 400 }}>
               {d.isToday ? '•' : d.dayLbl}
             </div>
           ))}
@@ -430,7 +427,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         {/* Legend */}
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'linear-gradient(135deg,#a5b4fc,#6366f1)' }} />
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: '#d4a843' }} />
             <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem' }}>פעיל</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -444,10 +441,10 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
       </div>
 
       {/* ── Weekly Insight card ── */}
-      <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem' }}>
+      <div style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '1.1rem' }}>{insight.icon}</span>
-          <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.82rem' }}>תובנה שבועית</span>
+          <span style={{ color: 'rgba(232,232,232,0.7)', fontWeight: 700, fontSize: '0.82rem' }}>תובנה שבועית</span>
         </div>
         <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{insight.text}</p>
       </div>
@@ -465,10 +462,10 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         ]
         const maxXP  = proj[2].xp
         return (
-          <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(139,92,246,0.04))', border: '1px solid rgba(99,102,241,0.16)', borderRadius: 16, padding: '1.1rem 1.1rem', marginBottom: '1rem' }}>
+          <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1.1rem 1.1rem', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.85rem' }}>
               <div>
-                <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.88rem' }}>מסלול הצמיחה שלך</span>
+                <span style={{ color: 'rgba(232,232,232,0.7)', fontWeight: 700, fontSize: '0.88rem' }}>מסלול הצמיחה שלך</span>
                 <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', marginTop: '0.1rem' }}>בהנחה של {dailyXP} XP/יום</div>
               </div>
               <span style={{ fontSize: '0.7rem' }}>🚀</span>
@@ -490,7 +487,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
                 <div key={p.days} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: i < 2 ? '0.5rem' : 0 }}>
                   <div style={{ width: 56, textAlign: 'left', color: colors[i], fontSize: '0.65rem', fontWeight: 700, flexShrink: 0 }}>{p.label}</div>
                   <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.06)', direction: 'ltr' }}>
-                    <div style={{ height: '100%', width: `${Math.round((p.xp / maxXP) * 100)}%`, borderRadius: 99, background: `linear-gradient(90deg,${colors[i]}88,${colors[i]})`, transition: 'width 0.8s ease' }} />
+                    <div style={{ height: '100%', width: `${Math.round((p.xp / maxXP) * 100)}%`, borderRadius: 99, background: colors[i], opacity: 0.7, transition: 'width 0.8s ease' }} />
                   </div>
                   <div style={{ width: 60, textAlign: 'right', color: colors[i], fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>
                     {p.xp.toLocaleString()} XP
@@ -500,8 +497,8 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
               )
             })}
 
-            <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(99,102,241,0.15)', color: 'rgba(241,245,249,0.32)', fontSize: '0.68rem', lineHeight: 1.55 }}>
-              💡 המספרים האלה אמיתיים — זה מה שיקרה אם תמשיך בקצב הנוכחי.
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', color: 'rgba(241,245,249,0.32)', fontSize: '0.68rem', lineHeight: 1.55 }}>
+              💡 זוהי תחזית משוערת לפי הקצב הנוכחי שלך.
             </div>
           </div>
         )
@@ -509,7 +506,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
 
       {/* ── Tracks progress breakdown — always shows niche tracks ── */}
       {relevantTrackIds.size > 0 && (
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '1rem 1.1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }}>
+        <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1rem 1.1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.85rem' }}>
             <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>מסלול פעיל</span>
             {activePathName && <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePathName}</span>}
@@ -524,13 +521,13 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                     <span style={{ color: 'rgba(241,245,249,0.55)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <span>{ch.emoji}</span>{ch.title}
-                      {isActive && <span style={{ background: `${ch.color}18`, border: `1px solid ${ch.color}30`, borderRadius: 20, padding: '0.05rem 0.4rem', color: ch.color, fontSize: '0.55rem', fontWeight: 800 }}>פעיל</span>}
+                      {isActive && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.05rem 0.4rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.55rem', fontWeight: 800 }}>פעיל</span>}
                       {done === 0 && <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>טרם התחיל</span>}
                     </span>
                     <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{done}/{ch.days}d · {pct}%</span>
                   </div>
                   <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
-                    <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}88,${ch.color})`, width: `${pct}%`, transition: 'width 0.5s ease' }} />
+                    <div style={{ height: '100%', borderRadius: 99, background: ch.color, opacity: 0.75, width: `${pct}%`, transition: 'width 0.5s ease' }} />
                   </div>
                 </div>
               )

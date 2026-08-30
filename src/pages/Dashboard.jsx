@@ -170,7 +170,7 @@ const WORKOUT_EXERCISES = [
   { id: 'squats',   emoji: '🦵', name: 'סקווטים',       desc: 'כוח פלג גוף תחתון',         trackId: 'self-discipline',  available: true  },
   { id: 'run',      emoji: '🏃', name: 'ריצה',           desc: 'טיימר + GPS מרחק בזמן אמת', trackId: 'cardio-run',       available: true  },
   { id: 'walk',     emoji: '🚶', name: 'הליכה',          desc: 'קצב + מרחק עם GPS',          trackId: 'cardio-walk',      available: true  },
-  { id: 'boxing',   emoji: '🥊', name: 'בוקסינג',         desc: 'AI מאמן טכניקה בזמן אמת',  trackId: 'boxing-muaythai',  available: true },
+  { id: 'boxing',   emoji: '🥊', name: 'איגרוף',           desc: 'מסלול מודרך · 7 רמות',     trackId: 'boxing-muaythai',  available: true },
   { id: 'muaythai', emoji: '🥋', name: 'מואי תאי',       desc: 'AI מאמן טכניקה בזמן אמת',  trackId: 'boxing-muaythai',  available: true },
 ]
 
@@ -420,7 +420,7 @@ function SetSummaryModal({ exercise, onDone, onClose, onAwardXP }) {
               <div style={{ marginBottom: '1rem', animation: 'fadeIn 0.25s ease' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '1rem' }}>🤖</span>
-                  <span style={{ color: 'rgba(232,232,232,0.6)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase' }}>AI Form Coach</span>
+                  <span style={{ color: 'rgba(232,232,232,0.6)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em' }}>ניתוח טופס</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   {aiFeedback.split('\n').map(l => l.trim()).filter(Boolean).map((line, i) => (
@@ -1442,12 +1442,12 @@ export default function Dashboard() {
               const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000)
               const DAILY_WORKOUTS = [
                 { name: 'שכיבות סמיכה', category: 'כוח', duration: '15 דקות', sets: '4 סטים × 10', icon: '💪', trackId: 'strength-pushups', isCombat: false },
-                { name: 'ריצה', category: 'קרדיו', duration: '20 דקות', sets: '1 ריצה רציפה', icon: '🏃', trackId: 'cardio-run', isCombat: false },
+                { name: 'ריצה', category: 'סיבולת', duration: '20 דקות', sets: '1 ריצה רציפה', icon: '🏃', trackId: 'cardio-run', isCombat: false },
                 { name: 'סקוואטים', category: 'כוח', duration: '15 דקות', sets: '4 סטים × 12', icon: '🦵', trackId: 'strength-squats', isCombat: false },
-                { name: 'בוקסינג', category: 'לחימה', duration: '15 דקות', sets: 'סשן מלא', icon: '🥊', trackId: 'boxing-muaythai', isCombat: true },
+                { name: 'איגרוף', category: 'לחימה', duration: '15 דקות', sets: 'סשן מלא', icon: '🥊', trackId: 'boxing-muaythai', isCombat: true },
                 { name: 'מתח', category: 'כוח', duration: '15 דקות', sets: '3 סטים × 5', icon: '🏋️', trackId: 'strength-pullups', isCombat: false },
-                { name: 'הליכה', category: 'קרדיו', duration: '30 דקות', sets: 'הליכה פעילה', icon: '🚶', trackId: 'cardio-walk', isCombat: false },
-                { name: 'מואי תאי', category: 'לחימה', duration: '15 דקות', sets: 'סשן מלא', icon: '🥋', trackId: 'boxing-muaythai', isCombat: true },
+                { name: 'הליכה', category: 'סיבולת', duration: '30 דקות', sets: 'הליכה פעילה', icon: '🚶', trackId: 'cardio-walk', isCombat: false },
+                { name: 'מואי תאי', category: 'לחימה', duration: '15 דקות', sets: 'סשן מלא', icon: '🥊', trackId: 'boxing-muaythai', isCombat: true },
               ]
               const w = DAILY_WORKOUTS[doy % DAILY_WORKOUTS.length]
               const workoutKey = `prime_workout_done_${todayKey()}`
@@ -1794,7 +1794,7 @@ export default function Dashboard() {
                       >
                         {cat.emoji} {cat.label}
                         {cat.id === 'dating' && !enabled && (
-                          <span style={{ fontSize: '0.6rem', color: '#71717A', marginRight: '0.3rem' }}> (opt-in)</span>
+                          <span style={{ fontSize: '0.6rem', color: '#71717A', marginRight: '0.3rem' }}> (לבחירתך)</span>
                         )}
                       </button>
                     )

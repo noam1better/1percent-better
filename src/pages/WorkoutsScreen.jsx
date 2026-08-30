@@ -13,7 +13,7 @@ const WORKOUT_CATEGORIES = [
   },
   {
     id: 'cardio',
-    label: 'קרדיו',
+    label: 'סיבולת',
     desc: 'ריצה והליכה',
     icon: '🏃',
     exercises: [

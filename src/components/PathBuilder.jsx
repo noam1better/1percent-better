@@ -38,7 +38,7 @@ const VISION_QUESTIONS = [
   {
     id:        'non_negotiables',
     icon:      '🔒',
-    label:     'Non-Negotiables',
+    label:     'הרגלי חובה',
     question:  '2 הרגלים שחייב לבצע כל יום כדי להרגיש כמו הפריים-סלף שלך.',
     inputType: 'habits',
     count:     2,
@@ -56,7 +56,7 @@ const HABIT_CHIPS = ['ספורט יומי', 'שינה 7+ שעות', 'ללא סו
 const DEFAULT_BUILDING_STEPS = [
   '🔍 קורא את הפרופיל שלך...',
   '⛰️ ממפה את הפער...',
-  '🔒 קושר את ה-Non-Negotiables ל-30 יום...',
+  '🔒 קושר את הרגלי החובה ל-30 יום...',
   '💎 מגלם את ערכי הליבה בכל משימה...',
   '🎯 מכייל את המסלול הסופי בשבילך...',
 ]
@@ -290,7 +290,7 @@ export default function PathBuilder({ user, onDone }) {
     const gapSlice    = (visionProfile.the_gap           || 'הפער שלך' ).slice(0, 32)
     const nnArr       = Array.isArray(visionProfile.non_negotiables) ? visionProfile.non_negotiables.filter(Boolean) : []
     const cvArr       = Array.isArray(visionProfile.core_values)     ? visionProfile.core_values.filter(Boolean)     : []
-    const nn1         = nnArr[0] ? `"${nnArr[0].slice(0, 25)}"` : 'Non-Negotiable'
+    const nn1         = nnArr[0] ? `"${nnArr[0].slice(0, 25)}"` : 'הרגל חובה'
     const nn2         = nnArr[1] ? ` + "${nnArr[1].slice(0, 20)}"` : ''
     const cv1         = cvArr[0] ? `"${cvArr[0]}"` : 'ערך הליבה'
     const cv2         = cvArr[1] ? ` + "${cvArr[1]}"` : ''

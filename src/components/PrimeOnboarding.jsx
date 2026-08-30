@@ -22,7 +22,7 @@ function Slide1() {
         marginBottom: '1.75rem',
         animation: 'fadeIn 0.6s ease both',
       }}>
-        <div style={{ color: 'rgba(245,197,24,0.35)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.16em', marginBottom: '0.75rem' }}>THE MATH</div>
+        <div style={{ color: 'rgba(245,197,24,0.35)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.16em', marginBottom: '0.75rem' }}>החשבון</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: '#F5C518', fontSize: '2.2rem', fontWeight: 900, lineHeight: 1 }}>1.01</div>

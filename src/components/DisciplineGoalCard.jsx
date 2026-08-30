@@ -241,7 +241,7 @@ export default function DisciplineGoalCard() {
         <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 11, padding: '0.75rem 0.9rem', animation: 'fadeIn 0.25s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.9rem' }}>🤖</span>
-            <span style={{ color: '#a5b4fc', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>AI Coach</span>
+            <span style={{ color: '#a5b4fc', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.06em' }}>מאמן</span>
           </div>
           <p style={{ color: 'rgba(241,245,249,0.82)', fontSize: '0.83rem', lineHeight: 1.65, margin: 0 }}>{aiMsg}</p>
         </div>

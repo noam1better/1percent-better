@@ -12,16 +12,16 @@ const PROTOCOLS = [
     discipline: 'muay-thai',
     type: 'rounds',
     rounds: [
-      { label: 'Round 1 — Teeps (Push Kicks)' },
-      { label: 'Round 2 — Low Kicks' },
-      { label: 'Round 3 — Knee Strikes' },
-      { label: 'Round 4 — Mixed Drills' },
+      { label: 'סיבוב 1 — טיפ (בעיטות דחיפה)' },
+      { label: 'סיבוב 2 — בעיטות נמוכות' },
+      { label: 'סיבוב 3 — ברכיים' },
+      { label: 'סיבוב 4 — תרגילים משולבים' },
     ],
     workSec: 180,
     restSec: 60,
     xpPerRound: 50,
     poseFeature: 'teepCounter',
-    desc: '4 סיבובים × 3 דק׳ · Teeps, בעיטות נמוכות, ברכיים',
+    desc: '4 סיבובים × 3 דק׳ · טיפ, בעיטות נמוכות, ברכיים',
   },
   {
     id: 'combinations-builder',
@@ -587,7 +587,7 @@ export default function CombatProtocols({ onClose, onAwardXP, onOpenFreeSession 
                   background: 'rgba(167,139,250,0.85)', borderRadius: 10,
                   padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: 900, color: '#fff',
                 }}>
-                  🦵 {teepCount} Teeps
+                  🦵 {teepCount} טיפ
                 </div>
               )}
               {protocol?.poseFeature === 'headMovement' && (
@@ -739,7 +739,7 @@ export default function CombatProtocols({ onClose, onAwardXP, onOpenFreeSession 
                   <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>📷</span>
                   <span style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.73rem' }}>
                     הפעל מצלמה למעקב AI ·{' '}
-                    {protocol.poseFeature === 'teepCounter' ? 'מונה Teep' : 'תנועת ראש'}
+                    {protocol.poseFeature === 'teepCounter' ? 'מונה טיפ' : 'תנועת ראש'}
                   </span>
                 </div>
               )}
@@ -755,10 +755,10 @@ export default function CombatProtocols({ onClose, onAwardXP, onOpenFreeSession 
                     <div style={{ color: '#a78bfa', fontSize: '1.9rem', fontWeight: 900, fontFamily: "'SF Mono','Fira Code',monospace", lineHeight: 1 }}>
                       {teepCount}
                     </div>
-                    <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.08em', marginTop: 2 }}>TEEPS</div>
+                    <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.08em', marginTop: 2 }}>טיפ</div>
                   </div>
                   <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.71rem', lineHeight: 1.5 }}>
-                    Teeps נספרים אוטומטית ע״י AI
+                    טיפ נספרים אוטומטית
                   </div>
                 </div>
               )}
@@ -808,7 +808,7 @@ export default function CombatProtocols({ onClose, onAwardXP, onOpenFreeSession 
                   <span style={{ fontSize: '1.25rem' }}>🦵</span>
                   <div>
                     <div style={{ color: '#a78bfa', fontWeight: 900, fontSize: '1rem' }}>
-                      {teepCount} Teeps נרשמו
+                      {teepCount} טיפ נרשמו
                     </div>
                     <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.68rem', marginTop: 2 }}>
                       נשמר בסיכום היומי

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useLang } from '../context/LangContext'
 import { isNudgesEnabled } from '../services/notificationService'
 
 function Row({ label, desc, children }) {
@@ -50,16 +49,15 @@ function ConfirmModal({ onConfirm, onCancel }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
-      background: 'rgba(8,8,20,0.88)', backdropFilter: 'blur(6px)',
+      background: 'rgba(8,8,20,0.94)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1.5rem', animation: 'slide-up 0.2s ease',
     }}>
       <div style={{
-        background: 'rgba(14,14,26,0.98)',
+        background: '#111111',
         border: '1.5px solid rgba(239,68,68,0.35)',
         borderRadius: 20, padding: '1.5rem 1.35rem',
         maxWidth: 360, width: '100%',
-        boxShadow: '0 0 40px rgba(239,68,68,0.08)',
       }}>
         <div style={{ fontSize: '2rem', textAlign: 'center', marginBottom: '0.75rem' }}>⚠️</div>
         <div style={{ color: '#f87171', fontWeight: 900, fontSize: '1rem', textAlign: 'center', marginBottom: '0.4rem' }}>
@@ -91,7 +89,6 @@ function ConfirmModal({ onConfirm, onCancel }) {
 
 export default function Settings({ onRebuildPath, activePathName }) {
   const { user, isGuest, logout } = useAuth()
-  const { lang, setLang }         = useLang()
   const [loggingOut,     setLoggingOut]     = useState(false)
   const [nudgesEnabled,  setNudgesEnabled]  = useState(isNudgesEnabled)
   const [rebuildConfirm, setRebuildConfirm] = useState(false)
@@ -109,7 +106,6 @@ export default function Settings({ onRebuildPath, activePathName }) {
     try { await logout() } catch { setLoggingOut(false) }
   }
 
-  const isHe      = lang === 'he'
   const initials  = user?.displayName?.slice(0, 1)?.toUpperCase() || user?.email?.slice(0, 1)?.toUpperCase() || '?'
 
   return (
@@ -158,29 +154,12 @@ export default function Settings({ onRebuildPath, activePathName }) {
         </Row>
       </div>
 
-      {/* Appearance section */}
-      <SectionHeader title="◈ מראה" />
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.1rem 1rem', marginBottom: '0.5rem' }}>
-        <Row
-          label={isHe ? 'English' : 'עברית'}
-          desc={isHe ? 'עבור לממשק אנגלי' : 'Switch to Hebrew'}
-        >
-          <button
-            onClick={() => setLang(isHe ? 'en' : 'he')}
-            className="btn-tactile"
-            style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 10, color: 'rgba(245,197,24,0.8)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
-          >
-            {isHe ? 'EN' : 'עב'}
-          </button>
-        </Row>
-      </div>
-
       {/* Notifications section */}
       {!isGuest && notifPerm !== 'unsupported' && (
         <>
           <SectionHeader title="◈ התראות" />
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.1rem 1rem', marginBottom: '0.5rem' }}>
-            <Row label="תזכורות PRIME" desc="תזכורות ב-10:00 ו-16:00 מבוססות Non-Negotiables וחזון 3 שנים">
+            <Row label="תזכורות PRIME" desc="תזכורות ב-10:00 ו-16:00 מבוססות הרגלי חובה וחזון 3 שנים">
               <Toggle
                 on={nudgesEnabled}
                 onToggle={() => {
@@ -223,11 +202,11 @@ export default function Settings({ onRebuildPath, activePathName }) {
         <>
           <SectionHeader title="◈ מסלול אישי" />
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.1rem 1rem', marginBottom: '0.5rem' }}>
-            <Row label="בנה מסלול מחדש" desc={activePathName ? `מסלול פעיל: ${activePathName} — מחיקת ההתקדמות הנוכחית` : 'תוכנית AI חדשה של 30 יום — מחיקת ההתקדמות הנוכחית'}>
+            <Row label="בנה מסלול מחדש" desc={activePathName ? `מסלול פעיל: ${activePathName} — מחיקת ההתקדמות הנוכחית` : 'תוכנית חדשה שנבנתה בעזרת בינה מלאכותית — מחיקת ההתקדמות הנוכחית'}>
                 <button
                   onClick={() => setRebuildConfirm(true)}
                   className="btn-tactile"
-                  style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 10, color: '#f87171', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#ef4444', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
                 >
                   ⚠️ מחק ובנה מחדש
                 </button>
@@ -236,8 +215,18 @@ export default function Settings({ onRebuildPath, activePathName }) {
         </>
       )}
 
+      {/* Legal link */}
+      <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
+        <a
+          href="/legal"
+          style={{ color: 'rgba(245,197,24,0.45)', fontSize: '0.72rem', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid rgba(245,197,24,0.2)', paddingBottom: 2 }}
+        >
+          משפטי ותמיכה
+        </a>
+      </div>
+
       {/* Footer */}
-      <div style={{ textAlign: 'center', color: 'rgba(241,245,249,0.15)', fontSize: '0.6rem', fontFamily: "'SF Mono','Fira Code',monospace", marginTop: '2rem', paddingBottom: '1rem' }}>
+      <div style={{ textAlign: 'center', color: 'rgba(241,245,249,0.15)', fontSize: '0.6rem', fontFamily: "'SF Mono','Fira Code',monospace", marginTop: '0.75rem', paddingBottom: '1rem' }}>
         PRIME · v1.2 · prime-app-84fe0.web.app
       </div>
     </div>

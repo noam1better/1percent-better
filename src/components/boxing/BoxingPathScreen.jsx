@@ -242,7 +242,7 @@ export default function BoxingPathScreen({ profile, onStartWorkout, onFreeTraini
           ←
         </button>
         <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, margin: 0, textAlign: 'right' }}>
-          🥊 בוקסינג — מהיסודות ללוחם
+          🥊 איגרוף — מהיסודות ללוחם
         </h1>
       </div>
 
@@ -340,7 +340,7 @@ export default function BoxingPathScreen({ profile, onStartWorkout, onFreeTraini
           ) : (
             /* No workouts left (all curriculum done) */
             <div style={{ textAlign: 'center', color: C.muted, fontSize: 15 }}>
-              🏆 השלמת את כל תכנית הבוקסינג!
+              🏆 השלמת את כל תכנית האיגרוף!
             </div>
           )}
         </div>
@@ -428,7 +428,7 @@ export default function BoxingPathScreen({ profile, onStartWorkout, onFreeTraini
             fontWeight: 600,
           }}
         >
-          אימון חופשי 🥋
+          אימון חופשי 🥊
         </button>
       </div>
     </div>

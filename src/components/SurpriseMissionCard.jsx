@@ -199,7 +199,7 @@ export default function SurpriseMissionCard({ enabledCategories, isGuest, onAwar
           </button>
         )}
         <button onClick={handleSkip} style={{ flex: 1, padding: '0.65rem', borderRadius: 9, border: '1px solid rgba(255,255,255,0.06)', background: 'transparent', color: '#71717A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', minHeight: 40 }}>
-          אחר פעם
+          פעם אחרת
         </button>
       </div>
     </div>

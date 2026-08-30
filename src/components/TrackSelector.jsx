@@ -141,7 +141,7 @@ export default function TrackSelector({ uid, userName, visionProfile }) {
   const todayDone    = todayEntry?.completed
 
   const categories = ['cardio', 'strength']
-  const catLabel   = { cardio: '❤️ קרדיו', strength: '💪 כוח' }
+  const catLabel   = { cardio: '❤️ סיבולת', strength: '💪 כוח' }
 
   return (
     <>

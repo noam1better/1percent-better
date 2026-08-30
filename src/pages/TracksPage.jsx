@@ -5,6 +5,7 @@ import { saveProfile } from '../services/focusTriggerService'
 import { CHALLENGES, CHALLENGE_WEEKS, LESSON_TYPES, getDayTask, getLessonType, getModuleIndex } from '../data/challenges'
 import { getDayContent } from '../data/lessonContent'
 import BenchmarkTracker from '../components/BenchmarkTracker'
+import { getEvolution, isEvolved, UNLOCK_AT } from '../data/trackEvolution'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const QUIZ_KEY = 'prime_track_quiz'
@@ -119,13 +120,13 @@ function CourseQuiz({ onComplete, onSkip }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {matched.map((ch, i) => (
-            <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.95rem 1.1rem', borderRadius: 16, background: `${ch.color}12`, border: `1px solid ${ch.color}30`, animation: `slide-up 0.3s ${i * 0.1}s ease both` }}>
+            <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.95rem 1.1rem', borderRadius: 16, background: '#111114', border: '1px solid rgba(255,255,255,0.07)', animation: `slide-up 0.3s ${i * 0.1}s ease both` }}>
               <span style={{ fontSize: '1.45rem', flexShrink: 0 }}>{ch.emoji}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem' }}>{ch.title}</div>
                 <div style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.68rem', marginTop: '0.1rem' }}>{ch.subtitle}</div>
               </div>
-              <span style={{ background: 'linear-gradient(135deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.15rem 0.55rem', color: '#fff', fontSize: '0.6rem', fontWeight: 900, flexShrink: 0 }}>#{i + 1}</span>
+              <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.15rem 0.55rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.6rem', fontWeight: 900, flexShrink: 0 }}>#{i + 1}</span>
             </div>
           ))}
         </div>
@@ -139,7 +140,7 @@ function CourseQuiz({ onComplete, onSkip }) {
       {/* Progress bar */}
       <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '2.25rem' }}>
         {QUIZ_QUESTIONS.map((_, i) => (
-          <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i <= step ? '#c4795a' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+          <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i <= step ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
         ))}
       </div>
 
@@ -184,14 +185,14 @@ function CourseQuiz({ onComplete, onSkip }) {
 function ReviewModal({ challenge, dayNum, onClose }) {
   const lessonType  = getLessonType(dayNum)
   const moduleTheme = getDayTask(challenge.id, dayNum)
-  const col         = challenge.color
+  const _col        = challenge.color
 
   return (
     <div
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 3000 }}
     >
-      <div style={{ width: '100%', maxWidth: 480, background: '#13131f', borderRadius: '22px 22px 0 0', padding: '1.5rem 1.5rem 2.8rem', borderTop: `2.5px solid ${col}45`, maxHeight: '80vh', overflowY: 'auto', animation: 'slide-up 0.28s ease' }}>
+      <div style={{ width: '100%', maxWidth: 480, background: '#18181b', borderRadius: '22px 22px 0 0', padding: '1.5rem 1.5rem 2.8rem', borderTop: '1px solid rgba(255,255,255,0.08)', maxHeight: '80vh', overflowY: 'auto', animation: 'slide-up 0.28s ease' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '1.2rem' }}>{lessonType.icon}</span>
@@ -205,12 +206,12 @@ function ReviewModal({ challenge, dayNum, onClose }) {
           <button onClick={onClose} className="btn-tactile" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(241,245,249,0.55)', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>✕</button>
         </div>
 
-        <div style={{ background: `${col}0e`, border: `1px solid ${col}22`, borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '1rem' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '1rem' }}>
           <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.45rem', fontFamily: "'SF Mono','Fira Code',monospace" }}>🎯 משימת היום</div>
           <p style={{ color: '#f1f5f9', fontSize: '0.92rem', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{moduleTheme}</p>
         </div>
 
-        <div style={{ background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.16)', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
           <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>💡</span>
           <p style={{ color: 'rgba(241,245,249,0.6)', fontSize: '0.8rem', lineHeight: 1.55, margin: 0 }}>{lessonType.insight}</p>
         </div>
@@ -239,6 +240,8 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
   daysFloor.current      = Math.max(daysFloor.current, rawDaysCompleted)
   const daysCompleted    = daysFloor.current
   const finished         = daysCompleted >= challenge.days
+  const evolution        = getEvolution(challenge.id)
+  const evolved          = isEvolved(daysCompleted)
   const doneToday     = progress?.lastCompletedDate === todayKey()
   const pct           = Math.round((daysCompleted / challenge.days) * 100)
 
@@ -261,7 +264,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
     <div style={{ animation: 'slide-up 0.3s ease both' }}>
 
       {/* ── Hero header ── */}
-      <div style={{ background: `linear-gradient(160deg,${col}16 0%,${col}05 65%,transparent 100%)`, borderBottom: `1px solid ${col}1a`, padding: '1rem 1.25rem 1.2rem' }}>
+      <div style={{ background: '#111114', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '1rem 1.25rem 1.2rem' }}>
 
         <button
           onClick={onBack}
@@ -273,13 +276,13 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
 
         {/* Track identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.1rem' }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: `${col}20`, border: `1.5px solid ${col}32`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.85rem', flexShrink: 0 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.85rem', flexShrink: 0 }}>
             {challenge.emoji}
           </div>
           <div style={{ flex: 1 }}>
             {isRecommended && (
               <div style={{ marginBottom: '0.22rem' }}>
-                <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.5rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ מותאם עבורך</span>
+                <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.5rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.57rem', fontWeight: 800 }}>✨ מותאם עבורך</span>
               </div>
             )}
             <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1.2 }}>{challenge.title}</div>
@@ -295,7 +298,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
             const isCurMod = daysCompleted >= segStart && daysCompleted < segStart + 5
             return (
               <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', outline: isCurMod ? `1.5px solid ${col}50` : 'none', outlineOffset: 1, direction: 'ltr' }}>
-                <div style={{ height: '100%', width: `${(segDone / 5) * 100}%`, background: `linear-gradient(90deg,${col}99,${col})`, borderRadius: 99 }} />
+                <div style={{ height: '100%', width: `${(segDone / 5) * 100}%`, background: col, opacity: 0.8, borderRadius: 99 }} />
               </div>
             )
           })}
@@ -332,7 +335,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
               חזור מחר — ממשיכים לנצח! 🚀 · {pct}% הושלם
             </div>
             {daysCompleted > 0 && daysCompleted % 5 === 0 && (
-              <div style={{ marginTop: '1.1rem', display: 'inline-block', background: `${col}12`, border: `1px solid ${col}28`, borderRadius: 14, padding: '0.75rem 1.2rem' }}>
+              <div style={{ marginTop: '1.1rem', display: 'inline-block', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.75rem 1.2rem' }}>
                 <span style={{ color: col, fontWeight: 800, fontSize: '0.88rem' }}>🎖 מודול {moduleIdx} הושלם!</span>
               </div>
             )}
@@ -342,14 +345,14 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
         ) : (
           <>
             {/* All steps */}
-            <div style={{ background: `${col}0a`, border: `1.5px solid ${col}28`, borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '1rem 1.1rem', marginBottom: '0.75rem' }}>
               <p style={{ color: col, fontSize: '0.57rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
                 ⚡ משימות יום {currentDay}
               </p>
               {richContent?.fieldAction?.length > 0
                 ? richContent.fieldAction.map((step, i) => (
                     <div key={i} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', marginBottom: i < richContent.fieldAction.length - 1 ? '0.7rem' : 0 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: `${col}22`, border: `1px solid ${col}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: col, marginTop: '0.1rem' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: 'rgba(232,232,232,0.6)', marginTop: '0.1rem' }}>
                         {i + 1}
                       </div>
                       <p style={{ color: '#f1f5f9', fontSize: '0.88rem', fontWeight: 600, lineHeight: 1.55, margin: 0 }}>{step}</p>
@@ -369,8 +372,8 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
 
             {/* Micro task / reflection */}
             {richContent?.microTask && (
-              <div style={{ background: 'rgba(245,197,24,0.05)', border: '1px solid rgba(245,197,24,0.16)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
-                <p style={{ color: 'rgba(245,197,24,0.65)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>✏️ רפלקציה</p>
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
+                <p style={{ color: 'rgba(212,168,67,0.65)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>✏️ רפלקציה</p>
                 <p style={{ color: 'rgba(241,245,249,0.68)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{richContent.microTask}</p>
               </div>
             )}
@@ -380,11 +383,39 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
               onClick={handleComplete}
               disabled={completing}
               className="btn-tactile"
-              style={{ width: '100%', padding: '1.1rem', borderRadius: 16, border: 'none', fontSize: '1rem', fontWeight: 800, cursor: completing ? 'not-allowed' : 'pointer', marginBottom: '1rem', background: `linear-gradient(135deg,${col}cc,${col})`, color: '#fff', transition: 'all 0.2s', boxShadow: `0 8px 28px ${col}30`, opacity: completing ? 0.7 : 1 }}
+              style={{ width: '100%', padding: '1.1rem', borderRadius: 16, border: 'none', fontSize: '1rem', fontWeight: 800, cursor: completing ? 'not-allowed' : 'pointer', marginBottom: '1rem', background: `linear-gradient(135deg,${col}cc,${col})`, color: '#fff', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', opacity: completing ? 0.7 : 1 }}
             >
               {completing ? '🎉' : `🔥 סיים יום ${currentDay}!`}
             </button>
           </>
+        )}
+
+        {/* ── Track Evolution ── */}
+        {evolution && (
+          <div style={{ marginBottom: '0.75rem', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ padding: '0.75rem 1rem', background: '#18181b', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'rgba(232,232,232,0.25)', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', flex: 1 }}>
+                {evolved ? `LEVEL 2 · ${evolution.label}` : `LEVEL 2 — פותח ביום ${UNLOCK_AT}`}
+              </span>
+              <span style={{ fontSize: '0.6rem', fontWeight: 800, color: evolved ? '#d4a843' : 'rgba(232,232,232,0.2)', background: evolved ? 'rgba(212,168,67,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${evolved ? 'rgba(212,168,67,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 20, padding: '0.1rem 0.5rem' }}>
+                {evolved ? `יום ${daysCompleted}` : `${daysCompleted}/${UNLOCK_AT}`}
+              </span>
+            </div>
+            {evolved
+              ? evolution.tasks.map((task, i) => (
+                  <div key={i} style={{ padding: '0.7rem 1rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', gap: '0.6rem', background: '#111114' }}>
+                    <span style={{ color: 'rgba(232,232,232,0.25)', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0, marginTop: '0.05rem' }}>{i + 1}.</span>
+                    <span style={{ color: 'rgba(232,232,232,0.7)', fontSize: '0.83rem', lineHeight: 1.45 }}>{task}</span>
+                  </div>
+                ))
+              : (
+                  <div style={{ padding: '0.7rem 1rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#111114', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: 'rgba(232,232,232,0.2)', fontSize: '0.8rem' }}>🔒</span>
+                    <span style={{ color: 'rgba(232,232,232,0.25)', fontSize: '0.78rem' }}>השלם {UNLOCK_AT - daysCompleted} ימים נוספים לפתיחה</span>
+                  </div>
+                )
+            }
+          </div>
         )}
 
         {/* ── Personal Benchmarks ── */}
@@ -412,7 +443,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
               return (
                 <div key={mIdx} style={{ marginBottom: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.35rem' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: moduleDone ? 'rgba(16,185,129,0.16)' : moduleLocked ? 'rgba(255,255,255,0.04)' : `${col}1a`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 800, color: moduleDone ? '#10b981' : moduleLocked ? 'rgba(255,255,255,0.16)' : col }}>
+                    <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: moduleDone ? 'rgba(16,185,129,0.16)' : moduleLocked ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 800, color: moduleDone ? '#10b981' : moduleLocked ? 'rgba(255,255,255,0.16)' : 'rgba(232,232,232,0.6)' }}>
                       {moduleDone ? '✓' : mIdx + 1}
                     </div>
                     <span style={{ color: moduleLocked ? 'rgba(241,245,249,0.18)' : moduleDone ? 'rgba(241,245,249,0.38)' : '#f1f5f9', fontSize: '0.78rem', fontWeight: 700 }}>מודול {mIdx + 1}</span>
@@ -430,15 +461,15 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
                         <div
                           key={dayNum}
                           onClick={() => completed && setReviewDay(dayNum)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.9rem', borderBottom: dayOffset < 4 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: completed ? 'pointer' : 'default', background: isCurrent ? `${col}0c` : 'transparent' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.9rem', borderBottom: dayOffset < 4 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: completed ? 'pointer' : 'default', background: isCurrent ? 'rgba(255,255,255,0.03)' : 'transparent' }}
                         >
-                          <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: completed ? '0.72rem' : '0.85rem', background: completed ? 'rgba(16,185,129,0.1)' : isCurrent ? `${col}1c` : 'rgba(255,255,255,0.03)', border: isCurrent ? `1px solid ${col}32` : 'none' }}>
+                          <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: completed ? '0.72rem' : '0.85rem', background: completed ? 'rgba(16,185,129,0.1)' : isCurrent ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)', border: isCurrent ? '1px solid rgba(255,255,255,0.12)' : 'none' }}>
                             {completed ? '✓' : locked ? '🔒' : lt.icon}
                           </div>
                           <span style={{ flex: 1, color: locked ? 'rgba(241,245,249,0.18)' : completed ? 'rgba(241,245,249,0.38)' : '#f1f5f9', fontSize: '0.77rem', fontWeight: isCurrent ? 700 : 400 }}>
                             יום {dayNum} · {lt.label}
                           </span>
-                          {isCurrent && <span style={{ background: `${col}1c`, border: `1px solid ${col}35`, borderRadius: 20, padding: '0.08rem 0.4rem', color: col, fontSize: '0.57rem', fontWeight: 800, flexShrink: 0 }}>היום ↑</span>}
+                          {isCurrent && <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '0.08rem 0.4rem', color: 'rgba(232,232,232,0.6)', fontSize: '0.57rem', fontWeight: 800, flexShrink: 0 }}>היום ↑</span>}
                           {completed && <span style={{ color: 'rgba(16,185,129,0.6)', fontSize: '0.62rem', flexShrink: 0 }}>✓</span>}
                         </div>
                       )
@@ -626,8 +657,8 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           → 4 עמודות
         </button>
 
-        <div style={{ background: `linear-gradient(145deg,${pillar.color}12,${pillar.color}06)`, border: `1.5px solid ${pillar.color}28`, borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: `${pillar.color}20`, border: `1px solid ${pillar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', flexShrink: 0 }}>{pillar.icon}</div>
+        <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', flexShrink: 0 }}>{pillar.icon}</div>
           <div>
             <div style={{ color: pillar.color, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>עמודה</div>
             <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1rem', marginBottom: '0.15rem' }}>{pillar.label}</div>
@@ -650,35 +681,31 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                 className="track-card"
                 onClick={() => handleSelect(ch)}
                 style={{
-                  background: inProgress
-                    ? `linear-gradient(135deg,${ch.color}0e,rgba(255,255,255,0.02))`
-                    : isRec
-                      ? `linear-gradient(135deg,${ch.color}0a,rgba(255,255,255,0.018))`
-                      : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${inProgress ? ch.color + '30' : isRec ? ch.color + '20' : 'rgba(255,255,255,0.05)'}`,
+                  background: '#111111',
+                  border: `1px solid ${inProgress ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.07)'}`,
                   borderRadius: 18,
                   padding: '1.1rem 1.2rem',
-                  boxShadow: inProgress ? `0 4px 22px ${ch.color}12` : isRec ? `0 4px 22px ${ch.color}08` : 'none',
                   cursor: 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 13, background: `${ch.color}1e`, border: `1px solid ${ch.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.55rem', flexShrink: 0 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.55rem', flexShrink: 0 }}>
                     {ch.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.12rem' }}>
                       <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
-                      {isRec && !done && <span style={{ background: 'linear-gradient(90deg,#c4795a,#d4956e)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
-                      {ch.expert && !done && <span style={{ background: 'linear-gradient(90deg,#0e7490,#06b6d4)', borderRadius: 20, padding: '0.1rem 0.45rem', color: '#fff', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
+                      {isRec && !done && <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
+                      {ch.expert && !done && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem', color: 'rgba(232,232,232,0.45)', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
                       {done && <span style={{ color: '#10b981', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', borderRadius: 20, padding: '0.1rem 0.4rem' }}>✓ הושלם</span>}
-                      {inProgress && <span style={{ color: ch.color, fontSize: '0.57rem', fontWeight: 800, background: `${ch.color}12`, border: `1px solid ${ch.color}28`, borderRadius: 20, padding: '0.1rem 0.45rem' }}>פעיל</span>}
+                      {inProgress && <span style={{ color: 'rgba(232,232,232,0.5)', fontSize: '0.57rem', fontWeight: 800, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>פעיל</span>}
+                      {isEvolved(days) && getEvolution(ch.id) && !done && <span style={{ color: '#d4a843', fontSize: '0.57rem', fontWeight: 800, background: 'rgba(212,168,67,0.08)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>LVL 2</span>}
                     </div>
                     <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{ch.subtitle}</div>
                     {days > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.45rem' }}>
                         <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg,${ch.color}80,${ch.color})`, width: `${pct}%` }} />
+                          <div style={{ height: '100%', borderRadius: 99, background: ch.color, opacity: 0.8, width: `${pct}%` }} />
                         </div>
                         <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem', fontWeight: 700 }}>{pct}%</span>
                       </div>
@@ -717,7 +744,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
       steps: [
         'סקור את הוויזיה שלך ל-3 שנים — 2 דקות בלבד',
         'הגדר מטרה אחת קריטית שתבצע היום',
-        'קבע מה לא ייכנס ליום שלך (Non-Negotiable)',
+        'קבע מה לא ייכנס ליום שלך (הרגל חובה)',
       ],
       cta: topTrack && !trackDoneToday ? `פתח מסלול: ${topTrack.title} ←` : 'כוון את הבוקר ←',
       onCta: topTrack && !trackDoneToday ? () => setSelected(topTrack) : null,
@@ -773,12 +800,11 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
             <div
               key={slot.id}
               style={{
-                background: `linear-gradient(145deg,${slot.color}08,${slot.color}02)`,
-                border: `1.5px solid ${isExpanded ? slot.color + '45' : slot.color + '22'}`,
+                background: '#111111',
+                border: `1px solid ${isExpanded ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)'}`,
                 borderRadius: 18,
                 overflow: 'hidden',
-                boxShadow: isActive ? `0 4px 24px ${slot.color}12` : 'none',
-                transition: 'border 0.2s, box-shadow 0.2s',
+                transition: 'border 0.2s',
               }}
             >
               {/* Card header — always visible */}
@@ -796,7 +822,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span style={{ color: slot.color, fontWeight: 800, fontSize: '0.88rem' }}>{slot.title}</span>
                     {isActive && (
-                      <span style={{ background: `${slot.color}18`, border: `1px solid ${slot.color}30`, borderRadius: 20, padding: '0.08rem 0.45rem', color: slot.color, fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>עכשיו</span>
+                      <span style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '0.08rem 0.45rem', color: 'rgba(232,232,232,0.6)', fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>עכשיו</span>
                     )}
                     {slotComplete && (
                       <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 20, padding: '0.08rem 0.45rem', color: '#10b981', fontSize: '0.52rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace" }}>✓ הושלם</span>
@@ -824,8 +850,8 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                           className="btn-tactile"
                           style={{
                             display: 'flex', gap: '0.55rem', alignItems: 'flex-start',
-                            background: checked ? `${slot.color}0c` : 'rgba(255,255,255,0.02)',
-                            border: `1px solid ${checked ? slot.color + '35' : 'rgba(255,255,255,0.06)'}`,
+                            background: checked ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${checked ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
                             borderRadius: 10, padding: '0.55rem 0.65rem',
                             cursor: 'pointer', textAlign: 'right', width: '100%',
                             transition: 'all 0.15s ease',
@@ -833,17 +859,17 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                         >
                           <div style={{
                             width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                            background: checked ? slot.color : 'transparent',
-                            border: `2px solid ${checked ? slot.color : 'rgba(255,255,255,0.2)'}`,
+                            background: checked ? 'rgba(255,255,255,0.15)' : 'transparent',
+                            border: `2px solid ${checked ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'}`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.6rem', color: '#0e0e16', fontWeight: 900,
+                            fontSize: '0.6rem', color: '#f1f5f9', fontWeight: 900,
                             transition: 'all 0.15s', marginTop: '0.1rem',
                           }}>{checked ? '✓' : ''}</div>
                           <p style={{
-                            color: checked ? `${slot.color}99` : 'rgba(241,245,249,0.75)',
+                            color: checked ? 'rgba(241,245,249,0.35)' : 'rgba(241,245,249,0.75)',
                             fontSize: '0.82rem', lineHeight: 1.5, margin: 0,
                             textDecoration: checked ? 'line-through' : 'none',
-                            textDecorationColor: `${slot.color}55`,
+                            textDecorationColor: 'rgba(255,255,255,0.25)',
                           }}>{step}</p>
                         </button>
                       )
@@ -857,9 +883,10 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                       className="btn-tactile"
                       style={{
                         width: '100%', padding: '0.85rem', borderRadius: 13, border: 'none',
-                        background: `linear-gradient(135deg,${slot.color}cc,${slot.color})`,
-                        color: '#0e0e16', fontSize: '0.85rem', fontWeight: 900,
+                        background: 'linear-gradient(135deg, #c49020, #d4a843)',
+                        color: '#111', fontSize: '0.85rem', fontWeight: 900,
                         cursor: 'pointer', letterSpacing: '0.01em', marginTop: '0.75rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                       }}
                     >
                       {slot.cta}
@@ -904,8 +931,8 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                   className="btn-tactile"
                   onClick={() => setActivePillar(p.id)}
                   style={{
-                    background: `linear-gradient(145deg,${p.color}10,${p.color}05)`,
-                    border: `1.5px solid ${p.color}28`, borderRadius: 18,
+                    background: '#111111',
+                    border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18,
                     padding: '1.1rem 0.85rem', cursor: 'pointer', textAlign: 'center',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
                     minHeight: 120, position: 'relative', overflow: 'hidden',
@@ -916,9 +943,9 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                   <span style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.6rem', lineHeight: 1.3 }}>{p.desc}</span>
                   <div style={{ width: '100%', marginTop: '0.2rem' }}>
                     <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', direction: 'ltr', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${p.color}80,${p.color})` }} />
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: p.color, opacity: 0.8 }} />
                     </div>
-                    <div style={{ color: pct > 0 ? `${p.color}88` : 'rgba(241,245,249,0.15)', fontSize: '0.55rem', fontWeight: 700, marginTop: '0.15rem' }}>{pct > 0 ? `${pct}%` : `${pillarCourses.length} מסלולים`}</div>
+                    <div style={{ color: pct > 0 ? 'rgba(241,245,249,0.4)' : 'rgba(241,245,249,0.15)', fontSize: '0.55rem', fontWeight: 700, marginTop: '0.15rem' }}>{pct > 0 ? `${pct}%` : `${pillarCourses.length} מסלולים`}</div>
                   </div>
                 </button>
               )
@@ -930,7 +957,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 11, width: '100%', padding: '0.65rem', color: 'rgba(241,245,249,0.22)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
           >
             לא בטוח מאיפה להתחיל?
-            <span style={{ color: 'rgba(196,121,90,0.55)' }}>ענה על שאלון קצר ←</span>
+            <span style={{ color: 'rgba(232,232,232,0.35)' }}>ענה על שאלון קצר ←</span>
           </button>
         </div>
       )}

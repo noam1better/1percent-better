@@ -72,7 +72,7 @@ export const HOBBY_DAYS = [
     hobby: 'strategy',
     hobbyLabel: 'משחקי חשיבה',
     emoji: '♟️',
-    taskHe: 'שחק משחק חשיבה אחד — שח-מט, Sudoku, puzzle, CrossWord — 25 דקות, בקשב מלא.',
+    taskHe: 'שחק משחק חשיבה אחד — שח-מט, סודוקו, חידה, או תשבץ — 25 דקות, בקשב מלא.',
     durationMin: 25,
     pillars: ['growth', 'life'],
   },

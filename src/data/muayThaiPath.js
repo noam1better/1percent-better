@@ -677,7 +677,7 @@ export const MT_LEVELS = [
   },
   {
     level:    2,
-    titleHe:  'טיפ (Teep) ושליטה במרחק',
+    titleHe:  'טיפ — בעיטת דחיפה ושליטה במרחק',
     workouts: PLACEHOLDER_WORKOUTS(2, 6),
   },
   {
@@ -697,7 +697,7 @@ export const MT_LEVELS = [
   },
   {
     level:    6,
-    titleHe:  'הגנות, Checks והתחמקויות',
+    titleHe:  'הגנות, חסימות בעיטה והתחמקויות',
     workouts: PLACEHOLDER_WORKOUTS(6, 6),
   },
   {

@@ -25,7 +25,7 @@ export const CHALLENGE_WEEKS = {
     'בנה זרימת עבודה אג\'נטית מלאה — תן ל-Claude Code לתכנן, לכתוב ולבדוק component שלם ללא התערבות ידנית.',
     'Debug עמוק: העלה שגיאה מורכבת מפרויקט אמיתי ותן ל-Claude לזהות root cause, להציע תיקון ולבצע אותו.',
     'בנה ופרוס אפליקציית Full-Stack שלמה (Frontend + Backend + DB) עם Claude Code — מאפס עד Hosting בסשן אחד.',
-    'אופטימיזציה ואבטחה: בצע code review, זיהוי security vulnerabilities ו-performance audit על קוד קיים עם Claude Code.',
+    'אופטימיזציה ואבטחה: בצע סקירת קוד, זיהוי פגיעויות אבטחה ובדיקת ביצועים על קוד קיים עם Claude Code.',
   ],
   'capital-markets': [
     'הכר את מבנה השוק: מניות, אגרות חוב, ETFs ונגזרים — איך כל אחד עובד, מי המשתתפים ולמה המחיר זז.',
