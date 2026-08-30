@@ -211,6 +211,45 @@ export function analyzeDip(lm, prevState) {
   return { angle, depth, state: newState, confidence: conf, kneeCaveIn: false, repCompleted }
 }
 
+// ── Teep (push kick) detection ───────────────────────────────────────
+// Counts valid teep motions: ankle rises significantly above the hip,
+// then returns to neutral. State machine: neutral → raised → count.
+// lm: MediaPipe landmarks; prevState: { raised: bool, count: number }
+export function analyzeTeep(lm, prevState = {}) {
+  const lHip = lm[23], rHip = lm[24], lAnkle = lm[27], rAnkle = lm[28]
+  const TEEP_THRESHOLD = 0.08   // ankle must be 8% above hip y (normalized, y down)
+
+  const leftRaised  = v(lAnkle) > 0.35 && v(lHip) > 0.35 && lAnkle.y < lHip.y - TEEP_THRESHOLD
+  const rightRaised = v(rAnkle) > 0.35 && v(rHip) > 0.35 && rAnkle.y < rHip.y - TEEP_THRESHOLD
+  const raised      = leftRaised || rightRaised
+
+  const wasRaised = prevState.raised || false
+  let count       = prevState.count  || 0
+  const newTeep   = !raised && wasRaised  // falling edge = completed rep
+
+  if (newTeep) count++
+  return { raised, count, newTeep }
+}
+
+// ── Head movement consistency ─────────────────────────────────────────
+// Tracks lateral (x) nose movement over a rolling window.
+// insufficient = true when the range of movement is below threshold
+// (too little weaving/slipping → glow warning).
+// noseHistory: number[] of nose.x values (last ~3 seconds at 10 fps = 30 frames)
+export function analyzeHeadMovement(lm, noseHistory = []) {
+  const nose = lm[0]
+  if (!nose || (nose.visibility ?? 0) < 0.3) {
+    return { noseHistory, insufficient: false, range: 0 }
+  }
+  const history     = [...noseHistory, nose.x].slice(-30)
+  const range       = history.length > 8
+    ? Math.max(...history) - Math.min(...history)
+    : 1  // not enough data yet → assume ok
+  const insufficient = range < 0.04  // < 4% frame width = stationary head
+
+  return { noseHistory: history, insufficient, range }
+}
+
 export function analyzeFrame(poseType, landmarks, prevState) {
   if (poseType === 'pushups') return analyzePushup(landmarks, prevState)
   if (poseType === 'squats')  return analyzeSquat(landmarks, prevState)
