@@ -395,7 +395,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
           <div style={{ marginBottom: '0.75rem', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
             <div style={{ padding: '0.75rem 1rem', background: '#18181b', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <span style={{ color: 'rgba(232,232,232,0.25)', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', flex: 1 }}>
-                {evolved ? `LEVEL 2 · ${evolution.label}` : `LEVEL 2 — פותח ביום ${UNLOCK_AT}`}
+                {evolved ? `רמה 2 · ${evolution.label}` : `רמה 2 — פותח ביום ${UNLOCK_AT}`}
               </span>
               <span style={{ fontSize: '0.6rem', fontWeight: 800, color: evolved ? '#d4a843' : 'rgba(232,232,232,0.2)', background: evolved ? 'rgba(212,168,67,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${evolved ? 'rgba(212,168,67,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 20, padding: '0.1rem 0.5rem' }}>
                 {evolved ? `יום ${daysCompleted}` : `${daysCompleted}/${UNLOCK_AT}`}
@@ -696,10 +696,10 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.12rem' }}>
                       <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>{ch.title}</span>
                       {isRec && !done && <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.57rem', fontWeight: 800 }}>✨ בשבילך</span>}
-                      {ch.expert && !done && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem', color: 'rgba(232,232,232,0.45)', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>EXPERT</span>}
+                      {ch.expert && !done && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem', color: 'rgba(232,232,232,0.45)', fontSize: '0.57rem', fontWeight: 800, fontFamily: "'SF Mono','Fira Code',monospace", letterSpacing: '0.06em' }}>מומחה</span>}
                       {done && <span style={{ color: '#10b981', fontSize: '0.57rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', borderRadius: 20, padding: '0.1rem 0.4rem' }}>✓ הושלם</span>}
                       {inProgress && <span style={{ color: 'rgba(232,232,232,0.5)', fontSize: '0.57rem', fontWeight: 800, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>פעיל</span>}
-                      {isEvolved(days) && getEvolution(ch.id) && !done && <span style={{ color: '#d4a843', fontSize: '0.57rem', fontWeight: 800, background: 'rgba(212,168,67,0.08)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>LVL 2</span>}
+                      {isEvolved(days) && getEvolution(ch.id) && !done && <span style={{ color: '#d4a843', fontSize: '0.57rem', fontWeight: 800, background: 'rgba(212,168,67,0.08)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 20, padding: '0.1rem 0.45rem' }}>רמה 2</span>}
                     </div>
                     <div style={{ color: 'rgba(241,245,249,0.27)', fontSize: '0.68rem' }}>{ch.subtitle}</div>
                     {days > 0 && (
