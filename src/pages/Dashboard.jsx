@@ -46,6 +46,12 @@ import BoxingWorkoutPreview from '../components/boxing/BoxingWorkoutPreview'
 import BoxingActiveWorkout from '../components/boxing/BoxingActiveWorkout'
 import BoxingCompletion from '../components/boxing/BoxingCompletion'
 import { getBoxingState, getNextWorkout, completeWorkout } from '../utils/boxingProgress'
+import CombatWorkoutPreview from '../components/combat/CombatWorkoutPreview'
+import CombatCompletion from '../components/combat/CombatCompletion'
+import MuayThaiPathScreen from '../components/muaythai/MuayThaiPathScreen'
+import { getMuayThaiState, getNextWorkout as getMTNextWorkout, completeWorkout as completeMTWorkout } from '../utils/muayThaiProgress'
+import { MT_LEVELS } from '../data/muayThaiPath'
+import { claimDailyWorkoutReward } from '../services/workoutRewardService'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -78,6 +84,19 @@ const sanitizeInput = str =>
 /* eslint-enable no-control-regex */
 
 const getLevel   = xp => Math.floor((xp || 0) / XP.PER_LEVEL) + 1
+
+const MT_TRAINING_OPTIONS = [
+  { id: 'shadow', label: 'צל', emoji: '👤', desc: 'ללא ציוד' },
+  { id: 'bag',    label: 'שק', emoji: '🥊', desc: 'עם שק אימון' },
+]
+const MT_REFLECTION_OPTIONS = [
+  { id: 'stance',    label: 'עמידה' },
+  { id: 'guard',     label: 'שמירה' },
+  { id: 'movement',  label: 'תנועה' },
+  { id: 'balance',   label: 'שיווי משקל' },
+  { id: 'timing',    label: 'תזמון' },
+  { id: 'felt-good', label: 'הרגיש טוב' },
+]
 const getLevelXP = xp => (xp || 0) % XP.PER_LEVEL
 const getToNext  = xp => XP.PER_LEVEL - getLevelXP(xp)
 
@@ -693,6 +712,10 @@ export default function Dashboard() {
   const [boxingPreview,       setBoxingPreview]       = useState(null)   // workout object
   const [boxingActive,        setBoxingActive]        = useState(null)   // { workout, trainingType }
   const [boxingCompletion,    setBoxingCompletion]    = useState(null)   // completion data
+  const [showMuayThaiPath,   setShowMuayThaiPath]   = useState(false)
+  const [mtPreview,           setMtPreview]           = useState(null)
+  const [mtActive,            setMtActive]            = useState(null)
+  const [mtCompletion,        setMtCompletion]        = useState(null)
   const [_showDetails,      setShowDetails]       = useState(false)
   const [_contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
   const [_headerScore,    setHeaderScore]    = useState(getScore)
@@ -1664,6 +1687,7 @@ export default function Dashboard() {
               }}
               onCombat={() => setShowCombatProtocols(true)}
               onBoxing={() => setShowBoxingPath(true)}
+              onMuayThai={() => setShowMuayThaiPath(true)}
             />
           </div>
         )}
@@ -1904,16 +1928,21 @@ export default function Dashboard() {
         <BoxingActiveWorkout
           workout={boxingActive.workout}
           trainingType={boxingActive.trainingType}
-          onComplete={stats => {
+          onComplete={async stats => {
             const workout = boxingActive.workout
             setBoxingActive(null)
-            const xpKey = `prime_boxing_done_${todayKey()}`
-            const alreadyEarned = !!localStorage.getItem(xpKey)
-            const xpAwarded = alreadyEarned ? 0 : XP.WORKOUT
-            if (!alreadyEarned) {
-              localStorage.setItem(xpKey, '1')
-              awardXP(xpAwarded)
-              bumpStreak()
+            let xpAwarded = 0
+            if (isGuest) {
+              const lsKey = `prime_workout_done_${todayKey()}`
+              if (!localStorage.getItem(lsKey)) {
+                localStorage.setItem(lsKey, '1')
+                xpAwarded = XP.WORKOUT
+                awardXP(xpAwarded)
+                bumpStreak()
+              }
+            } else if (user) {
+              const { claimed } = await claimDailyWorkoutReward(user.uid, todayKey())
+              if (claimed) { xpAwarded = XP.WORKOUT; awardXP(xpAwarded); bumpStreak() }
             }
             const boxState = getBoxingState(profile)
             const newBoxState = completeWorkout(boxState, workout.id, todayKey())
@@ -1937,6 +1966,71 @@ export default function Dashboard() {
           nextWorkout={boxingCompletion.nextWorkout}
           levelJustCompleted={boxingCompletion.levelJustCompleted}
           onDone={() => { setBoxingCompletion(null); setShowBoxingPath(true) }}
+        />
+      )}
+      {showMuayThaiPath && (
+        <MuayThaiPathScreen
+          profile={profile}
+          onStartWorkout={workout => { setShowMuayThaiPath(false); setMtPreview(workout) }}
+          onFreeTraining={() => { setShowMuayThaiPath(false); setShowCombatTraining(true) }}
+          onClose={() => setShowMuayThaiPath(false)}
+        />
+      )}
+      {mtPreview && (
+        <CombatWorkoutPreview
+          workout={mtPreview}
+          levelNum={mtPreview.level}
+          trainingOptions={MT_TRAINING_OPTIONS.filter(opt => (mtPreview.supportedModes ?? ['shadow', 'bag']).includes(opt.id))}
+          bagWarningLabel="🦵 לשק כבד: רצועות וכפפות חובה. אין מרפקים על שק רגיל."
+          onStart={trainingType => { setMtActive({ workout: mtPreview, trainingType }); setMtPreview(null) }}
+          onBack={() => { setMtPreview(null); setShowMuayThaiPath(true) }}
+        />
+      )}
+      {mtActive && (
+        <BoxingActiveWorkout
+          workout={mtActive.workout}
+          trainingType={mtActive.trainingType}
+          onComplete={async stats => {
+            const workout = mtActive.workout
+            setMtActive(null)
+            let xpAwarded = 0
+            if (isGuest) {
+              const lsKey = `prime_workout_done_${todayKey()}`
+              if (!localStorage.getItem(lsKey)) {
+                localStorage.setItem(lsKey, '1')
+                xpAwarded = XP.WORKOUT
+                awardXP(xpAwarded)
+                bumpStreak()
+              }
+            } else if (user) {
+              const { claimed } = await claimDailyWorkoutReward(user.uid, todayKey())
+              if (claimed) { xpAwarded = XP.WORKOUT; awardXP(xpAwarded); bumpStreak() }
+            }
+            const mtState = getMuayThaiState(profile)
+            const newMtState = completeMTWorkout(mtState, workout.id, todayKey())
+            if (!isGuest && user) {
+              saveProfile(user.uid, { training: { muayThai: newMtState } }).catch(() => {})
+              setProfile(p => ({ ...p, training: { ...(p?.training || {}), muayThai: newMtState } }))
+            }
+            const nextWorkout = getMTNextWorkout(newMtState)
+            const levelJustCompleted = newMtState.currentLevel > mtState.currentLevel ? mtState.currentLevel : null
+            setMtCompletion({ workout, stats, xpAwarded, nextWorkout, levelJustCompleted })
+          }}
+          onExit={() => setMtActive(null)}
+        />
+      )}
+      {mtCompletion && (
+        <CombatCompletion
+          disciplineEmoji="🦵"
+          completionTitle="האימון הושלם!"
+          levels={MT_LEVELS}
+          reflectionOptions={MT_REFLECTION_OPTIONS}
+          workout={mtCompletion.workout}
+          stats={mtCompletion.stats}
+          xpAwarded={mtCompletion.xpAwarded}
+          nextWorkout={mtCompletion.nextWorkout}
+          levelJustCompleted={mtCompletion.levelJustCompleted}
+          onDone={() => { setMtCompletion(null); setShowMuayThaiPath(true) }}
         />
       )}
       {showWorkoutLib && (

@@ -27,13 +27,13 @@ const WORKOUT_CATEGORIES = [
     desc: 'בוקסינג ומואי תאי',
     icon: '🥊',
     exercises: [
-      { id: 'boxing',   name: 'בוקסינג',   desc: 'מאמן AI בזמן אמת', trackId: 'boxing-muaythai' },
-      { id: 'muaythai', name: 'מואי תאי',  desc: 'מאמן AI בזמן אמת', trackId: 'boxing-muaythai' },
+      { id: 'boxing',   name: 'בוקסינג',   desc: 'מסלול מודרך · 7 רמות', trackId: 'boxing-muaythai' },
+      { id: 'muaythai', name: 'מואי תאי',  desc: 'מסלול מודרך · 7 רמות', trackId: 'boxing-muaythai' },
     ],
   },
 ]
 
-export default function WorkoutsScreen({ onStartWorkout, onCombat, onBoxing }) {
+export default function WorkoutsScreen({ onStartWorkout, onCombat, onBoxing, onMuayThai }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem' }}>
       <h2 style={{ color: '#F4F1E8', fontWeight: 800, fontSize: '1rem', margin: '0 0 1rem' }}>בחר אימון</h2>
@@ -52,6 +52,8 @@ export default function WorkoutsScreen({ onStartWorkout, onCombat, onBoxing }) {
                 onClick={() => {
                   if (cat.id === 'combat' && ex.id === 'boxing') {
                     onBoxing?.()
+                  } else if (cat.id === 'combat' && ex.id === 'muaythai') {
+                    onMuayThai?.()
                   } else if (cat.id === 'combat') {
                     onCombat?.()
                   } else {

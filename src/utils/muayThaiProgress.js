@@ -1,39 +1,36 @@
 /**
- * boxingProgress.js
- * Boxing-specific wrappers around the generic combat progression engine.
- * All exports remain API-stable — existing tests require no changes.
+ * muayThaiProgress.js
+ * Muay Thai–specific wrappers around the generic combat progression engine.
+ * Keeps profile.training.muayThai completely separate from profile.training.boxing.
  */
 
-import { BOXING_LEVELS, BOXING_LEVEL_MAP } from '../data/boxingPath'
+import { MT_LEVELS } from '../data/muayThaiPath'
 import { createCombatProgressionEngine, isWorkoutUnlocked } from './combatProgress'
 
-// Silence unused-import lint for BOXING_LEVEL_MAP (kept for external consumers)
-void BOXING_LEVEL_MAP
-
-const engine = createCombatProgressionEngine(BOXING_LEVELS)
+const engine = createCombatProgressionEngine(MT_LEVELS)
 
 // ---------------------------------------------------------------------------
 // Default state
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BOXING_STATE = {
-  currentLevel:        1,
+const DEFAULT_MT_STATE = {
+  currentLevel:       1,
   completedWorkoutIds: [],
-  lastWorkoutDate:     null,
-  totalSessions:       0,
-  reflections:         {},
+  lastWorkoutDate:    null,
+  totalSessions:      0,
+  reflections:        {},
 }
 
 // ---------------------------------------------------------------------------
 // State accessor
 // ---------------------------------------------------------------------------
 
-export function getBoxingState(profile) {
-  return profile?.training?.boxing ?? { ...DEFAULT_BOXING_STATE }
+export function getMuayThaiState(profile) {
+  return profile?.training?.muayThai ?? { ...DEFAULT_MT_STATE }
 }
 
 // ---------------------------------------------------------------------------
-// Re-export engine methods with original names
+// Re-export engine methods with bound names
 // ---------------------------------------------------------------------------
 
 export function getWorkoutById(id)                       { return engine.getWorkoutById(id) }
@@ -45,3 +42,5 @@ export function getLevelProgress(levelNum, completedIds) { return engine.getLeve
 export function getNextWorkout(state)                    { return engine.getNextWorkout(state) }
 export function completeWorkout(state, workoutId, today) { return engine.completeWorkout(state, workoutId, today) }
 export function getLearnedTechniques(completedIds)       { return engine.getLearnedTechniques(completedIds) }
+
+export { engine as muayThaiEngine }
