@@ -8,3 +8,20 @@ export const XP = {
   PERFECT_DAY: 20,      // bonus when all habits + mission + workout done
   PER_LEVEL: 100,       // XP needed per level
 }
+
+// Level name tiers — each tier covers a range of levels.
+// getLevelName(level) → Hebrew title for display.
+const LEVEL_TIERS = [
+  { from: 1,  name: 'מגויס'  },
+  { from: 3,  name: 'לוחם'   },
+  { from: 6,  name: 'ממושמע' },
+  { from: 10, name: 'מחויב'  },
+  { from: 15, name: 'אליטה'  },
+  { from: 21, name: 'PRIME'  },
+  { from: 30, name: 'אגדה'   },
+]
+
+export function getLevelName(level) {
+  const tier = [...LEVEL_TIERS].reverse().find(t => level >= t.from)
+  return tier?.name || 'מגויס'
+}
