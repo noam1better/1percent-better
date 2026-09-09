@@ -127,7 +127,7 @@ function RoundStructureRow({ round, index: _index }) {
   )
 }
 
-export default function BoxingWorkoutPreview({ workout, levelNum, onStart, onBack }) {
+export default function BoxingWorkoutPreview({ workout, levelNum, onStart, onInstant, onBack }) {
   const [trainingType, setTrainingType] = useState(null)
 
   if (!workout) return null
@@ -309,10 +309,10 @@ export default function BoxingWorkoutPreview({ workout, levelNum, onStart, onBac
           </div>
         )}
 
-        {/* ── Start button ── */}
+        {/* ── Start buttons ── */}
         <button
           className="btn-tactile"
-          onClick={() => trainingType && onStart(trainingType)}
+          onClick={() => trainingType && onStart(trainingType, 'regular')}
           disabled={!trainingType}
           style={{
             width: '100%',
@@ -326,10 +326,56 @@ export default function BoxingWorkoutPreview({ workout, levelNum, onStart, onBac
             cursor: trainingType ? 'pointer' : 'not-allowed',
             transition: 'all 0.2s ease',
             letterSpacing: 0.3,
+            marginBottom: 10,
           }}
         >
           {trainingType ? 'התחל אימון ←' : 'בחר סוג אימון תחילה'}
         </button>
+
+        {/* Quick workout — skips warmup, starts directly at first work round */}
+        <button
+          className="btn-tactile"
+          onClick={() => trainingType && onStart(trainingType, 'quick')}
+          disabled={!trainingType}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: trainingType ? C.muted : C.border,
+            border: `1px solid ${trainingType ? C.border : C.border}`,
+            borderRadius: 14,
+            padding: '13px 0',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: trainingType ? 'pointer' : 'not-allowed',
+            transition: 'all 0.2s ease',
+            letterSpacing: 0.2,
+            marginBottom: onInstant ? 10 : 0,
+          }}
+        >
+          ⚡ אימון מהיר — דלג על החימום
+        </button>
+
+        {/* Instant workout — 5 min, no warmup, no progression, no equipment */}
+        {onInstant && (
+          <button
+            className="btn-tactile"
+            onClick={onInstant}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              color: '#a78bfa',
+              border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: 14,
+              padding: '13px 0',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              letterSpacing: 0.2,
+            }}
+          >
+            ⚡ אימון קליל מיידי — 5 דקות, ללא ציוד
+          </button>
+        )}
       </div>
     </div>
   )

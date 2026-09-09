@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 const C = {
   bg:      '#111317',
@@ -100,39 +100,56 @@ function ExitModal({ onContinue, onExit }) {
   )
 }
 
-export default function CombatActiveWorkout({ workout, onComplete, onExit }) {
-  const rounds = workout?.rounds ?? []
+export default function CombatActiveWorkout({ workout, onComplete, onExit, skipWarmup = false }) {
+  // In quick mode, skip all leading warmup rounds so the workout starts at the first non-warmup round.
+  // When no warmup exists the effectiveRounds is identical to rounds.
+  const effectiveRounds = useMemo(() => {
+    const rounds = workout?.rounds ?? []
+    if (!skipWarmup) return rounds
+    const first = rounds.findIndex(r => r.type !== 'warmup')
+    return first >= 0 ? rounds.slice(first) : rounds
+  }, [workout?.rounds, skipWarmup])
 
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0)
-  const [timeLeft,          setTimeLeft]           = useState(rounds[0]?.durationSeconds ?? 60)
+  const [timeLeft,          setTimeLeft]           = useState(effectiveRounds[0]?.durationSeconds ?? 60)
   const [isPaused,          setIsPaused]           = useState(false)
   const [showExitConfirm,   setShowExitConfirm]    = useState(false)
 
-  const intervalRef  = useRef(null)
-  const startTimeRef = useRef(Date.now())
-  const workDoneRef  = useRef(0)
-  const isRunning    = true  // always running when not paused
+  const intervalRef   = useRef(null)
+  const startTimeRef  = useRef(Date.now())
+  const workDoneRef   = useRef(0)
+  const advancingRef  = useRef(false)
+  const isRunning     = true  // always running when not paused
 
-  const currentRound   = rounds[currentRoundIndex]
-  const totalSeconds   = currentRound?.durationSeconds ?? 60
-  const workRoundsAll  = rounds.filter((r) => r.type === 'work')
+  const currentRound    = effectiveRounds[currentRoundIndex]
+  const totalSeconds    = currentRound?.durationSeconds ?? 60
+  const workRoundsAll   = effectiveRounds.filter((r) => r.type === 'work')
   const totalWorkRounds = workRoundsAll.length
-  const workRoundsSoFar = rounds.slice(0, currentRoundIndex).filter((r) => r.type === 'work').length
+  const workRoundsSoFar = effectiveRounds.slice(0, currentRoundIndex).filter((r) => r.type === 'work').length
   const currentWorkRoundNum = currentRound?.type === 'work' ? workRoundsSoFar + 1 : null
-  const nextRound = rounds[currentRoundIndex + 1] ?? null
+  const nextRound = effectiveRounds[currentRoundIndex + 1] ?? null
 
   const advanceRound = useCallback(() => {
+    if (advancingRef.current) return
+    advancingRef.current = true
+
     if (currentRound?.type === 'work') workDoneRef.current += 1
 
     const nextIndex = currentRoundIndex + 1
-    if (nextIndex >= rounds.length) {
+    if (nextIndex >= effectiveRounds.length) {
       const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000)
       onComplete({ durationSeconds, roundsCompleted: workDoneRef.current, techniques: workout?.techniques ?? [] })
       return
     }
     setCurrentRoundIndex(nextIndex)
-    setTimeLeft(rounds[nextIndex].durationSeconds)
-  }, [currentRoundIndex, currentRound, rounds, workout, onComplete])
+    setTimeLeft(effectiveRounds[nextIndex].durationSeconds)
+    setTimeout(() => { advancingRef.current = false }, 50)
+  }, [currentRoundIndex, currentRound, effectiveRounds, workout, onComplete])
+
+  function skipStep() {
+    clearInterval(intervalRef.current)
+    advanceRound()
+  }
 
   useEffect(() => {
     if (!isRunning || isPaused) { clearInterval(intervalRef.current); return }
@@ -172,7 +189,7 @@ export default function CombatActiveWorkout({ workout, onComplete, onExit }) {
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <RoundDots rounds={rounds} currentIndex={currentRoundIndex} />
+          <RoundDots rounds={effectiveRounds} currentIndex={currentRoundIndex} />
         </div>
 
         <CircularTimer timeLeft={timeLeft} totalSeconds={totalSeconds} color={timerColor} />
@@ -200,9 +217,14 @@ export default function CombatActiveWorkout({ workout, onComplete, onExit }) {
 
       {/* Controls */}
       <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bg }}>
-        <button className="btn-tactile" onClick={() => setIsPaused((p) => !p)} style={{ width: '100%', minHeight: 54, background: isPaused ? C.accent : C.surface, color: isPaused ? '#111317' : C.text, border: `1px solid ${isPaused ? C.accent : C.border}`, borderRadius: 14, fontSize: 17, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-          {isPaused ? '▶ המשך' : '⏸ השהה'}
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-tactile" onClick={() => setIsPaused((p) => !p)} style={{ flex: 2, minHeight: 54, background: isPaused ? C.accent : C.surface, color: isPaused ? '#111317' : C.text, border: `1px solid ${isPaused ? C.accent : C.border}`, borderRadius: 14, fontSize: 17, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            {isPaused ? '▶ המשך' : '⏸ השהה'}
+          </button>
+          <button className="btn-tactile" onClick={skipStep} aria-label="דלג לשלב הבא" style={{ flex: 1, minHeight: 54, background: 'transparent', color: C.muted, border: `1px solid ${C.border}`, borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            דלג ←
+          </button>
+        </div>
       </div>
 
       {showExitConfirm && <ExitModal onContinue={() => setShowExitConfirm(false)} onExit={onExit} />}

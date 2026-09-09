@@ -89,7 +89,7 @@ function RoundStructureRow({ round }) {
  * @param {Function} onStart(type)    - Called with selected training type
  * @param {Function} onBack           - Back navigation
  */
-export default function CombatWorkoutPreview({ workout, levelNum, trainingOptions, bagWarningLabel, onStart, onBack }) {
+export default function CombatWorkoutPreview({ workout, levelNum, trainingOptions, bagWarningLabel, onStart, onInstant, onBack }) {
   const [trainingType, setTrainingType] = useState(null)
   const [bagAck, setBagAck] = useState(false)
 
@@ -187,11 +187,33 @@ export default function CombatWorkoutPreview({ workout, levelNum, trainingOption
         {(() => {
           const canStart = trainingType && (trainingType !== 'bag' || bagAck)
           return (
-            <button className="btn-tactile" onClick={() => canStart && onStart(trainingType)} disabled={!canStart} style={{ width: '100%', background: canStart ? C.accent : C.border, color: canStart ? '#111317' : C.muted, border: 'none', borderRadius: 14, padding: '16px 0', fontSize: 17, fontWeight: 800, cursor: canStart ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease', letterSpacing: 0.3 }}>
+            <button className="btn-tactile" onClick={() => canStart && onStart(trainingType)} disabled={!canStart} style={{ width: '100%', background: canStart ? C.accent : C.border, color: canStart ? '#111317' : C.muted, border: 'none', borderRadius: 14, padding: '16px 0', fontSize: 17, fontWeight: 800, cursor: canStart ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease', letterSpacing: 0.3, marginBottom: onInstant ? 10 : 0 }}>
               {!trainingType ? 'בחר סוג אימון תחילה' : trainingType === 'bag' && !bagAck ? 'אשר ציוד תחילה' : 'התחל אימון ←'}
             </button>
           )
         })()}
+
+        {/* Instant workout — 5 min, no warmup, no progression, no equipment */}
+        {onInstant && (
+          <button
+            className="btn-tactile"
+            onClick={onInstant}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              color: C.purple,
+              border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: 14,
+              padding: '13px 0',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              letterSpacing: 0.2,
+            }}
+          >
+            ⚡ אימון קליל מיידי — 5 דקות, ללא ציוד
+          </button>
+        )}
       </div>
     </div>
   )

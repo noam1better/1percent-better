@@ -184,7 +184,10 @@ function CourseQuiz({ onComplete, onSkip }) {
 
 function ReviewModal({ challenge, dayNum, onClose }) {
   const lessonType  = getLessonType(dayNum)
-  const moduleTheme = getDayTask(challenge.id, dayNum)
+  const _midx       = Math.floor((dayNum - 1) / 5)
+  const _dim        = (dayNum - 1) % 5
+  const _rich       = getDayContent(challenge.id, _midx, _dim)
+  const moduleTheme = _rich?.microTask || getDayTask(challenge.id, dayNum)
   const _col        = challenge.color
 
   return (
@@ -247,11 +250,11 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
 
   const currentDay   = Math.min(daysCompleted + 1, challenge.days)
   const _lessonType  = getLessonType(currentDay)
-  const moduleTheme  = getDayTask(challenge.id, currentDay)
   const moduleIdx    = getModuleIndex(currentDay)
   const dayInModule  = (currentDay - 1) % 5
   const modules      = CHALLENGE_WEEKS[challenge.id] || []
   const richContent  = getDayContent(challenge.id, moduleIdx, dayInModule)
+  const moduleTheme  = richContent?.microTask || getDayTask(challenge.id, currentDay)
 
   function handleComplete() {
     if (completing || doneToday) return
@@ -733,7 +736,14 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
   const topTrack       = topTrackId ? CHALLENGES.find(ch => ch.id === topTrackId) : null
   const topProgress    = topTrack ? getProgress(topTrack.id) : null
   const nextDay        = (topProgress?.daysCompleted || 0) + 1
-  const todayTask      = topTrack ? getDayTask(topTrack.id, nextDay) : null
+  const todayTask      = topTrack
+    ? (() => {
+        const midx = Math.floor((nextDay - 1) / 5)
+        const dim  = (nextDay - 1) % 5
+        const rich = getDayContent(topTrack.id, midx, dim)
+        return rich?.microTask || getDayTask(topTrack.id, nextDay)
+      })()
+    : null
   const trackDoneToday = topProgress?.lastCompletedDate === todayKey()
 
   const PROTOCOL_SLOTS = [
