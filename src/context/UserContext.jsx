@@ -7,6 +7,10 @@ const DEFAULT_PREFS = {
   timeAvail:        null,   // '15' | '30' | '60'
   focusGoal:        null,
   recommendedTrack: null,
+  learnTopics:      [],     // preferred lesson topic IDs (e.g. ['money','brain'])
+  prefDuration:     null,   // '2' | '5' | '10' minutes
+  prefStyle:        null,   // 'story' | 'facts' | 'action'
+  dailyIntensity:   null,   // 'light' | 'moderate' | 'intense'
 }
 
 const Ctx = createContext(null)

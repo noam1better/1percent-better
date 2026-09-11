@@ -298,11 +298,75 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         </div>
       )}
 
+      {/* ── 14-day consistency chart — real progress, shown first ── */}
+      <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1.1rem 1.1rem 0.85rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>עקביות יומית</span>
+          <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.68rem' }}>14 הימים האחרונים</span>
+        </div>
+
+        {/* Bar chart */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: 60, marginBottom: '0.4rem' }}>
+          {barData.map(d => (
+            <div key={d.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
+              <div
+                title={d.key}
+                style={{
+                  width: '100%',
+                  height: d.active ? '100%' : '12%',
+                  borderRadius: 4,
+                  background: d.active
+                    ? d.isToday
+                      ? '#d4a843'
+                      : 'rgba(212,168,67,0.45)'
+                    : 'rgba(255,255,255,0.06)',
+                  transition: 'height 0.4s ease',
+                  boxShadow: 'none',
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Day labels */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {barData.map(d => (
+            <div key={d.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.55rem', color: d.isToday ? '#d4a843' : 'rgba(241,245,249,0.2)', fontWeight: d.isToday ? 800 : 400 }}>
+              {d.isToday ? '•' : d.dayLbl}
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: '#d4a843' }} />
+            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem' }}>פעיל</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }} />
+            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem' }}>לא פעיל</span>
+          </div>
+          <span style={{ marginLeft: 'auto', color: 'rgba(241,245,249,0.25)', fontSize: '0.65rem' }}>
+            {activitySet.size} ימים פעילים סה״כ
+          </span>
+        </div>
+      </div>
+
+      {/* ── Weekly Insight card ── */}
+      <div style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '1.1rem' }}>{insight.icon}</span>
+          <span style={{ color: 'rgba(232,232,232,0.7)', fontWeight: 700, fontSize: '0.82rem' }}>תובנה שבועית</span>
+        </div>
+        <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{insight.text}</p>
+      </div>
+
       {/* ── Stat pills ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1.5rem' }}>
         {[
           { label: 'סה״כ XP',            value: xp.toLocaleString(),   icon: '✨', color: '#6366f1' },
-          { label: 'רצף נוכחי',          value: `${streak}d`,          icon: '🔥', color: '#f59e0b' },
+          { label: 'רצף נוכחי',          value: streak === 0 ? 'אין רצף' : streak === 1 ? 'יום אחד' : `${streak} ימים`,          icon: '🔥', color: '#f59e0b' },
           { label: 'רמה',               value: level,                 icon: '⭐', color: '#8b5cf6' },
           { label: 'שיעורים שהושלמו',    value: totalLessons,          icon: '📚', color: '#10b981' },
         ].map(s => (
@@ -374,7 +438,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span style={{ fontSize: '0.8rem' }}>🔔</span>
-            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>הנדנוד של היום · 08:00</span>
+            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>תזכורת יומית · 08:00</span>
           </div>
           <button
             onClick={handlePreviewNudge}
@@ -383,70 +447,6 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
         </div>
         <div style={{ color: '#f1f5f9', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.15rem' }}>{nudge.title}</div>
         <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.77rem', lineHeight: 1.5 }}>{nudge.body}</div>
-      </div>
-
-      {/* ── 14-day consistency chart ── */}
-      <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1.1rem 1.1rem 0.85rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.88rem' }}>עקביות יומית</span>
-          <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.68rem' }}>14 הימים האחרונים</span>
-        </div>
-
-        {/* Bar chart */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: 60, marginBottom: '0.4rem' }}>
-          {barData.map(d => (
-            <div key={d.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
-              <div
-                title={d.key}
-                style={{
-                  width: '100%',
-                  height: d.active ? '100%' : '12%',
-                  borderRadius: 4,
-                  background: d.active
-                    ? d.isToday
-                      ? '#d4a843'
-                      : 'rgba(212,168,67,0.45)'
-                    : 'rgba(255,255,255,0.06)',
-                  transition: 'height 0.4s ease',
-                  boxShadow: 'none',
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Day labels */}
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {barData.map(d => (
-            <div key={d.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.55rem', color: d.isToday ? '#d4a843' : 'rgba(241,245,249,0.2)', fontWeight: d.isToday ? 800 : 400 }}>
-              {d.isToday ? '•' : d.dayLbl}
-            </div>
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: '#d4a843' }} />
-            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem' }}>פעיל</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }} />
-            <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.65rem' }}>לא פעיל</span>
-          </div>
-          <span style={{ marginLeft: 'auto', color: 'rgba(241,245,249,0.25)', fontSize: '0.65rem' }}>
-            {activitySet.size} ימים פעילים סה״כ
-          </span>
-        </div>
-      </div>
-
-      {/* ── Weekly Insight card ── */}
-      <div style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '1.1rem' }}>{insight.icon}</span>
-          <span style={{ color: 'rgba(232,232,232,0.7)', fontWeight: 700, fontSize: '0.82rem' }}>תובנה שבועית</span>
-        </div>
-        <p style={{ color: 'rgba(241,245,249,0.65)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{insight.text}</p>
       </div>
 
       {/* ── Future Trajectory ── */}
@@ -466,7 +466,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.85rem' }}>
               <div>
                 <span style={{ color: 'rgba(232,232,232,0.7)', fontWeight: 700, fontSize: '0.88rem' }}>מסלול הצמיחה שלך</span>
-                <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', marginTop: '0.1rem' }}>בהנחה של {dailyXP} XP/יום</div>
+                <div style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.62rem', marginTop: '0.1rem' }}>בהתבסס על קצב של {dailyXP} XP/יום</div>
               </div>
               <span style={{ fontSize: '0.7rem' }}>🚀</span>
             </div>
@@ -524,7 +524,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
                       {isActive && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.05rem 0.4rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.55rem', fontWeight: 800 }}>פעיל</span>}
                       {done === 0 && <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>טרם התחיל</span>}
                     </span>
-                    <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{done}/{ch.days}d · {pct}%</span>
+                    <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{done}/{ch.days} ימים · {pct}%</span>
                   </div>
                   <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
                     <div style={{ height: '100%', borderRadius: 99, background: ch.color, opacity: 0.75, width: `${pct}%`, transition: 'width 0.5s ease' }} />

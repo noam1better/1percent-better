@@ -657,7 +657,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
           className="btn-tactile"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '0.38rem 0.85rem', color: 'rgba(241,245,249,0.55)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1.25rem' }}
         >
-          → 4 עמודות
+          ← כל התחומים
         </button>
 
         <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '1.1rem 1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -922,7 +922,7 @@ export default function TracksPage({ profile, onAwardXP, onSaveProfile }) {
         }}
       >
         {showTracksArchive ? '▲' : '▼'}
-        <span>מסלולים עמוקים — 4 עמודות · 30 יום</span>
+        <span>מסלולים עמוקים — תחומי צמיחה · 30 יום</span>
       </button>
 
       {/* Collapsed archive: 4-pillar grid */}

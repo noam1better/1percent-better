@@ -54,6 +54,7 @@ import { getMuayThaiState, getNextWorkout as getMTNextWorkout, completeWorkout a
 import { MT_LEVELS } from '../data/muayThaiPath'
 import { claimDailyWorkoutReward } from '../services/workoutRewardService'
 import { INSTANT_BOXING_WORKOUT, INSTANT_MT_WORKOUT } from '../data/instantWorkouts'
+import DailyLessonCard from '../components/DailyLessonCard'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -736,6 +737,7 @@ export default function Dashboard() {
   const [levelUpModal, setLevelUpModal] = useState(null)
   const [_mantraIdx,      _setMantraIdx]        = useState(() => new Date().getDate() % MANTRAS.length)
   const [_showUnlockBanner,setShowUnlockBanner] = useState(false)
+  const [showMyRoutine,  setShowMyRoutine]   = useState(false)
   const [completingId,     setCompletingId]     = useState(null)
   const [showPathHistory,  setShowPathHistory]  = useState(false)
   const [_todayEnergy,    _setTodayEnergy]      = useState(() => getTodayEnergy())
@@ -1194,7 +1196,8 @@ export default function Dashboard() {
 
   const activitySet     = new Set(profile?.activityLog || [])
   const isFirstTimer    = activitySet.size === 0
-  const missedYesterday = !isFirstTimer && !activitySet.has(yesterday)
+  const streakAlive     = profile?.streak?.lastDate === todayKey() || profile?.streak?.lastDate === yesterday
+  const missedYesterday = !isFirstTimer && !streakAlive
   // ── Single primary action ──────────────────────────────────────
   const trackDoneToday   = activeTrack ? profile?.challenges?.[activeTrack.id]?.lastCompletedDate === todayKey() : true
   const firstUndoneHabit = triggers.find(tr => !checkins[tr.id]) ?? null
@@ -1540,6 +1543,11 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Daily Learning Card — directly below main task */}
+                {!isGuest && (
+                  <DailyLessonCard prefTopics={profile?.learnTopics || []} />
+                )}
+
                 {/* Daily Workout Card — red accent */}
                 {(() => {
                   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000)
@@ -1603,6 +1611,30 @@ export default function Dashboard() {
                     </div>
                   )
                 })()}
+
+                {/* השגרה שלי — collapsible section for habits + surprise mission */}
+                <div>
+                  <button
+                    onClick={() => setShowMyRoutine(v => !v)}
+                    style={{
+                      width: '100%', background: 'none', border: 'none', padding: '0.55rem 0',
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      cursor: 'pointer', color: 'rgba(241,245,249,0.4)', fontSize: '0.72rem', fontWeight: 700,
+                      letterSpacing: '0.05em', textTransform: 'uppercase',
+                    }}
+                    aria-expanded={showMyRoutine}
+                  >
+                    <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: showMyRoutine ? 'rotate(90deg)' : 'rotate(0deg)', fontSize: '0.6rem' }}>▶</span>
+                    השגרה שלי
+                    {triggers.length > 0 && (
+                      <span style={{ marginRight: 'auto', color: allDone ? '#3FAF7A' : 'rgba(241,245,249,0.25)', fontSize: '0.68rem', fontWeight: 700 }}>
+                        {doneCount}/{Math.min(triggers.length, 3)} הרגלים
+                      </span>
+                    )}
+                  </button>
+
+                  {showMyRoutine && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', animation: 'slide-up 0.2s ease both' }}>
 
                 {/* Habits section — teal accent */}
                 {(triggers.length > 0 || !activeTrack) && (
@@ -1720,6 +1752,10 @@ export default function Dashboard() {
                     />
                   </div>
                 )}
+
+                    </div>
+                  )}
+                </div>
 
                 {/* Today XP Summary */}
                 {(doneCount > 0 || challengeDone) && (

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { isNudgesEnabled } from '../services/notificationService'
+import { useUserPrefs } from '../context/UserContext'
+import { LESSON_TOPICS } from '../data/dailyLessons'
 
 function Row({ label, desc, children }) {
   return (
@@ -89,16 +91,35 @@ function ConfirmModal({ onConfirm, onCancel }) {
 
 export default function Settings({ onRebuildPath, activePathName }) {
   const { user, isGuest, logout } = useAuth()
+  const { prefs, setPrefs } = useUserPrefs()
   const [loggingOut,     setLoggingOut]     = useState(false)
   const [nudgesEnabled,  setNudgesEnabled]  = useState(isNudgesEnabled)
   const [rebuildConfirm, setRebuildConfirm] = useState(false)
   const [notifPerm,      setNotifPerm]      = useState(() =>
     ('Notification' in window) ? Notification.permission : 'unsupported'
   )
+  const [testSent, setTestSent] = useState(false)
 
   useEffect(() => {
     if (!('Notification' in window)) return
     setNotifPerm(Notification.permission)
+  }, [])
+
+  const handleRequestPermission = useCallback(async () => {
+    if (!('Notification' in window)) return
+    const perm = await Notification.requestPermission()
+    setNotifPerm(perm)
+  }, [])
+
+  const handleTestNotif = useCallback(() => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    new Notification('🧪 בדיקת PRIME', {
+      body: 'ההתראות עובדות! תזכורות יגיעו בזמן הנכון.',
+      icon: '/icon-192.png',
+      tag:  'prime-local-test',
+    })
+    setTestSent(true)
+    setTimeout(() => setTestSent(false), 3000)
   }, [])
 
   async function handleLogout() {
@@ -159,6 +180,7 @@ export default function Settings({ onRebuildPath, activePathName }) {
         <>
           <SectionHeader title="◈ התראות" />
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.1rem 1rem', marginBottom: '0.5rem' }}>
+
             <Row label="תזכורות PRIME" desc="תזכורות ב-10:00 ו-16:00 מבוססות הרגלי חובה וחזון 3 שנים">
               <Toggle
                 on={nudgesEnabled}
@@ -169,30 +191,47 @@ export default function Settings({ onRebuildPath, activePathName }) {
                 }}
               />
             </Row>
+
+            {/* Browser permission status */}
             <Row
               label="הרשאת דפדפן"
               desc={
-                notifPerm === 'granted' ? 'התראות מאושרות' :
+                notifPerm === 'granted' ? 'התראות מאושרות ✓' :
                 notifPerm === 'denied'  ? 'חסומות — שנה בהגדרות הדפדפן' :
-                'נדרש אישור חד-פעמי'
+                'נדרש אישור חד-פעמי כדי לקבל תזכורות'
               }
             >
-              {notifPerm === 'default' && (
-                <button
-                  onClick={() => Notification.requestPermission().then(p => setNotifPerm(p))}
-                  className="btn-tactile"
-                  style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 10, color: 'rgba(245,197,24,0.7)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44 }}
-                >
-                  אשר
-                </button>
+              {notifPerm === 'denied' && (
+                <span style={{ color: '#f87171', fontSize: '0.9rem', fontWeight: 800 }}>✗</span>
               )}
               {notifPerm === 'granted' && (
                 <span style={{ color: '#34d399', fontSize: '0.9rem', fontWeight: 800 }}>✓</span>
               )}
-              {notifPerm === 'denied' && (
-                <span style={{ color: '#f87171', fontSize: '0.9rem', fontWeight: 800 }}>✗</span>
+              {notifPerm === 'default' && (
+                <button
+                  onClick={handleRequestPermission}
+                  className="btn-tactile"
+                  style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 10, color: 'rgba(245,197,24,0.85)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer', minHeight: 44, whiteSpace: 'nowrap' }}
+                >
+                  הפעל
+                </button>
               )}
             </Row>
+
+            {/* Local test notification — no server required */}
+            {notifPerm === 'granted' && (
+              <Row label="שלח התראת בדיקה" desc="התראה מקומית — בדוק שהדפדפן מציג אותה">
+                <button
+                  onClick={handleTestNotif}
+                  disabled={testSent}
+                  className="btn-tactile"
+                  style={{ background: testSent ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${testSent ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: testSent ? '#34d399' : 'rgba(241,245,249,0.6)', fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: testSent ? 'default' : 'pointer', minHeight: 44, whiteSpace: 'nowrap' }}
+                >
+                  {testSent ? '✓ נשלח' : 'בדיקה'}
+                </button>
+              </Row>
+            )}
+
           </div>
         </>
       )}
@@ -214,6 +253,61 @@ export default function Settings({ onRebuildPath, activePathName }) {
           </div>
         </>
       )}
+
+      {/* Learning preferences section */}
+      <SectionHeader title="◈ העדפות למידה" />
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '0.85rem 1rem', marginBottom: '0.5rem' }}>
+        <div style={{ color: '#e8eaf0', fontSize: '0.83rem', fontWeight: 600, marginBottom: '0.55rem' }}>נושאי למידה מועדפים</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.9rem' }}>
+          {LESSON_TOPICS.map(t => {
+            const selected = (prefs.learnTopics || []).includes(t.id)
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  const current = prefs.learnTopics || []
+                  const next = selected ? current.filter(id => id !== t.id) : [...current, t.id]
+                  setPrefs({ learnTopics: next })
+                }}
+                style={{
+                  background: selected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${selected ? 'rgba(139,92,246,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 20, padding: '0.3rem 0.75rem',
+                  color: selected ? '#c4b5fd' : 'rgba(241,245,249,0.5)',
+                  fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}
+              >
+                <span>{t.emoji}</span>{t.label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ color: '#e8eaf0', fontSize: '0.83rem', fontWeight: 600, marginBottom: '0.4rem' }}>זמן מועדף לשיעור</div>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          {[{ v: '2', label: '2 דקות' }, { v: '5', label: '5 דקות' }, { v: '10', label: '10 דקות' }].map(opt => {
+            const selected = prefs.prefDuration === opt.v
+            return (
+              <button
+                key={opt.v}
+                onClick={() => setPrefs({ prefDuration: selected ? null : opt.v })}
+                style={{
+                  flex: 1, background: selected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${selected ? 'rgba(139,92,246,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 10, padding: '0.45rem 0',
+                  color: selected ? '#c4b5fd' : 'rgba(241,245,249,0.5)',
+                  fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ color: 'rgba(241,245,249,0.25)', fontSize: '0.68rem', marginTop: '0.5rem' }}>
+          שינוי ההעדפות לא מאפס את ההתקדמות שלך
+        </div>
+      </div>
 
       {/* Legal link */}
       <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
