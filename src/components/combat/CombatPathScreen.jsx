@@ -114,16 +114,19 @@ function LevelAccordion({ level, completedIds, engine, defaultOpen }) {
  * Generic combat path overview screen.
  *
  * Props:
- *   title             — header title string
- *   levels            — LEVELS array
+ *   title              — header title string
+ *   levels             — LEVELS array
  *   levelOneTechniques — string[] shown in techniques section
- *   state             — { currentLevel, completedWorkoutIds, ... }
- *   engine            — progression engine from createCombatProgressionEngine
- *   freePracticeLabel — string
- *   allCompletedLabel — string shown when entire curriculum is done
- *   onStartWorkout    — fn(workout)
- *   onFreeTraining    — fn()
- *   onClose           — fn()
+ *   state              — { currentLevel, completedWorkoutIds, ... }
+ *   engine             — progression engine from createCombatProgressionEngine
+ *   freePracticeLabel  — string
+ *   allCompletedLabel  — string shown when entire curriculum is done
+ *   onStartWorkout     — fn(workout)
+ *   onFreeTraining     — fn()
+ *   onClose            — fn()
+ *   onQuickLegWork     — optional fn() — quick-start leg/footwork drill
+ *   onQuickHandsElbows — optional fn() — quick-start hands+elbows drill
+ *   quickDuration      — number (minutes) shown on quick-start buttons
  */
 export default function CombatPathScreen({
   title,
@@ -136,6 +139,9 @@ export default function CombatPathScreen({
   onStartWorkout,
   onFreeTraining,
   onClose,
+  onQuickLegWork,
+  onQuickHandsElbows,
+  quickDuration = 5,
 }) {
   const completedIds  = state?.completedWorkoutIds ?? []
   const nextWorkout   = engine.getNextWorkout(state ?? { completedWorkoutIds: [], currentLevel: 1 })
@@ -156,14 +162,48 @@ export default function CombatPathScreen({
   const levelProgress = nextLevel ? engine.getLevelProgress(nextLevel.level, completedIds) : null
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, direction: 'rtl', fontFamily: 'system-ui, sans-serif', paddingBottom: 32 }}>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, direction: 'rtl', fontFamily: 'system-ui, sans-serif', paddingBottom: 32, overflowX: 'hidden' }}>
       {/* Sticky header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 50, background: C.bg, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', minHeight: 56, padding: '0 16px', gap: 12 }}>
-        <button onClick={onClose} className="btn-tactile" style={{ background: 'transparent', border: 'none', color: C.text, fontSize: 22, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, lineHeight: 1 }}>←</button>
+        <button onClick={onClose} className="btn-tactile" style={{ background: 'transparent', border: 'none', color: C.text, fontSize: 22, cursor: 'pointer', padding: '4px 8px', borderRadius: 8, lineHeight: 1, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
         <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, margin: 0, textAlign: 'right' }}>{title}</h1>
       </div>
 
       <div style={{ padding: '16px 16px 0' }}>
+
+        {/* ── Quick Start ──────────────────────────────────────────────── */}
+        {(onQuickLegWork || onQuickHandsElbows) && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 8, textAlign: 'right', letterSpacing: 0.3 }}>
+              ⚡ הפעלה מהירה
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {onQuickLegWork && (
+                <button
+                  className="btn-tactile"
+                  onClick={onQuickLegWork}
+                  style={{ flex: 1, minWidth: 0, minHeight: 72, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '12px 8px' }}
+                >
+                  <span style={{ fontSize: 24, lineHeight: 1 }}>👟</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>רגליים מהיר</span>
+                  <span style={{ fontSize: 11, color: C.muted }}>{quickDuration} דק׳</span>
+                </button>
+              )}
+              {onQuickHandsElbows && (
+                <button
+                  className="btn-tactile"
+                  onClick={onQuickHandsElbows}
+                  style={{ flex: 1, minWidth: 0, minHeight: 72, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '12px 8px' }}
+                >
+                  <span style={{ fontSize: 24, lineHeight: 1 }}>🥊</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>ידיים ומרפקים</span>
+                  <span style={{ fontSize: 11, color: C.muted }}>{quickDuration} דק׳</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Current workout card */}
         <div style={{ background: C.surface, borderRadius: 16, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
           {allDone ? (

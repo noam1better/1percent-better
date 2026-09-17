@@ -52,6 +52,8 @@ import CombatCompletion from '../components/combat/CombatCompletion'
 import MuayThaiPathScreen from '../components/muaythai/MuayThaiPathScreen'
 import { getMuayThaiState, getNextWorkout as getMTNextWorkout, completeWorkout as completeMTWorkout } from '../utils/muayThaiProgress'
 import { MT_LEVELS } from '../data/muayThaiPath'
+import BoxingDrillTimer from '../components/boxing/BoxingDrillTimer'
+import { buildDrill, getLastDuration } from '../data/boxingDrills'
 import { claimDailyWorkoutReward } from '../services/workoutRewardService'
 import { INSTANT_BOXING_WORKOUT, INSTANT_MT_WORKOUT } from '../data/instantWorkouts'
 import DailyLessonCard from '../components/DailyLessonCard'
@@ -719,6 +721,7 @@ export default function Dashboard() {
   const [mtPreview,           setMtPreview]           = useState(null)
   const [mtActive,            setMtActive]            = useState(null)
   const [mtCompletion,        setMtCompletion]        = useState(null)
+  const [mtDrillActive,       setMtDrillActive]       = useState(null)  // quick-start drill for MT
   const [_showDetails,      setShowDetails]       = useState(false)
   const [_contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
   const [_headerScore,    setHeaderScore]    = useState(getScore)
@@ -2026,6 +2029,22 @@ export default function Dashboard() {
           onStartWorkout={workout => { setShowBoxingPath(false); setBoxingPreview(workout) }}
           onFreeTraining={() => { setShowBoxingPath(false); setShowCombatTraining(true) }}
           onClose={() => setShowBoxingPath(false)}
+          onDrillComplete={async stats => {
+            let xpAwarded = 0
+            if (isGuest) {
+              const lsKey = `prime_workout_done_${todayKey()}`
+              if (!localStorage.getItem(lsKey)) {
+                localStorage.setItem(lsKey, '1')
+                xpAwarded = XP.WORKOUT
+                awardXP(xpAwarded)
+                bumpStreak()
+              }
+            } else if (user) {
+              const { claimed } = await claimDailyWorkoutReward(user.uid, todayKey())
+              if (claimed) { xpAwarded = XP.WORKOUT; awardXP(xpAwarded); bumpStreak() }
+            }
+            return xpAwarded
+          }}
         />
       )}
       {boxingPreview && (
@@ -2093,6 +2112,17 @@ export default function Dashboard() {
           onStartWorkout={workout => { setShowMuayThaiPath(false); setMtPreview(workout) }}
           onFreeTraining={() => { setShowMuayThaiPath(false); setShowCombatTraining(true) }}
           onClose={() => setShowMuayThaiPath(false)}
+          onQuickLegWork={() => {
+            const dur = getLastDuration()
+            setShowMuayThaiPath(false)
+            setMtDrillActive(buildDrill('footwork', dur))
+          }}
+          onQuickHandsElbows={() => {
+            const dur = getLastDuration()
+            setShowMuayThaiPath(false)
+            setMtDrillActive(buildDrill('mt-elbows', dur))
+          }}
+          quickDuration={getLastDuration()}
         />
       )}
       {mtPreview && (
@@ -2156,6 +2186,29 @@ export default function Dashboard() {
           nextWorkout={mtCompletion.nextWorkout}
           levelJustCompleted={mtCompletion.levelJustCompleted}
           onDone={() => { const wasInstant = mtCompletion?.isInstant; setMtCompletion(null); if (!wasInstant) setShowMuayThaiPath(true) }}
+        />
+      )}
+      {mtDrillActive && (
+        <BoxingDrillTimer
+          workout={mtDrillActive}
+          skipWarmup={false}
+          onComplete={async stats => {
+            setMtDrillActive(null)
+            const earnedXP = stats.durationSeconds >= 60 || stats.roundsCompleted >= 1
+            if (!earnedXP) return
+            if (isGuest) {
+              const lsKey = `prime_workout_done_${todayKey()}`
+              if (!localStorage.getItem(lsKey)) {
+                localStorage.setItem(lsKey, '1')
+                awardXP(XP.WORKOUT)
+                bumpStreak()
+              }
+            } else if (user) {
+              const { claimed } = await claimDailyWorkoutReward(user.uid, todayKey())
+              if (claimed) { awardXP(XP.WORKOUT); bumpStreak() }
+            }
+          }}
+          onExit={() => { setMtDrillActive(null); setShowMuayThaiPath(true) }}
         />
       )}
       {showWorkoutLib && (

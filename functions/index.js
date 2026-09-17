@@ -3,10 +3,15 @@
 const { onSchedule }              = require('firebase-functions/v2/scheduler');
 const { onDocumentWritten }       = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError }      = require('firebase-functions/v2/https');
+const { defineSecret }            = require('firebase-functions/params');
 const { initializeApp }           = require('firebase-admin/app');
 const { getFirestore }            = require('firebase-admin/firestore');
 const { getMessaging }            = require('firebase-admin/messaging');
 const { GoogleGenerativeAI }      = require('@google/generative-ai');
+const { GoogleAIFileManager }     = require('@google/generative-ai/server');
+const { getStorage }              = require('firebase-admin/storage');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 initializeApp();
 
@@ -19,19 +24,50 @@ initializeApp();
 //   imageBase64     string?            — base64-encoded image (no data: prefix)
 //   imageMimeType   string?            — e.g. "image/jpeg"
 //   systemInstruction string?          — optional model system instruction
-//   model           string?            — default "gemini-1.5-flash"
+//   model           string?            — default "gemini-2.5-flash"
 //
 // Response: { text: string }
+
+const GEMINI_DAILY_LIMIT = 20;
+
+// Atomically increments the daily call counter for uid.
+// Returns false and does NOT increment if the limit is already reached.
+// Uses a transaction so concurrent calls don't race past the cap.
+async function checkGeminiRateLimit(db, uid) {
+  const today = todayIsraelDateKey();
+  const ref   = db.collection('geminiUsage').doc(uid);
+  let allowed = false;
+  await db.runTransaction(async (txn) => {
+    const snap  = await txn.get(ref);
+    const data  = snap.data() || {};
+    const calls = (data.date === today ? (data.calls || 0) : 0);
+    if (calls >= GEMINI_DAILY_LIMIT) { allowed = false; return; }
+    txn.set(ref, { date: today, calls: calls + 1 }, { merge: false });
+    allowed = true;
+  });
+  return allowed;
+}
 
 exports.analyzeWithGemini = onCall(
   {
     region:          'europe-west1',
     memory:          '512MiB',
     timeoutSeconds:  30,
+    secrets:         [geminiApiKey],
   },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Authentication required.');
+    }
+
+    const uid = request.auth.uid;
+    const db  = getFirestore();
+    const allowed = await checkGeminiRateLimit(db, uid);
+    if (!allowed) {
+      throw new HttpsError(
+        'resource-exhausted',
+        `Daily AI limit of ${GEMINI_DAILY_LIMIT} calls reached. Try again tomorrow.`
+      );
     }
 
     const {
@@ -39,14 +75,14 @@ exports.analyzeWithGemini = onCall(
       imageBase64,
       imageMimeType = 'image/jpeg',
       systemInstruction,
-      model: modelName = 'gemini-1.5-flash',
+      model: modelName = 'gemini-2.5-flash',
     } = request.data || {};
 
     if (!prompt && !imageBase64) {
       throw new HttpsError('invalid-argument', 'prompt or imageBase64 required.');
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = geminiApiKey.value();
     if (!apiKey) {
       throw new HttpsError('failed-precondition', 'Gemini API key not configured.');
     }
@@ -76,6 +112,214 @@ exports.analyzeWithGemini = onCall(
     } catch (err) {
       console.error('[analyzeWithGemini] Gemini error:', err?.message);
       throw new HttpsError('internal', 'Gemini request failed.');
+    }
+  }
+);
+
+// ── analyzeBoxingSession — temporal video analysis ────────────────────────────
+// Downloads video from Firebase Storage to a Buffer (no temp file), uploads to
+// Gemini Files API, polls until ACTIVE, analyzes with structured JSON prompt,
+// then deletes the file from both Gemini and Storage.
+//
+// Request data:
+//   storagePath  string  — path in Firebase Storage ("workout-analysis/{uid}/{file}")
+//
+// Response: { analysis: { canAssess, limitations, strength, priorityCorrections,
+//                         repeatedMistakes, timelineObservations, practiceAction } }
+
+const SERVER_VALIDATION = {
+  MAX_BYTES:    100 * 1024 * 1024,           // 100 MB
+  TS_PATTERN:   /^\d+:\d{2}$/,              // "M:SS" or "MM:SS"
+  CATEGORIES:   new Set(['guard','punch','footwork','defense']),
+};
+
+function sanitizeAnalysis(obj) {
+  // Sanitize timestamps; ensure category values are in allowed set
+  if (!obj || typeof obj !== 'object') return false;
+  if (typeof obj.canAssess !== 'boolean') return false;
+  if (!obj.canAssess) return true; // only limitations needed when canAssess=false
+
+  // Normalize priority corrections
+  if (!Array.isArray(obj.priorityCorrections)) return false;
+  for (const c of obj.priorityCorrections) {
+    if (c.timestamp !== null && !SERVER_VALIDATION.TS_PATTERN.test(String(c.timestamp ?? ''))) {
+      c.timestamp = null;
+    }
+    if (!SERVER_VALIDATION.CATEGORIES.has(c.category)) c.category = 'guard';
+  }
+  // Enforce exactly 2 items
+  while (obj.priorityCorrections.length < 2) obj.priorityCorrections.push({ category: 'guard', he: '', timestamp: null });
+  obj.priorityCorrections = obj.priorityCorrections.slice(0, 2);
+
+  // Normalize timeline observations
+  if (!Array.isArray(obj.timelineObservations)) obj.timelineObservations = [];
+  for (const o of obj.timelineObservations) {
+    if (o.time !== null && !SERVER_VALIDATION.TS_PATTERN.test(String(o.time ?? ''))) o.time = null;
+    if (!SERVER_VALIDATION.CATEGORIES.has(o.category)) o.category = 'guard';
+  }
+  obj.timelineObservations = obj.timelineObservations.slice(0, 6);
+
+  if (!Array.isArray(obj.repeatedMistakes)) obj.repeatedMistakes = [];
+  return true;
+}
+
+exports.analyzeBoxingSession = onCall(
+  {
+    region:         'europe-west1',
+    memory:         '1GiB',
+    timeoutSeconds: 120,
+    secrets:        [geminiApiKey],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required.');
+    }
+
+    const uid = request.auth.uid;
+    const { storagePath } = request.data || {};
+
+    if (!storagePath || typeof storagePath !== 'string') {
+      throw new HttpsError('invalid-argument', 'storagePath required.');
+    }
+
+    // Ownership check — path must start with the caller's uid segment
+    const expectedPrefix = `workout-analysis/${uid}/`;
+    if (!storagePath.startsWith(expectedPrefix)) {
+      throw new HttpsError('permission-denied', 'Access denied.');
+    }
+
+    // No path traversal
+    const filename = storagePath.slice(expectedPrefix.length);
+    if (filename.includes('/') || filename.includes('..')) {
+      throw new HttpsError('invalid-argument', 'Invalid storagePath.');
+    }
+
+    const db      = getFirestore();
+    const allowed = await checkGeminiRateLimit(db, uid);
+    if (!allowed) {
+      throw new HttpsError('resource-exhausted', `Daily AI limit of ${GEMINI_DAILY_LIMIT} calls reached.`);
+    }
+
+    const apiKey = geminiApiKey.value();
+    if (!apiKey || apiKey.startsWith('PASTE_')) {
+      throw new HttpsError('failed-precondition', 'Gemini API key not configured.');
+    }
+
+    const bucket      = getStorage().bucket();
+    const storageFile = bucket.file(storagePath);
+    let geminiFileName = null;
+
+    try {
+      // 1. Server-side file metadata validation (before downloading)
+      const [metadata] = await storageFile.getMetadata();
+      const contentType = metadata.contentType || '';
+      if (!contentType.startsWith('video/')) {
+        throw new HttpsError('invalid-argument', 'File must be a video.');
+      }
+      const sizeBytes = parseInt(metadata.size, 10);
+      if (isNaN(sizeBytes) || sizeBytes > SERVER_VALIDATION.MAX_BYTES) {
+        throw new HttpsError('invalid-argument', 'File exceeds 100 MB limit.');
+      }
+
+      // 2. Download to Buffer — no temp file needed; uploadFile() accepts Buffer directly
+      const [videoBuffer] = await storageFile.download();
+
+      // 3. Upload to Gemini Files API
+      const fileManager   = new GoogleAIFileManager(apiKey);
+      const uploadResult  = await fileManager.uploadFile(videoBuffer, {
+        mimeType:    contentType,
+        displayName: `boxing-${uid}`,
+      });
+      geminiFileName       = uploadResult.file.name;
+      const fileUri        = uploadResult.file.uri;
+
+      // 4. Poll until ACTIVE (Gemini processes video server-side before analysis)
+      let fileState = uploadResult.file;
+      let polls     = 0;
+      while (fileState.state === 'PROCESSING' && polls < 18) {
+        await new Promise(r => setTimeout(r, 5000));
+        fileState = await fileManager.getFile(geminiFileName);
+        polls++;
+      }
+      if (fileState.state !== 'ACTIVE') {
+        throw new HttpsError('internal', `Video processing failed (state: ${fileState.state}).`);
+      }
+
+      // 5. Analyze — gemini-2.5-flash supports video via Files API and structured JSON output
+      //    responseMimeType enforces JSON output; supported since SDK v0.12.0
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model:            'gemini-2.5-flash',
+        generationConfig: { responseMimeType: 'application/json' },
+      });
+
+      const prompt =
+`You are an expert boxing coach reviewing a training session video.
+
+Analyze the footage. Return ONLY valid JSON — no markdown, no prose outside JSON:
+{
+  "canAssess": true,
+  "limitations": "describe what you cannot assess from this footage, or null if footage is fully usable",
+  "strength": { "he": "one specific thing they do well — in Hebrew" },
+  "priorityCorrections": [
+    { "category": "guard|punch|footwork|defense", "he": "specific issue in Hebrew", "timestamp": "M:SS or null" },
+    { "category": "guard|punch|footwork|defense", "he": "specific issue in Hebrew", "timestamp": "M:SS or null" }
+  ],
+  "repeatedMistakes": ["mistake in Hebrew"],
+  "timelineObservations": [
+    { "time": "M:SS", "category": "guard|punch|footwork|defense", "he": "observation in Hebrew" }
+  ],
+  "practiceAction": {
+    "titleHe": "drill name in Hebrew",
+    "instructionHe": "3-minute corrective drill instructions in Hebrew",
+    "durationMinutes": 3
+  }
+}
+
+Rules:
+- Set canAssess=false and limitations=reason if footage is too dark, wrong angle, or not boxing. All other fields null.
+- Use video timestamps like "0:05" or "1:23". If timestamp is uncertain, use null — do NOT guess.
+- priorityCorrections: exactly 2 items addressing the two most important issues.
+- timelineObservations: 3–6 key moments you can clearly see. Do not invent observations.
+- repeatedMistakes: only mistakes that appear more than once in the footage.
+- practiceAction.instructionHe must target the first priorityCorrection specifically.
+- All Hebrew fields in Hebrew only. No markdown inside field values.`;
+
+      const result = await model.generateContent([
+        { text: prompt },
+        { fileData: { mimeType: contentType, fileUri } },
+      ]);
+
+      const raw   = result.response.text().trim();
+      const start = raw.indexOf('{');
+      const end   = raw.lastIndexOf('}');
+      if (start === -1 || end === -1) {
+        throw new HttpsError('internal', 'Model returned non-JSON response.');
+      }
+
+      let analysis;
+      try {
+        analysis = JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        throw new HttpsError('internal', 'Failed to parse analysis JSON.');
+      }
+
+      if (!sanitizeAnalysis(analysis)) {
+        throw new HttpsError('internal', 'Analysis response missing required fields.');
+      }
+
+      return { analysis };
+
+    } finally {
+      // Cleanup: delete Gemini file and Storage file regardless of outcome
+      // Note: if the function is killed by timeout, this block does not run.
+      // The Storage file will be cleaned up by the client; the Gemini file
+      // expires automatically after 48 hours per Files API policy.
+      if (geminiFileName) {
+        const fm = new GoogleAIFileManager(apiKey);
+        fm.deleteFile(geminiFileName).catch(() => {});
+      }
+      storageFile.delete().catch(() => {});
     }
   }
 );
@@ -187,13 +431,21 @@ function pickCopy(lang) {
  */
 function isCompletedToday(userData, today) {
   const streak = userData.streak || {};
-  if (streak.lastPostDate === today) return true;
+  // Client saves streak.lastDate (not lastPostDate — fixed field name)
+  if (streak.lastDate === today) return true;
 
   const quests = userData[`dailyQuests_${today}`] || {};
   if (quests.pushup && quests.monkMode && quests.quickReview) return true;
 
   return false;
 }
+
+// ── FCM push notification functions ──────────────────────────────────────────
+// NOTE: dailyHabitNudge, accountabilityReminder, broadcastUpdate, and
+// sendTestNotification all use Firebase Cloud Messaging (Admin SDK) and require
+// the Blaze (pay-as-you-go) plan to deploy. They are intentionally left here
+// for future reintroduction. The client does NOT call any of these functions —
+// local browser notifications (Notification API) handle all user-facing nudges.
 
 // ── Scheduled function ────────────────────────────────────────────────────────
 // Fires every day at 19:30 Israel local time (handles IDT/IST automatically).
@@ -506,5 +758,79 @@ exports.broadcastUpdate = onDocumentWritten(
     });
 
     console.log(`[broadcastUpdate] version=${version} sent=${sent} failed=${failed} stale=${staleTokens.size} total=${messages.length}`);
+  }
+);
+
+// ── sendTestNotification ──────────────────────────────────────────────────────
+// Callable from the client. Sends a real FCM push to all registered tokens for
+// the authenticated user — useful for end-to-end testing without waiting for the
+// scheduled nudge. Requires the user to be registered (tokens in users/{uid}).
+
+exports.sendTestNotification = onCall(
+  {
+    region:         'europe-west1',
+    memory:         '256MiB',
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required.');
+    }
+
+    const uid = request.auth.uid;
+    const db        = getFirestore();
+    const messaging = getMessaging();
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      throw new HttpsError('not-found', 'User document not found. Register a push token first.');
+    }
+
+    const { fcmTokens = [], fcmToken } = userDoc.data();
+    const tokenSet = new Set(Array.isArray(fcmTokens) ? fcmTokens : []);
+    if (fcmToken) tokenSet.add(fcmToken);
+
+    if (!tokenSet.size) {
+      throw new HttpsError('failed-precondition', 'No FCM tokens registered for this user.');
+    }
+
+    let sent = 0, failed = 0;
+    const staleTokens = new Set();
+    const tokenToUid  = new Map([[...tokenSet].join(','), uid]);
+
+    for (const token of tokenSet) {
+      tokenToUid.set(token, uid);
+      try {
+        await messaging.send({
+          token,
+          webpush: {
+            headers: { Urgency: 'high' },
+            data: {
+              title: '🧪 PRIME — בדיקת Push',
+              body:  'ההתראה הגיעה! כל המערכת עובדת.',
+              url:   '/',
+              icon:  '/icon-192.png',
+              badge: '/icon-192.png',
+              tag:   'prime-test-backend',
+            },
+          },
+        });
+        sent++;
+      } catch (err) {
+        failed++;
+        const code = err?.errorInfo?.code || '';
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+        ) {
+          staleTokens.add(token);
+        }
+        console.warn(`[sendTestNotification] uid=${uid} token_error=${code}`);
+      }
+    }
+
+    await purgeStaleTokens(db, staleTokens, tokenToUid);
+    console.log(`[sendTestNotification] uid=${uid} sent=${sent} failed=${failed}`);
+    return { sent, failed, total: tokenSet.size };
   }
 );
