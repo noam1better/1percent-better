@@ -128,11 +128,11 @@ export default function SurpriseMissionCard({ enabledCategories, isGuest, onAwar
   if (collapsed) {
     return (
       <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#F4F1E8', fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.15rem' }}>🎲 בא לך לצאת מהשגרה?</div>
           <div style={{ color: '#71717A', fontSize: '0.7rem' }}>משימת הפתעה — {XP.SURPRISE_MISSION} XP בונוס</div>
         </div>
-        <button onClick={handleReveal} className="btn-tactile" style={{ background: '#17191E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#A4A6AD', fontSize: '0.8rem', fontWeight: 800, padding: '0.5rem 0.9rem', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 40 }}>
+        <button onClick={handleReveal} className="btn-tactile" style={{ background: '#17191E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#A4A6AD', fontSize: '0.8rem', fontWeight: 800, padding: '0.5rem 0.9rem', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 40, flexShrink: 0 }}>
           גלה משימה ←
         </button>
       </div>
