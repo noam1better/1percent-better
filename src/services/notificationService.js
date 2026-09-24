@@ -1,5 +1,6 @@
 import { db } from './firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { getEffectiveStreak } from '../utils/streak'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
@@ -265,7 +266,7 @@ export function checkNotifications(triggers, profile, recapTime = '20:00', nudge
     const nudgeKey = `ft_nudge_${todayKey()}`
     if (!localStorage.getItem(nudgeKey)) {
       localStorage.setItem(nudgeKey, '1')
-      const streak  = profile?.streak?.count || 0
+      const streak  = getEffectiveStreak(profile)
       const { title, body } = getDailyNudgeMessage(profile?.name, streak)
       new Notification(title, { body, icon: '/favicon.svg', tag: 'daily-nudge' })
     }

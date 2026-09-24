@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CHALLENGES } from '../data/challenges'
 import { getDailyNudgeMessage } from '../services/notificationService'
+import { getEffectiveStreak } from '../utils/streak'
 
 const WHATSAPP_LINK = 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4'
 const APP_URL       = 'https://1percent-better-app.web.app'
@@ -182,7 +183,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
       .filter(ch => (challenges[ch.id]?.daysCompleted || 0) > 0)
       .sort((a, b) => (challenges[b.id]?.daysCompleted || 0) - (challenges[a.id]?.daysCompleted || 0))[0]
     const trackName = best ? best.title : '1% Better'
-    const streakVal = profile?.streak?.count || 0
+    const streakVal = getEffectiveStreak(profile)
     const name      = profile?.name || ''
     const text = streakVal > 0
       ? `${name} על רצף של ${streakVal} ימים ב"${trackName}" ב-1% Better.\nהצטרף לתנועה ← ${APP_URL}`
@@ -193,7 +194,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
   }
 
   function handlePreviewNudge() {
-    const streakVal = profile?.streak?.count || 0
+    const streakVal = getEffectiveStreak(profile)
     const { title, body } = getDailyNudgeMessage(profile?.name, streakVal)
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body, icon: '/favicon.svg', tag: 'nudge-preview' })
@@ -217,7 +218,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
   const days14      = useMemo(() => last14Days(), [])
 
   const xp             = profile?.xp || 0
-  const streak         = profile?.streak?.count || 0
+  const streak         = getEffectiveStreak(profile)
   const level          = Math.floor(xp / 100) + 1
   const challenges     = profile?.challenges || {}
   const _challengesDone = Object.values(challenges).filter(c => (c.daysCompleted || 0) >= 30).length

@@ -42,6 +42,7 @@ import HobbyDiscoveryProgress from '../components/HobbyDiscoveryProgress'
 import { HOBBY_DISCOVERY_ID, getHobbyDay } from '../data/hobbyDiscovery'
 import { DEFAULT_PILLARS } from '../data/pillars'
 import { shouldShowLateReminder, getIncompleteCount } from '../utils/habitReminder'
+import { getEffectiveStreak } from '../utils/streak'
 import BoxingPathScreen from '../components/boxing/BoxingPathScreen'
 import BoxingWorkoutPreview from '../components/boxing/BoxingWorkoutPreview'
 import BoxingActiveWorkout from '../components/boxing/BoxingActiveWorkout'
@@ -902,7 +903,7 @@ export default function Dashboard() {
     document.title = `🏃‍♂️ ${m}:${s}${d} — PRIME`
   }, [liveCardio, liveTick])
 
-  const streak             = profile?.streak?.count || 0
+  const streak             = getEffectiveStreak(profile)
   const _winnerGlow        = streak >= 7
   const isAdvancedUnlocked = streak >= 3
 
@@ -1156,7 +1157,6 @@ export default function Dashboard() {
   const xp        = profile?.xp || 0
   const toNext    = getToNext(xp)
   const hour      = new Date().getHours()
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
   const TAB_H     = 64
 
   // ── Personalized context ───────────────────────────────────────
@@ -1199,8 +1199,7 @@ export default function Dashboard() {
 
   const activitySet     = new Set(profile?.activityLog || [])
   const isFirstTimer    = activitySet.size === 0
-  const streakAlive     = profile?.streak?.lastDate === todayKey() || profile?.streak?.lastDate === yesterday
-  const missedYesterday = !isFirstTimer && !streakAlive
+  const missedYesterday = !isFirstTimer && streak === 0
   // ── Single primary action ──────────────────────────────────────
   const trackDoneToday   = activeTrack ? profile?.challenges?.[activeTrack.id]?.lastCompletedDate === todayKey() : true
   const firstUndoneHabit = triggers.find(tr => !checkins[tr.id]) ?? null
