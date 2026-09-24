@@ -59,6 +59,7 @@ import { buildDrill, getLastDuration } from '../data/boxingDrills'
 import { claimDailyWorkoutReward } from '../services/workoutRewardService'
 import { INSTANT_BOXING_WORKOUT, INSTANT_MT_WORKOUT } from '../data/instantWorkouts'
 import DailyLessonCard from '../components/DailyLessonCard'
+import MyTasks from '../components/MyTasks'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -1406,6 +1407,10 @@ export default function Dashboard() {
         {/* ── HOME TAB — Command Center ── */}
         {activeTab === 'home' && (
           <div className="prime-home-outer">
+            {/* My Tasks — the user's own tasks, always first */}
+            <div style={{ marginBottom: '0.875rem' }}>
+              <MyTasks uid={isGuest ? null : user?.uid} />
+            </div>
             <div ref={pathCardRef} style={{ scrollMarginTop: '4rem' }} />
             <div className="prime-home-grid">
 
