@@ -128,6 +128,23 @@ function FullScreen({ children }) {
   )
 }
 
+// Profile photo with fallback: initials from the name, or a user icon.
+// no-referrer: Google profile photos often 403 when a referrer is sent.
+function ProfileAvatar({ photoURL, name }) {
+  const [failedURL, setFailedURL] = useState(null)
+  const showPhoto = photoURL && failedURL !== photoURL
+  const initials  = (name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  return (
+    <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#17191E', border: '1px solid rgba(217,179,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+      {showPhoto
+        ? <img src={photoURL} alt="" referrerPolicy="no-referrer" onError={() => setFailedURL(photoURL)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : initials
+          ? <span style={{ color: '#D9B34C', fontWeight: 800, fontSize: '1.05rem' }}>{initials}</span>
+          : <User size={22} color="#A4A6AD" />}
+    </div>
+  )
+}
+
 function ConfettiBurst() {
   const p = useMemo(() => Array.from({ length: 20 }, (_, i) => {
     const a = ((i / 20) * Math.PI * 2) + (Math.random() - 0.5) * 0.5
@@ -1866,11 +1883,7 @@ export default function Dashboard() {
             {/* User info header */}
             <div style={{ padding: '1.5rem 1.25rem 0.75rem', maxWidth: 480, margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#17191E', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
-                  {user?.photoURL
-                    ? <img src={user.photoURL} alt="פרופיל" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                    : '👤'}
-                </div>
+                <ProfileAvatar photoURL={user?.photoURL} name={profile?.name || user?.displayName} />
                 <div>
                   <div style={{ color: '#F4F1E8', fontWeight: 800, fontSize: '1rem' }}>{profile?.name || user?.displayName || 'PRIME User'}</div>
                   <div style={{ color: '#71717A', fontSize: '0.75rem', marginTop: '0.15rem' }}>{user?.email || ''}</div>
