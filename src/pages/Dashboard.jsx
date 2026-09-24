@@ -111,6 +111,23 @@ const getToNext  = xp => XP.PER_LEVEL - getLevelXP(xp)
 
 const CONF_COLORS = ['#6366f1','#8b5cf6','#10b981','#a5b4fc','#34d399','#fbbf24','#f472b6','#60a5fa']
 
+// Full-screen layer for combat screens that render in page flow (boxing / Muay Thai).
+// Covers header + tab bar, scrolls on its own, and locks the page behind it.
+function FullScreen({ children }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    ref.current?.scrollTo?.(0, 0)
+    return () => { document.body.style.overflow = prev }
+  }, [])
+  return (
+    <div ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#09090b', overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      {children}
+    </div>
+  )
+}
+
 function ConfettiBurst() {
   const p = useMemo(() => Array.from({ length: 20 }, (_, i) => {
     const a = ((i / 20) * Math.PI * 2) + (Math.random() - 0.5) * 0.5
@@ -926,6 +943,11 @@ export default function Dashboard() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [proofModal, editHabit])
+
+  // Combat path screens belong to the Workouts tab — unmount them when leaving it
+  useEffect(() => {
+    if (activeTab !== 'workouts') { setShowBoxingPath(false); setShowMuayThaiPath(false) }
+  }, [activeTab])
 
   // ── XP helpers ────────────────────────────────────────────────
 
@@ -2025,7 +2047,7 @@ export default function Dashboard() {
         />
       )}
       {showBoxingPath && (
-        <BoxingPathScreen
+        <FullScreen><BoxingPathScreen
           profile={profile}
           onStartWorkout={workout => { setShowBoxingPath(false); setBoxingPreview(workout) }}
           onFreeTraining={() => { setShowBoxingPath(false); setShowCombatTraining(true) }}
@@ -2046,19 +2068,19 @@ export default function Dashboard() {
             }
             return xpAwarded
           }}
-        />
+        /></FullScreen>
       )}
       {boxingPreview && (
-        <BoxingWorkoutPreview
+        <FullScreen><BoxingWorkoutPreview
           workout={boxingPreview}
           levelNum={boxingPreview.level}
           onStart={(trainingType, workoutMode = 'regular') => { setBoxingActive({ workout: boxingPreview, trainingType, workoutMode }); setBoxingPreview(null) }}
           onInstant={() => { setBoxingActive({ workout: INSTANT_BOXING_WORKOUT, trainingType: 'shadow', workoutMode: 'instant' }); setBoxingPreview(null) }}
           onBack={() => { setBoxingPreview(null); setShowBoxingPath(true) }}
-        />
+        /></FullScreen>
       )}
       {boxingActive && (
-        <BoxingActiveWorkout
+        <FullScreen><BoxingActiveWorkout
           workout={boxingActive.workout}
           trainingType={boxingActive.trainingType}
           skipWarmup={boxingActive.workoutMode === 'quick'}
@@ -2095,20 +2117,20 @@ export default function Dashboard() {
             setBoxingCompletion({ workout, stats, xpAwarded, nextWorkout, levelJustCompleted, isInstant })
           }}
           onExit={() => setBoxingActive(null)}
-        />
+        /></FullScreen>
       )}
       {boxingCompletion && (
-        <BoxingCompletion
+        <FullScreen><BoxingCompletion
           workout={boxingCompletion.workout}
           stats={boxingCompletion.stats}
           xpAwarded={boxingCompletion.xpAwarded}
           nextWorkout={boxingCompletion.nextWorkout}
           levelJustCompleted={boxingCompletion.levelJustCompleted}
           onDone={() => { const wasInstant = boxingCompletion?.isInstant; setBoxingCompletion(null); if (!wasInstant) setShowBoxingPath(true) }}
-        />
+        /></FullScreen>
       )}
       {showMuayThaiPath && (
-        <MuayThaiPathScreen
+        <FullScreen><MuayThaiPathScreen
           profile={profile}
           onStartWorkout={workout => { setShowMuayThaiPath(false); setMtPreview(workout) }}
           onFreeTraining={() => { setShowMuayThaiPath(false); setShowCombatTraining(true) }}
@@ -2124,10 +2146,10 @@ export default function Dashboard() {
             setMtDrillActive(buildDrill('mt-elbows', dur))
           }}
           quickDuration={getLastDuration()}
-        />
+        /></FullScreen>
       )}
       {mtPreview && (
-        <CombatWorkoutPreview
+        <FullScreen><CombatWorkoutPreview
           workout={mtPreview}
           levelNum={mtPreview.level}
           trainingOptions={MT_TRAINING_OPTIONS.filter(opt => (mtPreview.supportedModes ?? ['shadow', 'bag']).includes(opt.id))}
@@ -2135,10 +2157,10 @@ export default function Dashboard() {
           onStart={trainingType => { setMtActive({ workout: mtPreview, trainingType, workoutMode: 'regular' }); setMtPreview(null) }}
           onInstant={() => { setMtActive({ workout: INSTANT_MT_WORKOUT, trainingType: 'shadow', workoutMode: 'instant' }); setMtPreview(null) }}
           onBack={() => { setMtPreview(null); setShowMuayThaiPath(true) }}
-        />
+        /></FullScreen>
       )}
       {mtActive && (
-        <BoxingActiveWorkout
+        <FullScreen><BoxingActiveWorkout
           workout={mtActive.workout}
           trainingType={mtActive.trainingType}
           onComplete={async stats => {
@@ -2173,10 +2195,10 @@ export default function Dashboard() {
             setMtCompletion({ workout, stats, xpAwarded, nextWorkout, levelJustCompleted, isInstant })
           }}
           onExit={() => setMtActive(null)}
-        />
+        /></FullScreen>
       )}
       {mtCompletion && (
-        <CombatCompletion
+        <FullScreen><CombatCompletion
           disciplineEmoji="🦵"
           completionTitle="האימון הושלם!"
           levels={MT_LEVELS}
@@ -2187,10 +2209,10 @@ export default function Dashboard() {
           nextWorkout={mtCompletion.nextWorkout}
           levelJustCompleted={mtCompletion.levelJustCompleted}
           onDone={() => { const wasInstant = mtCompletion?.isInstant; setMtCompletion(null); if (!wasInstant) setShowMuayThaiPath(true) }}
-        />
+        /></FullScreen>
       )}
       {mtDrillActive && (
-        <BoxingDrillTimer
+        <FullScreen><BoxingDrillTimer
           workout={mtDrillActive}
           skipWarmup={false}
           onComplete={async stats => {
@@ -2210,7 +2232,7 @@ export default function Dashboard() {
             }
           }}
           onExit={() => { setMtDrillActive(null); setShowMuayThaiPath(true) }}
-        />
+        /></FullScreen>
       )}
       {showWorkoutLib && (
         <WorkoutLibraryModal
