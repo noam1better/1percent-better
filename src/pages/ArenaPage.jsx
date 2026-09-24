@@ -40,7 +40,7 @@ function GlobalLeaderboard({ currentUid }) {
 
   if (entries.length === 0) return (
     <div style={{ padding: '0 1.25rem 1rem' }}>
-      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: 'rgba(99,102,241,0.04)', border: '1px dashed rgba(99,102,241,0.18)', borderRadius: 16 }}>
+      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🌍</div>
         <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.35rem' }}>הלוח הגלובלי עוד מתמלא</div>
         <div style={{ color: 'rgba(241,245,249,0.35)', fontSize: '0.72rem', lineHeight: 1.65 }}>
@@ -61,8 +61,8 @@ function GlobalLeaderboard({ currentUid }) {
             <div key={entry.uid} style={{
               display: 'flex', alignItems: 'center', gap: '0.65rem',
               padding: '0.6rem 0.8rem',
-              background: isMe ? 'rgba(99,102,241,0.07)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${isMe ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)'}`,
+              background: isMe ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${isMe ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`,
               borderRadius: 12,
             }}>
               <div style={{ width: 24, textAlign: 'center', flexShrink: 0 }}>
@@ -71,18 +71,18 @@ function GlobalLeaderboard({ currentUid }) {
                   : <span style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.72rem', fontWeight: 700 }}>#{rank}</span>
                 }
               </div>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: isMe ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ color: isMe ? '#a5b4fc' : 'rgba(241,245,249,0.45)', fontWeight: 900, fontSize: '0.75rem' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: isMe ? 'rgba(212,168,67,0.12)' : 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ color: isMe ? '#d4a843' : 'rgba(241,245,249,0.45)', fontWeight: 900, fontSize: '0.75rem' }}>
                   {(entry.name || '?').slice(0, 1).toUpperCase()}
                 </span>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: isMe ? '#a5b4fc' : '#f1f5f9', fontWeight: isMe ? 800 : 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: isMe ? '#d4a843' : '#f1f5f9', fontWeight: isMe ? 800 : 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {entry.name}{isMe && ' (אתה)'}
                 </div>
               </div>
               <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ color: isMe ? '#a5b4fc' : '#f1f5f9', fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{(entry.xp || 0).toLocaleString()}</div>
+                <div style={{ color: isMe ? '#d4a843' : '#f1f5f9', fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{(entry.xp || 0).toLocaleString()}</div>
                 <div style={{ color: 'rgba(241,245,249,0.3)', fontSize: '0.5rem', fontWeight: 700 }}>XP</div>
               </div>
             </div>
@@ -111,7 +111,7 @@ function SquadsWorldWar({ mySquadId }) {
 
   if (squads.length === 0) return (
     <div style={{ padding: '0 1.25rem 1rem' }}>
-      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: 'linear-gradient(145deg,rgba(245,197,24,0.05),rgba(245,197,24,0.02))', border: '1px solid rgba(245,197,24,0.15)', borderRadius: 16 }}>
+      <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
         <div style={{ fontSize: '2.2rem', marginBottom: '0.55rem' }}>⚔️</div>
         <div style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '0.9rem', marginBottom: '0.35rem' }}>המלחמה עוד לא התחילה</div>
         <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.72rem', lineHeight: 1.7, marginBottom: '0.75rem' }}>
@@ -119,7 +119,7 @@ function SquadsWorldWar({ mySquadId }) {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           {['💪 אימון', '🔥 רצף', '🏆 ניצחון'].map(tag => (
-            <span key={tag} style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 20, padding: '0.2rem 0.6rem', color: 'rgba(245,197,24,0.6)', fontSize: '0.65rem', fontWeight: 700 }}>{tag}</span>
+            <span key={tag} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.2rem 0.6rem', color: 'rgba(232,232,232,0.4)', fontSize: '0.65rem', fontWeight: 700 }}>{tag}</span>
           ))}
         </div>
       </div>
@@ -137,8 +137,8 @@ function SquadsWorldWar({ mySquadId }) {
             <div key={squad.squadId} style={{
               display: 'flex', alignItems: 'center', gap: '0.65rem',
               padding: '0.65rem 0.85rem',
-              background: isMySquad ? 'rgba(245,197,24,0.06)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${isMySquad ? 'rgba(245,197,24,0.22)' : 'rgba(255,255,255,0.05)'}`,
+              background: isMySquad ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${isMySquad ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.05)'}`,
               borderRadius: 12,
             }}>
               <div style={{ width: 24, textAlign: 'center', flexShrink: 0 }}>
@@ -178,8 +178,11 @@ export default function ArenaPage({ uid, userName, isGuest }) {
   return (
     <div dir="rtl" style={{ minHeight: '100svh', paddingBottom: TAB_H + 16 }}>
       {/* Header */}
-      <div style={{ padding: '1.5rem 1.25rem 0.5rem', background: 'linear-gradient(180deg, rgba(245,197,24,0.05) 0%, transparent 100%)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.5rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace", marginBottom: '0.3rem' }}>◈ PRIME ARENA</div>
+      <div style={{ padding: '1.5rem 1.25rem 0.5rem', background: '#09090b', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+          <div style={{ color: 'rgba(245,197,24,0.5)', fontSize: '0.5rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>◈ PRIME ARENA</div>
+          <span style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 20, color: '#d4a843', fontSize: '0.5rem', fontWeight: 800, letterSpacing: '0.08em', padding: '0.15rem 0.45rem', textTransform: 'uppercase' }}>BETA</span>
+        </div>
         <h1 style={{ color: '#f1f5f9', fontWeight: 900, fontSize: '1.55rem', margin: 0, letterSpacing: '-0.02em' }}>הזירה 🏟️</h1>
         <p style={{ color: 'rgba(241,245,249,0.32)', fontSize: '0.73rem', marginTop: '0.3rem' }}>תתחרה. תתקדם. תנצח. 🏆</p>
       </div>
@@ -188,8 +191,15 @@ export default function ArenaPage({ uid, userName, isGuest }) {
       <SectionHeader icon="⚔️" title="הסקווד שלך" subtitle="צוות חברים · לוח שיאים שבועי" />
       <div style={{ padding: '0 1.25rem 0.25rem' }}>
         {isGuest ? (
-          <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 16 }}>
-            <div style={{ color: 'rgba(241,245,249,0.4)', fontSize: '0.8rem' }}>התחבר כדי להצטרף לסקווד</div>
+          <div style={{ textAlign: 'center', padding: '1.75rem 1.25rem', background: '#111114', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚔️</div>
+            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.35rem' }}>הצטרף לסקווד</div>
+            <div style={{ color: 'rgba(241,245,249,0.38)', fontSize: '0.72rem', lineHeight: 1.65, marginBottom: '0.75rem' }}>
+              התחבר כדי ליצור סקווד, להזמין חברים ולהתחרות על דירוג שבועי.
+            </div>
+            <a href="/welcome" style={{ display: 'inline-block', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, color: 'rgba(232,232,232,0.7)', fontSize: '0.75rem', fontWeight: 800, padding: '0.45rem 1rem', textDecoration: 'none' }}>
+              התחבר עכשיו ←
+            </a>
           </div>
         ) : (
           <SquadLeaderboard uid={uid} userName={userName} />

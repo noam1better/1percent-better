@@ -115,6 +115,14 @@ export async function loadLeaderboard() {
   }
 }
 
+// Write streak.lastDate to users/{uid} so the Cloud Function (which reads the
+// users collection for FCM tokens) can also check whether today is already done.
+export async function syncCompletionStatus(uid, date) {
+  try {
+    await setDoc(doc(db, 'users', uid), { streak: { lastDate: date } }, { merge: true })
+  } catch {}
+}
+
 export async function joinWaitlist(uid, email) {
   const safeEmail = sanitizeText(email, 254)
   if (!safeEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail)) {

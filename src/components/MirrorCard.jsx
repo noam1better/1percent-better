@@ -10,8 +10,8 @@ export default function MirrorCard({ gapDays, message, onRespond }) {
 
   return (
     <div style={{
-      background: 'linear-gradient(145deg,rgba(251,146,60,0.08),rgba(239,68,68,0.04))',
-      border: '1px solid rgba(251,146,60,0.3)',
+      background: '#111114',
+      border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 18,
       padding: '1.1rem 1.15rem',
       marginBottom: '1.1rem',
@@ -25,7 +25,7 @@ export default function MirrorCard({ gapDays, message, onRespond }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
         <span style={{ fontSize: '1rem' }}>🪞</span>
         <div>
-          <div style={{ color: 'rgba(251,146,60,0.7)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>
+          <div style={{ color: 'rgba(232,232,232,0.4)', fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'SF Mono','Fira Code',monospace" }}>
             ◈ MIRROR · {gapDays} ימים ללא התקדמות
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function MirrorCard({ gapDays, message, onRespond }) {
         fontWeight: 600,
         lineHeight: 1.7,
         margin: '0 0 1rem',
-        borderRight: '2px solid rgba(251,146,60,0.4)',
+        borderRight: '2px solid rgba(255,255,255,0.1)',
         paddingRight: '0.85rem',
         direction: 'rtl',
       }}>

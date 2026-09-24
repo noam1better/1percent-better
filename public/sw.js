@@ -16,19 +16,50 @@ self.addEventListener('activate', e => {
   self.clients.claim()
 })
 
+// ── FCM background push handler ──────────────────────────────────────
+// Cloud Function sends webpush.data (flat JSON). Browser delivers a push
+// event here when the app is in the background or closed.
+self.addEventListener('push', e => {
+  let payload = {}
+  try { payload = e.data ? e.data.json() : {} } catch { payload = {} }
+
+  const title = payload.title || 'PRIME'
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body:  payload.body  || '',
+      icon:  payload.icon  || '/icon-192.png',
+      badge: payload.badge || '/icon-192.png',
+      tag:   payload.tag   || 'prime-push',
+      data:  { url: payload.url || '/' },
+    })
+  )
+})
+
+// If the browser refreshes the push subscription, signal the client to re-register
+self.addEventListener('pushsubscriptionchange', e => {
+  e.waitUntil(
+    clients.matchAll({ type: 'window' }).then(list =>
+      list.forEach(c => c.postMessage({ type: 'FCM_TOKEN_REFRESH' }))
+    )
+  )
+})
+
 self.addEventListener('notificationclick', e => {
   e.notification.close()
   const action = e.action   // 'done' | 'later' | 'help' | '' (body click)
   const data   = e.notification.data || {}
+  const target = data.url || '/'
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const msg = { type: 'NUDGE_RESPONSE', action: action || 'open', data }
-      if (list.length > 0) {
-        list[0].postMessage(msg)
-        list[0].focus()
+      // In-app nudge notifications carry habitLabel; FCM background pushes carry url
+      if (data.habitLabel) {
+        const msg = { type: 'NUDGE_RESPONSE', action: action || 'open', data }
+        if (list.length > 0) { list[0].postMessage(msg); list[0].focus() }
+        else clients.openWindow('/').then(c => c && c.postMessage(msg))
       } else {
-        clients.openWindow('/').then(c => c && c.postMessage(msg))
+        if (list.length > 0) { list[0].navigate(target); list[0].focus() }
+        else clients.openWindow(target)
       }
     })
   )

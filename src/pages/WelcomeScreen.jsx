@@ -5,12 +5,12 @@ import { useLang } from '../context/LangContext'
 import { loadProfile } from '../services/focusTriggerService'
 
 const S = {
-  page: { minHeight: '100vh', background: '#0e0e16', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative' },
-  card: { width: '100%', maxWidth: 400, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: '2.5rem 2rem', textAlign: 'center' },
-  logo: { width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#e8b800,#facc15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 1rem' },
+  page: { minHeight: '100vh', background: '#09090b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative' },
+  card: { width: '100%', maxWidth: 400, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: '2.5rem 2rem', textAlign: 'center' },
+  logo: { width: 52, height: 52, borderRadius: 16, background: '#d4a843', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 1rem' },
   h1: { color: '#f1f5f9', fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.35rem' },
   sub: { color: 'rgba(241,245,249,0.6)', fontSize: '0.9rem', marginBottom: '2rem' },
-  btn: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '0.95rem 1.5rem', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#e8b800,#facc15)', color: '#111', fontSize: '0.95rem', fontWeight: 900, cursor: 'pointer', marginTop: '2rem', boxShadow: '0 6px 24px rgba(250,204,21,0.38)', transition: 'filter 0.15s, box-shadow 0.15s, transform 0.12s' },
+  btn: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '0.95rem 1.5rem', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#c49020,#d4a843)', color: '#111', fontSize: '0.95rem', fontWeight: 900, cursor: 'pointer', marginTop: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', transition: 'transform 0.12s' },
   err: { color: '#f87171', fontSize: '0.8rem', marginTop: '0.75rem' },
   legal: { color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', marginTop: '1.5rem', lineHeight: 1.5 },
 }
@@ -83,7 +83,7 @@ function LegalModal({ type, onClose }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 480, background: '#0e0e16', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(255,255,255,0.1)', padding: '1.5rem 1.5rem 2.5rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.25s ease' }}
+        style={{ width: '100%', maxWidth: 480, background: '#18181b', borderRadius: '20px 20px 0 0', borderTop: '2px solid rgba(255,255,255,0.1)', padding: '1.5rem 1.5rem 2.5rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.25s ease' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
           <span style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1rem' }}>
@@ -199,8 +199,8 @@ export default function WelcomeScreen() {
           onClick={handleGoogle}
           disabled={loading}
           style={{ ...S.btn, opacity: loading ? 0.65 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-          onMouseEnter={e => { if (!loading) { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(250,204,21,0.5)'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
-          onMouseLeave={e => { e.currentTarget.style.filter = ''; e.currentTarget.style.boxShadow = '0 6px 24px rgba(250,204,21,0.38)'; e.currentTarget.style.transform = '' }}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)' } }}
+          onMouseLeave={e => { e.currentTarget.style.transform = '' }}
         >
           {loading
             ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(0,0,0,0.25)', borderTopColor: '#111', animation: 'spin 0.8s linear infinite' }} />
@@ -250,7 +250,7 @@ export default function WelcomeScreen() {
             <button
               type="submit"
               disabled={emailLoading}
-              style={{ ...S.btn, marginTop: 0, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', color: '#fff', fontWeight: 700, opacity: emailLoading ? 0.6 : 1, cursor: emailLoading ? 'not-allowed' : 'pointer' }}
+              style={{ ...S.btn, marginTop: 0, background: '#1e1e1e', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(240,240,240,0.85)', fontWeight: 700, opacity: emailLoading ? 0.6 : 1, cursor: emailLoading ? 'not-allowed' : 'pointer', boxShadow: 'none' }}
             >
               {emailLoading
                 ? <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.8s linear infinite' }} />

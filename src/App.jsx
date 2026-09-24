@@ -7,6 +7,7 @@ import GoogleAuthGuard from './components/GoogleAuthGuard'
 import WelcomeScreen from './pages/WelcomeScreen'
 import OnboardingFlow from './pages/OnboardingFlow'
 import Dashboard from './pages/Dashboard'
+import Legal from './pages/Legal'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/welcome"   element={<WelcomeScreen />} />
             <Route path="/setup"     element={<GoogleAuthGuard><OnboardingFlow /></GoogleAuthGuard>} />
             <Route path="/dashboard" element={<GoogleAuthGuard><Dashboard /></GoogleAuthGuard>} />
+            <Route path="/legal"     element={<Legal />} />
             <Route path="*"          element={<Navigate to="/welcome" replace />} />
           </Routes>
         </LoadingWrapper>

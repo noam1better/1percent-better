@@ -4,7 +4,7 @@ const STEPS = ['hook', 'rules', 'activation']
 
 const page = {
   minHeight: '100vh',
-  background: '#0e0e16',
+  background: '#09090b',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -17,7 +17,7 @@ const page = {
 const card = {
   width: '100%',
   maxWidth: 440,
-  background: 'rgba(255,255,255,0.03)',
+  background: '#111114',
   border: '1px solid rgba(255,255,255,0.07)',
   borderRadius: '22px 28px 24px 26px',
   padding: '2.5rem 2rem 2rem',
@@ -29,8 +29,8 @@ const emojiBox = {
   width: 56,
   height: 56,
   borderRadius: '16px 18px 14px 20px',
-  background: 'rgba(196,121,90,0.12)',
-  border: '1px solid rgba(196,121,90,0.22)',
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -55,7 +55,7 @@ const bodySt = {
 }
 
 const detailSt = {
-  color: 'rgba(196,121,90,0.85)',
+  color: 'rgba(232,232,232,0.55)',
   fontSize: '0.85rem',
   fontWeight: 700,
   letterSpacing: '0.01em',

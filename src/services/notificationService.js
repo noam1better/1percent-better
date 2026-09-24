@@ -142,6 +142,33 @@ export function isNudgesEnabled() {
   catch { return true }
 }
 
+// ── Dev-only test hook ─────────────────────────────────────────────
+// Call window.__primeFire() in the browser console. The next interval
+// tick (within 60s) will fire the morning nudge as if it were 08:00,
+// bypassing time and cooldown checks. Stripped from production builds.
+
+let _devFireOnNextTick = false
+
+export function __devQueueTestNudge() {
+  if (import.meta.env.PROD) return
+  _devFireOnNextTick = true
+  try {
+    const today = todayKey()
+    localStorage.removeItem(`ft_nudge_${today}`)
+    localStorage.removeItem(`ft_recap_${today}`)
+    for (const k of Object.keys(localStorage)) {
+      if (
+        k.startsWith('prime_nudge_ts_') ||
+        k.startsWith(`prime_nudge_done_${today}`) ||
+        k.startsWith('prime_nudge_snooze_')
+      ) {
+        localStorage.removeItem(k)
+      }
+    }
+  } catch {}
+  console.log('[PRIME DEV] Nudge queued — fires on next 60s interval tick')
+}
+
 // ── Check nudges (called every 60s from Dashboard) ─────────────────
 
 export async function checkNudges(visionProfile, uid) {
@@ -226,12 +253,15 @@ export function getDailyNudgeMessage(name, streak) {
 export function checkNotifications(triggers, profile, recapTime = '20:00', nudgeTime = '08:00') {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
 
+  const devFire = _devFireOnNextTick
+  if (devFire) _devFireOnNextTick = false
+
   const now  = new Date()
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   const checkins = getCheckins()
 
   // Morning streak nudge
-  if (hhmm === nudgeTime) {
+  if (hhmm === nudgeTime || devFire) {
     const nudgeKey = `ft_nudge_${todayKey()}`
     if (!localStorage.getItem(nudgeKey)) {
       localStorage.setItem(nudgeKey, '1')

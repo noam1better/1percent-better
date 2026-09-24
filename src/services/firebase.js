@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
+import { getMessaging } from 'firebase/messaging'
 
 const config = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,6 +20,7 @@ let _auth      = null
 let _db        = null
 let _storage   = null
 let _functions = null
+let _messaging = null
 
 let _app = null
 
@@ -28,6 +30,10 @@ if (isFirebaseConfigured) {
   _db        = getFirestore(_app)
   _storage   = getStorage(_app)
   _functions = getFunctions(_app, 'europe-west1')
+  // Messaging only available in browsers that support service workers
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    try { _messaging = getMessaging(_app) } catch {}
+  }
 }
 
 export const app            = _app
@@ -35,4 +41,5 @@ export const auth           = _auth
 export const db             = _db
 export const storage        = _storage
 export const functions      = _functions
+export const messaging      = _messaging
 export const googleProvider = isFirebaseConfigured ? new GoogleAuthProvider() : null

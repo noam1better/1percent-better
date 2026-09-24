@@ -180,16 +180,24 @@ export function getMissionsForCategories(enabledCategoryIds) {
   return enabledCategoryIds.flatMap(id => MISSIONS[id] || [])
 }
 
-export function pickRandomMission(enabledCategoryIds, excludeIds = []) {
+export function pickRandomMission(enabledCategoryIds, excludeIds = [], categoryWeights = {}) {
   const pool = getMissionsForCategories(enabledCategoryIds)
     .filter(m => !excludeIds.includes(m.id))
   if (pool.length === 0) {
-    // fallback: ignore excludeIds
     const fallback = getMissionsForCategories(enabledCategoryIds)
     if (fallback.length === 0) return null
     return fallback[Math.floor(Math.random() * fallback.length)]
   }
-  return pool[Math.floor(Math.random() * pool.length)]
+  const hasWeights = Object.keys(categoryWeights).some(k => (categoryWeights[k] || 0) > 0)
+  if (!hasWeights) return pool[Math.floor(Math.random() * pool.length)]
+  // Each mission gets 1 + min(weight, 2) slots — cap preserves variety
+  const weighted = []
+  for (const m of pool) {
+    const cat = SURPRISE_CATEGORIES.find(c => m.id.startsWith(c.id))?.id
+    const slots = 1 + Math.min(categoryWeights[cat] || 0, 2)
+    for (let i = 0; i < slots; i++) weighted.push(m)
+  }
+  return weighted[Math.floor(Math.random() * weighted.length)]
 }
 
 export function getCategoryLabel(categoryId) {
@@ -198,6 +206,33 @@ export function getCategoryLabel(categoryId) {
 
 export function getCategoryEmoji(categoryId) {
   return SURPRISE_CATEGORIES.find(c => c.id === categoryId)?.emoji || '🎲'
+}
+
+export const PILLAR_LABELS = {
+  body:       'גוף',
+  discipline: 'משמעת',
+  growth:     'התפתחות',
+  people:     'אנשים',
+  life:       'חיים',
+}
+
+// Maps surprise-category IDs to the five pillar categories
+const SURPRISE_CAT_TO_PILLAR = {
+  fitness:    'body',
+  creativity: 'life',
+  social:     'people',
+  mindset:    'discipline',
+  learning:   'growth',
+  community:  'people',
+  adventure:  'life',
+  dating:     'people',
+}
+
+export function getMissionCategory(missionId) {
+  const meta = REPEATABLE_MISSIONS[missionId]
+  if (meta?.pillar) return meta.pillar
+  const surpriseCat = SURPRISE_CATEGORIES.find(c => missionId.startsWith(c.id))?.id
+  return surpriseCat ? (SURPRISE_CAT_TO_PILLAR[surpriseCat] || null) : null
 }
 
 // Metadata for missions that can be converted to repeatable habits

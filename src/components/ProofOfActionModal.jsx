@@ -74,9 +74,9 @@ export default function ProofOfActionModal({
     >
       <div style={{
         width: '100%', maxWidth: 480,
-        background: '#161622',
+        background: '#18181b',
         borderRadius: '20px 20px 0 0',
-        borderTop: `2px solid ${accentColor}55`,
+        borderTop: '1px solid rgba(255,255,255,0.08)',
         animation: 'slide-up 0.22s ease',
       }}>
 
@@ -105,7 +105,7 @@ export default function ProofOfActionModal({
 
           {/* Optional task context */}
           {taskDesc && (
-            <div style={{ background: `${accentColor}0a`, border: `1px solid ${accentColor}20`, borderRadius: 10, padding: '0.6rem 0.8rem', marginBottom: '0.85rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.6rem 0.8rem', marginBottom: '0.85rem' }}>
               <p style={{ color: 'rgba(241,245,249,0.55)', fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>{taskDesc}</p>
             </div>
           )}
@@ -198,7 +198,7 @@ export default function ProofOfActionModal({
                     key={tag.id}
                     onClick={() => handleEnergyTag(tag.id)}
                     className="btn-tactile"
-                    style={{ padding: '0.4rem 0.75rem', borderRadius: 20, border: `1px solid ${tag.color}40`, background: `${tag.color}10`, color: tag.color, fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ padding: '0.4rem 0.75rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'rgba(232,232,232,0.5)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {tag.label}
                   </button>

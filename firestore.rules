@@ -115,12 +115,36 @@ service cloud.firestore {
     }
 
     // ── SQUADS ─────────────────────────────────────────
+    // createdBy, createdAt, and inviteCode are immutable after creation.
+    // Two legitimate update paths:
+    //   (a) Join — caller not yet a member, adds only their own uid to memberUids
+    //       (arrayUnion semantics: existing members preserved, size +1 max).
+    //   (b) Member update — caller is an existing member, memberUids stays unchanged
+    //       (covers telegramChatId writes and members map updates).
+    // Any member can update non-uid fields (name, telegramChatId) — acceptable;
+    // the high-severity risk (arbitrary memberUids overwrite) is blocked.
     match /squads/{squadId} {
       allow read:   if isSignedIn() && request.auth.uid in resource.data.memberUids;
-      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid
+      allow create: if isSignedIn()
+                   && request.resource.data.createdBy == request.auth.uid
                    && request.resource.data.name is string
                    && request.resource.data.name.size() <= 40;
-      allow update: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      allow update: if isSignedIn()
+                   // Immutable core fields
+                   && request.resource.data.createdBy  == resource.data.createdBy
+                   && request.resource.data.createdAt  == resource.data.createdAt
+                   && request.resource.data.inviteCode == resource.data.inviteCode
+                   && (
+                     // (a) Join: caller is not yet a member, adds only their own uid
+                     (!(request.auth.uid in resource.data.memberUids)
+                      && request.auth.uid in request.resource.data.memberUids
+                      && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+                      && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1)
+                     ||
+                     // (b) Existing member update: memberUids must not change
+                     (request.auth.uid in resource.data.memberUids
+                      && request.resource.data.memberUids == resource.data.memberUids)
+                   );
     }
 
     // ── WEEKLY REPS (readable by any signed-in user for squad leaderboard) ──
@@ -141,6 +165,16 @@ service cloud.firestore {
       allow update: if isSignedIn()
                    && (resource.data.challenger == request.auth.uid
                        || resource.data.challenged == request.auth.uid);
+    }
+
+    // ── NUDGE RESPONSES ────────────────────────────────
+    // Written by notificationService.saveNudgeResponse as {uid}_{YYYY-MM-DD}.
+    // Document must carry a uid field matching the caller; read is also uid-scoped.
+    match /nudgeResponses/{docId} {
+      allow write: if isSignedIn()
+                  && request.resource.data.uid == request.auth.uid;
+      allow read:  if isSignedIn()
+                  && resource.data.uid == request.auth.uid;
     }
 
     // ── PRO WAITLIST ───────────────────────────────────
