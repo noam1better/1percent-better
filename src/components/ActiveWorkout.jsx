@@ -496,6 +496,7 @@ function FutureVsNowWidget({ reps, sessionGoal, trackId, visionProfile, repFlash
 // ── Strength (camera + pose) ────────────────────────────────────────
 
 const HOLD_MS = 120
+const WARMUP_SEC = 3   // pose tracking runs, but reps don't count until the countdown ends
 
 const SET_LOG_KEY = 'prime_set_log'
 function saveSetLog(entry) {
@@ -588,6 +589,7 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
   const caveInActiveRef  = useRef(false)   // debounce: one event per 2s
   const sessionStartRef  = useRef(null)    // set when camera goes live
   const lastConfRef      = useRef(1)       // latest confidence for AI formScore
+  const countingRef      = useRef(false)   // false during warm-up — getting into position isn't a rep
 
   const [phase,       setPhase]       = useState('loading')
   const [reps,        setReps]        = useState(0)
@@ -600,6 +602,7 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
   const [manualRep,   setManualRep]   = useState('')
   const [summary,     setSummary]     = useState(null)   // { score, headline, tips }
   const [aiFeedback,  setAiFeedback]  = useState(null)   // null | 'loading' | string
+  const [warmup,      setWarmup]      = useState(null)   // seconds left before counting, null when counting
   const formWarnTimer = useRef(null)
 
   const cleanup = useCallback(() => {
@@ -670,6 +673,23 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
       .catch(err  => console.error('[camera] play() FAILED:', err.name, '—', err.message))
   }, [phase])
 
+  // Warm-up countdown: starts when the camera goes live, arms rep counting at 0
+  useEffect(() => {
+    if (phase !== 'running') return
+    countingRef.current = false
+    let left = WARMUP_SEC
+    setWarmup(left)
+    const id = setInterval(() => {
+      left -= 1
+      if (left > 0) { setWarmup(left); return }
+      clearInterval(id)
+      downSinceRef.current = null   // a squat started during warm-up doesn't count
+      countingRef.current  = true
+      setWarmup(null)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [phase])
+
   // Pose detection loop
   useEffect(() => {
     if (phase !== 'running') return
@@ -733,6 +753,8 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
           poseStateRef.current = newState
           setPoseState(newState)
           setAngle(result.angle)
+
+          if (!countingRef.current) repCompleted = false
 
           if (repCompleted) {
             repsRef.current += 1
@@ -975,6 +997,18 @@ function StrengthWorkout({ track, goal, uid, userName, visionProfile, onComplete
                 : `${angle}° ${poseState === 'down' ? '▼' : '▲'}`
               }
             </span>
+          </div>
+        )}
+
+        {/* Warm-up countdown — get into position before reps count */}
+        {warmup !== null && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+            background: 'rgba(0,0,0,0.45)', pointerEvents: 'none',
+          }}>
+            <div style={{ color: '#F5C518', fontSize: '3rem', fontWeight: 900, lineHeight: 1 }}>{warmup}</div>
+            <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 700 }}>מתכוננים — תיכנס לעמדה</div>
           </div>
         )}
 
