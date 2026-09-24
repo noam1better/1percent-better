@@ -144,7 +144,7 @@ html {
   gap: 0.875rem;
 }
 .prime-side-col {
-  order: -1;
+  order: 1;   /* mobile: after the main column (My Tasks → track → workout → routine) */
   display: flex;
   flex-direction: column;
   gap: 0.75rem;

@@ -87,10 +87,16 @@ export default function HabitCreationFlow({ growthPillars, existingCount, onSave
               </div>
             ) : (
               <>
+                <button
+                  onClick={handleCustom}
+                  style={{ width: '100%', padding: '0.8rem', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: '#A4A6AD', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1rem' }}
+                >
+                  + צור הרגל מותאם אישית
+                </button>
                 <div style={{ color: '#71717A', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>
                   מומלץ בשבילך
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   {suggestions.map(s => {
                     const pillar = getPillar(s.pillar)
                     return (
@@ -120,12 +126,6 @@ export default function HabitCreationFlow({ growthPillars, existingCount, onSave
                     )
                   })}
                 </div>
-                <button
-                  onClick={handleCustom}
-                  style={{ width: '100%', padding: '0.8rem', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: '#A4A6AD', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  + צור הרגל מותאם אישית
-                </button>
               </>
             )}
           </div>

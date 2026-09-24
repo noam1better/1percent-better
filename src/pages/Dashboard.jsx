@@ -777,7 +777,7 @@ export default function Dashboard() {
   const [levelUpModal, setLevelUpModal] = useState(null)
   const [_mantraIdx,      _setMantraIdx]        = useState(() => new Date().getDate() % MANTRAS.length)
   const [_showUnlockBanner,setShowUnlockBanner] = useState(false)
-  const [showMyRoutine,  setShowMyRoutine]   = useState(false)
+  const [showMyRoutine,  setShowMyRoutine]   = useState(true)
   const [completingId,     setCompletingId]     = useState(null)
   const [showPathHistory,  setShowPathHistory]  = useState(false)
   const [_todayEnergy,    _setTodayEnergy]      = useState(() => getTodayEnergy())
@@ -1414,7 +1414,7 @@ export default function Dashboard() {
             <div ref={pathCardRef} style={{ scrollMarginTop: '4rem' }} />
             <div className="prime-home-grid">
 
-              {/* ── Side Column: Hero, XP bar, Week Strip ── */}
+              {/* ── Side Column: Hero, XP bar (below main on mobile, right rail on desktop) ── */}
               <aside className="prime-side-col">
 
                 {/* TodayHero — circular arc progress ring */}
@@ -1480,8 +1480,6 @@ export default function Dashboard() {
                   )
                 })()}
 
-                {/* 7-day activity strip */}
-                <WeekStrip activityLog={profile?.activityLog} />
 
               </aside>
 
@@ -1591,11 +1589,6 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Daily Learning Card — directly below main task */}
-                {!isGuest && (
-                  <DailyLessonCard prefTopics={profile?.learnTopics || []} />
-                )}
-
                 {/* Daily Workout Card — red accent */}
                 {(() => {
                   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000)
@@ -1660,7 +1653,7 @@ export default function Dashboard() {
                   )
                 })()}
 
-                {/* השגרה שלי — collapsible section for habits + surprise mission */}
+                {/* השגרה שלי — collapsible habits section, open by default */}
                 <div>
                   <button
                     onClick={() => setShowMyRoutine(v => !v)}
@@ -1782,28 +1775,14 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Surprise Mission — purple accent wrapper */}
-                {!isGuest && (
-                  <div style={{ borderRight: '3px solid rgba(139,92,246,0.4)', borderRadius: 14, overflow: 'hidden' }}>
-                    <SurpriseMissionCard
-                      enabledCategories={profile?.surpriseCategoryPrefs || DEFAULT_ENABLED_CATEGORIES}
-                      isGuest={isGuest}
-                      onAwardXP={amount => {
-                        if (amount === 'signin') { setXPToast('signin'); return }
-                        awardXP(amount)
-                        bumpStreak()
-                      }}
-                      onConvertToHabit={async prefill => {
-                        if (isGuest) return { error: 'guest' }
-                        return handleConvertToHabit(prefill)
-                      }}
-                    />
-                  </div>
-                )}
-
                     </div>
                   )}
                 </div>
+
+                {/* Daily Learning Card */}
+                {!isGuest && (
+                  <DailyLessonCard prefTopics={profile?.learnTopics || []} />
+                )}
 
                 {/* Today XP Summary */}
                 {(doneCount > 0 || challengeDone) && (
@@ -1812,18 +1791,6 @@ export default function Dashboard() {
                     <span style={{ color: '#D9B34C', fontWeight: 800, fontSize: '0.88rem' }}>
                       +{(doneCount * XP.HABIT) + (challengeDone ? dailyChallenge.xp : 0)} XP
                     </span>
-                  </div>
-                )}
-
-                {/* Contextual messages */}
-                {isFirstTimer && primaryAction.type !== 'all-done' && (
-                  <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.9rem 1rem', fontSize: '0.83rem', color: '#A4A6AD', lineHeight: 1.5 }}>
-                    {td.welcomeFirst} — {td.welcomeFirstSub}
-                  </div>
-                )}
-                {missedYesterday && primaryAction.type !== 'all-done' && (
-                  <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.9rem 1rem', fontSize: '0.83rem', color: '#A4A6AD', lineHeight: 1.5 }}>
-                    {td.missedYday} — {td.missedYdaySub}
                   </div>
                 )}
 
@@ -1855,6 +1822,40 @@ export default function Dashboard() {
         {/* ── PROGRESS TAB (merged tracks + analytics) ── */}
         {activeTab === 'progress' && (
           <div style={{ paddingBottom: TAB_H + 16 }}>
+            {/* Moved from Home: motivation messages, weekly activity, surprise mission */}
+            <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.25rem 1.25rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Contextual messages (moved from Home) */}
+              {isFirstTimer && primaryAction.type !== 'all-done' && (
+                <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.9rem 1rem', fontSize: '0.83rem', color: '#A4A6AD', lineHeight: 1.5 }}>
+                  {td.welcomeFirst} — {td.welcomeFirstSub}
+                </div>
+              )}
+              {missedYesterday && primaryAction.type !== 'all-done' && (
+                <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.9rem 1rem', fontSize: '0.83rem', color: '#A4A6AD', lineHeight: 1.5 }}>
+                  {td.missedYday} — {td.missedYdaySub}
+                </div>
+              )}
+              {/* 7-day activity strip (moved from Home) */}
+              <WeekStrip activityLog={profile?.activityLog} />
+              {/* Surprise Mission — purple accent wrapper (moved from Home) */}
+              {!isGuest && (
+                <div style={{ borderRight: '3px solid rgba(139,92,246,0.4)', borderRadius: 14, overflow: 'hidden' }}>
+                  <SurpriseMissionCard
+                    enabledCategories={profile?.surpriseCategoryPrefs || DEFAULT_ENABLED_CATEGORIES}
+                    isGuest={isGuest}
+                    onAwardXP={amount => {
+                      if (amount === 'signin') { setXPToast('signin'); return }
+                      awardXP(amount)
+                      bumpStreak()
+                    }}
+                    onConvertToHabit={async prefill => {
+                      if (isGuest) return { error: 'guest' }
+                      return handleConvertToHabit(prefill)
+                    }}
+                  />
+                </div>
+              )}
+            </div>
             <TracksPage
               profile={profile}
               onAwardXP={(amount, guestMode) => { if (!guestMode) { awardXP(amount); bumpStreak() } else setXPToast('signin') }}
