@@ -12,7 +12,7 @@ Single project: **`better-de9aa`**
 
 | Resource | Detail |
 |---|---|
-| Firestore | User profiles, habits, XP, workout history |
+| Firestore | User profiles, habits, XP, workout history · My Tasks in `users/{uid}/tasks` |
 | Hosting site `prime-app-84fe0` | Live app → https://prime-app-84fe0.web.app |
 | Hosting site `1percent-better-app` | 301 redirect target only — do not deploy content here |
 | Functions | Node.js 22, region `europe-west1`, Firebase Functions v2 |
@@ -71,7 +71,7 @@ src/
     InitiationFlow.jsx
     WelcomeScreen.jsx
     OnboardingFlow.jsx / OnboardingPage.jsx
-    Legal.jsx              # UNTRACKED — not committed yet
+    Legal.jsx
   components/
     boxing/                # Boxing drill system (full, committed)
       BoxingPathScreen.jsx     # Home + drill selector + guided course
@@ -84,6 +84,7 @@ src/
       CombatActiveWorkout.jsx / CombatCompletion.jsx / CombatWorkoutPreview.jsx
     muaythai/
       MuayThaiPathScreen.jsx   # Thin wrapper over CombatPathScreen
+    MyTasks.jsx            # My Tasks card — top of Home
     auth/AuthModal.jsx
     dashboard/WeekStrip.jsx
     [many other feature components]
@@ -97,10 +98,14 @@ src/
     boxingProgress.js
     muayThaiProgress.js    # Wraps combatProgress.js engine for MT
     combatProgress.js      # Generic createCombatProgressionEngine factory
+    streak.js              # getEffectiveStreak() — single source for streak display
+    trackDay.js            # getTrackDay() — single source for "יום X/30"
+    localDate.js           # getLocalDateKey() — local date, used ONLY by My Tasks
   services/
     firebase.js            # Firebase init — reads VITE_* env vars
     boxingVideoService.js  # Upload video → call analyzeBoxingSession function
-    fcmService.js          # UNTRACKED — not committed yet
+    fcmService.js
+    myTasksService.js      # My Tasks CRUD — Firestore users/{uid}/tasks, guest → localStorage
     [geminiClient, workoutRewardService, etc.]
   context/
     AuthContext.jsx        # useAuth() — use this, NOT react-firebase-hooks
@@ -122,73 +127,46 @@ functions/
 - **Gemini models** — both functions use `gemini-2.5-flash`. `gemini-2.0-flash` deprecated June 2026, `gemini-1.5-flash` also deprecated.
 - **`buildDrill(categoryId, durationMin, skipWarmup?)`** and **`getLastDuration()`** exported from `boxingDrills.js`, used by both `BoxingPathScreen` and `Dashboard`.
 - **Functions region** — always `europe-west1` (nearest to Israel).
+- **Dates** — existing code uses UTC keys (`toISOString().slice(0,10)`); only My Tasks uses local dates (`getLocalDateKey`). Don't mix them.
+- **Combat screens** (boxing/MT path, preview, active, completion) render inside `FullScreen` in `Dashboard.jsx` — fixed overlay above tab bar.
 
 ---
 
-## Uncommitted changes (not yet committed as of last session)
+## Git / GitHub
 
-These files were modified but not committed with the boxing work. Review before committing:
-
-```
-src/App.jsx
-src/components/MirrorCard.jsx
-src/components/ProofOfActionModal.jsx
-src/components/SurpriseMissionCard.jsx
-src/data/dailyLessons.js
-src/data/surpriseMissions.js
-src/pages/ArenaPage.jsx
-src/pages/InitiationFlow.jsx
-src/pages/WelcomeScreen.jsx
-src/services/firebase.js
-src/services/focusTriggerService.js
-src/services/notificationService.js
-firestore.rules
-index.html
-public/sw.js
-.env.example
-functions/package-lock.json
-```
-
-Untracked (new files, not staged):
-```
-src/__tests__/fcmService.test.js
-src/pages/Legal.jsx
-src/services/fcmService.js
-```
+- Repo: **https://github.com/noam922008-ship-it/1percent-better** (public; transferred from `noam1better`)
+- Auth: `gh` logged in as `noam922008-ship-it`. No token in the remote URL — keep it that way.
+- Branches: `main` (= `my-tasks` @ `2ed9bdb`), `my-tasks`, `wip/muay-thai` (`08da753`) — all pushed.
 
 ---
 
-## Planned but not yet started
+## Done — 2026-09-24
 
-The following was scoped and approved but **not implemented**:
+All committed, pushed, and deployed (hosting:prime-app + firestore:rules):
 
-**PHASE 1 — Bugs:**
-1. Streak inconsistency: "3 ימים ברצף" vs "הרצף קטוע" — not one source of truth
-2. Track day counter: Home shows 10/30, Progress tab shows 9/30
-3. Boxing screen opens below viewport on mobile instead of full-screen
-4. Profile image broken — shows "פרופיל" text, needs initials/icon fallback
-5. Camera rep counter fires one rep on screen open — needs warm-up delay
-6. 390px layout: "גלה משימה" truncated, workout card buttons overlap
+- **6 bug fixes:** streak single source · track day single source · boxing/MT full-screen · profile photo fallback · camera rep warm-up (3s) · 390px ("גלה משימה", workout card header)
+- **My Tasks:** input at top of Home, checkbox/text/delete, "מאתמול" carry-over, not connected to XP
+- **Home reorder:** My Tasks → track → workout → השגרה שלי (open). Motivation messages, WeekStrip, surprise mission → Progress tab. Custom-habit link at top of habit sheet.
+- **Firestore rules:** owner-only `users/{uid}/tasks` rule deployed.
 
-**PHASE 2 — My Tasks:**
-- Input at top of Home ("היום"): "מה אתה חייב לעשות היום?" → creates one-off tasks
-- Checkbox + text + delete. No categories/dates/priorities.
-- Incomplete tasks carry over with "מאתמול" label
-- Stored per-user in Firestore (existing backend). No new libraries.
-- NOT connected to XP yet.
-
-**PHASE 3 — Home screen reorder:**
-- Order: My Tasks → daily track challenge → daily workout → "השגרה שלי"
-- "השגרה שלי" expanded by default; "צור הרגל מותאם אישית" link moves to top of sheet
-- Motivation message, surprise task, weekly activity bar → move to Progress tab
+Open:
+- Workout-card overlap at 390px not reproduced as guest — verify logged-in.
+- Revoke the old `noam1better` token that was exposed in the remote URL.
+- Pre-existing lint: 5 errors / 11 warnings (not from this work).
 
 ---
 
 ## Recent git history
 
 ```
-45ede59  feat: add quick boxing and Muay Thai workouts          ← HEAD
-f1953ac  feat: daily learning card, home hierarchy, progress improvements
-51e17cf  fix: resolve repeated daily task bug across all challenge protocols
-9dfc92c  Rebuild dashboard home tab: side progress panel, weekly strip, RTL fixes
+2ed9bdb  feat: reorder Home around the user's own tasks          ← HEAD (main, my-tasks)
+3ebd03a  chore(rules): owner-only access for users/{uid}/tasks
+f55451d  feat: My Tasks — the user's own daily tasks on Home
+58eaa01  fix: prevent truncation and overlap in narrow home cards
+efd4c6f  fix: warm-up countdown before camera rep counting
+df6746c  fix: fallback for broken profile photo
+cc9d22e  fix: open boxing and Muay Thai screens full-screen
+6fe2378  fix: single source of truth for track day counter
+d25c56b  fix: single source of truth for streak display
+08da753  wip: snapshot uncommitted work — FCM, legal page, mission cards, focus triggers
 ```
