@@ -43,6 +43,7 @@ import { HOBBY_DISCOVERY_ID, getHobbyDay } from '../data/hobbyDiscovery'
 import { DEFAULT_PILLARS } from '../data/pillars'
 import { shouldShowLateReminder, getIncompleteCount } from '../utils/habitReminder'
 import { getEffectiveStreak } from '../utils/streak'
+import { getTrackDay } from '../utils/trackDay'
 import BoxingPathScreen from '../components/boxing/BoxingPathScreen'
 import BoxingWorkoutPreview from '../components/boxing/BoxingWorkoutPreview'
 import BoxingActiveWorkout from '../components/boxing/BoxingActiveWorkout'
@@ -1175,6 +1176,7 @@ export default function Dashboard() {
   }, [profile?.challenges])
 
   const activeTrackDone = activeTrack ? (profile?.challenges?.[activeTrack.id]?.daysCompleted || 0) : 0
+  const activeTrackDay  = activeTrack ? getTrackDay(activeTrack, profile?.challenges?.[activeTrack.id]).currentDay : 0
 
   const dynamicGreeting = useMemo(() => {
     const name  = profile?.name
@@ -1182,10 +1184,10 @@ export default function Dashboard() {
     const n     = name ? `, ${name}` : ''
     if (streak >= 14) return `${greet}${n}. ${streak} ימים ברצף — אתה לא כמו כולם.`
     if (streak >= 7)  return `${greet}${n}. שבוע ברצף — אל תשבור את הרצף.`
-    if (activeTrack)  return `${greet}${n}. יום ${activeTrackDone + 1} ב${activeTrack.title}.`
+    if (activeTrack)  return `${greet}${n}. יום ${activeTrackDay} ב${activeTrack.title}.`
     if (streak >= 1)  return `${greet}${n}. ${streak} ימים ברצף.`
     return `${greet}${n}. יום חדש, צעד חדש.`
-  }, [profile?.name, hour, streak, activeTrack, activeTrackDone])
+  }, [profile?.name, hour, streak, activeTrack, activeTrackDay])
 
   const _weeklyCompletedDays = useMemo(() => {
     const log = new Set(profile?.activityLog || [])
@@ -1224,7 +1226,7 @@ export default function Dashboard() {
 
   let primaryAction
   if (activeTrack && !trackDoneToday) {
-    const dayNum    = (profile?.challenges?.[activeTrack.id]?.daysCompleted || 0) + 1
+    const dayNum    = activeTrackDay
     const moduleIdx = getModuleIndex(dayNum)
     const dayInMod  = (dayNum - 1) % 5
     const richDay   = getDayContent(activeTrack.id, moduleIdx, dayInMod)
@@ -1376,7 +1378,7 @@ export default function Dashboard() {
                   const R = 32, C = 2 * Math.PI * R
                   const pct = todayTotalTasks > 0 ? todayDoneTasks / todayTotalTasks : 0
                   const offset = C * (1 - pct)
-                  const dayNum = activeTrack ? (activeTrackDone + 1) : null
+                  const dayNum = activeTrack ? activeTrackDay : null
                   return (
                     <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
                       <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
@@ -1457,7 +1459,7 @@ export default function Dashboard() {
                     <div style={{ background: '#111317', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '0.75rem 1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                         <span style={{ color: '#A4A6AD', fontSize: '0.72rem', fontWeight: 600 }}>{activeTrack.emoji} {activeTrack.title}</span>
-                        <span style={{ color: '#D9B34C', fontSize: '0.72rem', fontWeight: 800 }}>יום {activeTrackDone + 1}/{activeTrack.days}</span>
+                        <span style={{ color: '#D9B34C', fontSize: '0.72rem', fontWeight: 800 }}>יום {activeTrackDay}/{activeTrack.days}</span>
                       </div>
                       <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                         <div style={{ height: '100%', background: '#D9B34C', width: `${pct}%`, borderRadius: 99, opacity: 0.85, transition: 'width 0.6s ease' }} />

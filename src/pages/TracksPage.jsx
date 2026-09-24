@@ -6,6 +6,7 @@ import { CHALLENGES, CHALLENGE_WEEKS, LESSON_TYPES, getDayTask, getLessonType, g
 import { getDayContent } from '../data/lessonContent'
 import BenchmarkTracker from '../components/BenchmarkTracker'
 import { getEvolution, isEvolved, UNLOCK_AT } from '../data/trackEvolution'
+import { getTrackDay } from '../utils/trackDay'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const QUIZ_KEY = 'prime_track_quiz'
@@ -308,7 +309,7 @@ function CourseDashboard({ challenge, progress, onBack, onLessonComplete, isReco
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: col, fontSize: '0.63rem', fontWeight: 800 }}>
-            {finished ? '✓ הושלם' : daysCompleted === 0 ? `יום 1 / ${challenge.days}` : `יום ${currentDay} / ${challenge.days} · ${daysCompleted} הושלמו`}
+            {finished ? '✓ הושלם' : daysCompleted === 0 ? `יום 1 / ${challenge.days}` : `יום ${getTrackDay(challenge, progress).currentDay} / ${challenge.days} · ${daysCompleted} הושלמו`}
           </span>
           <span style={{ color: 'rgba(241,245,249,0.28)', fontSize: '0.6rem' }}>
             מודול {moduleIdx + 1} / {modules.length} · {pct}%

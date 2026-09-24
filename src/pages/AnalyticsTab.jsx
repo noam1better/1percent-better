@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CHALLENGES } from '../data/challenges'
 import { getDailyNudgeMessage } from '../services/notificationService'
 import { getEffectiveStreak } from '../utils/streak'
+import { getTrackDay } from '../utils/trackDay'
 
 const WHATSAPP_LINK = 'https://chat.whatsapp.com/L5AoG0c2l4H29BkAZanCw4'
 const APP_URL       = 'https://1percent-better-app.web.app'
@@ -525,7 +526,7 @@ export default function AnalyticsTab({ profile, currentUid: _currentUid, activeP
                       {isActive && <span style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.05rem 0.4rem', color: 'rgba(232,232,232,0.5)', fontSize: '0.55rem', fontWeight: 800 }}>פעיל</span>}
                       {done === 0 && <span style={{ color: 'rgba(241,245,249,0.22)', fontSize: '0.6rem' }}>טרם התחיל</span>}
                     </span>
-                    <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{done}/{ch.days} ימים · {pct}%</span>
+                    <span style={{ color: ch.color, fontSize: '0.68rem', fontWeight: 700 }}>{isActive ? `יום ${getTrackDay(ch, challenges[ch.id]).currentDay}/${ch.days}` : `${done}/${ch.days} ימים`} · {pct}%</span>
                   </div>
                   <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
                     <div style={{ height: '100%', borderRadius: 99, background: ch.color, opacity: 0.75, width: `${pct}%`, transition: 'width 0.5s ease' }} />
