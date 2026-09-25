@@ -49,6 +49,25 @@ service cloud.firestore {
         allow update:       if isOwner(uid) && validTask(request.resource.data)
                             && request.resource.data.createdDate == resource.data.createdDate;
       }
+
+      // Journal — private free writing + two fixed answers. Owner-only.
+      // Shape: { text, important, step, date, createdAt, updatedAt? }.
+      // date is a local YYYY-MM-DD key; date + createdAt are immutable on edit.
+      match /journal/{entryId} {
+        function validEntry(d) {
+          return d.keys().hasOnly(['text', 'important', 'step', 'date', 'createdAt', 'updatedAt'])
+              && d.text is string      && d.text.size()      <= 5000
+              && d.important is string && d.important.size() <= 1000
+              && d.step is string      && d.step.size()      <= 1000
+              && (d.text.size() > 0 || d.important.size() > 0 || d.step.size() > 0)
+              && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+        }
+        allow read, delete: if isOwner(uid);
+        allow create:       if isOwner(uid) && validEntry(request.resource.data);
+        allow update:       if isOwner(uid) && validEntry(request.resource.data)
+                            && request.resource.data.date == resource.data.date
+                            && request.resource.data.createdAt == resource.data.createdAt;
+      }
     }
 
     // ── POSTS (Community Feed) ──────────────────────────
