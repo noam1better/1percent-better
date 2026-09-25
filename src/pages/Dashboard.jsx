@@ -60,6 +60,8 @@ import { claimDailyWorkoutReward } from '../services/workoutRewardService'
 import { INSTANT_BOXING_WORKOUT, INSTANT_MT_WORKOUT } from '../data/instantWorkouts'
 import DailyLessonCard from '../components/DailyLessonCard'
 import MyTasks from '../components/MyTasks'
+import JournalCard from '../components/JournalCard'
+import Journal from '../components/Journal'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -759,6 +761,7 @@ export default function Dashboard() {
   const [mtActive,            setMtActive]            = useState(null)
   const [mtCompletion,        setMtCompletion]        = useState(null)
   const [mtDrillActive,       setMtDrillActive]       = useState(null)  // quick-start drill for MT
+  const [journalOpen,         setJournalOpen]         = useState(false)
   const [_showDetails,      setShowDetails]       = useState(false)
   const [_contractLocked, setContractLocked] = useState(() => checkContractStatus().locked)
   const [_headerScore,    setHeaderScore]    = useState(getScore)
@@ -1410,6 +1413,10 @@ export default function Dashboard() {
             {/* My Tasks — the user's own tasks, always first */}
             <div style={{ marginBottom: '0.875rem' }}>
               <MyTasks uid={isGuest ? null : user?.uid} />
+            </div>
+            {/* Journal — opens full-screen writing page */}
+            <div style={{ marginBottom: '0.875rem' }}>
+              <JournalCard onOpen={() => setJournalOpen(true)} />
             </div>
             <div ref={pathCardRef} style={{ scrollMarginTop: '4rem' }} />
             <div className="prime-home-grid">
@@ -2229,6 +2236,9 @@ export default function Dashboard() {
           levelJustCompleted={mtCompletion.levelJustCompleted}
           onDone={() => { const wasInstant = mtCompletion?.isInstant; setMtCompletion(null); if (!wasInstant) setShowMuayThaiPath(true) }}
         /></FullScreen>
+      )}
+      {journalOpen && (
+        <FullScreen><Journal uid={isGuest ? null : user?.uid} onClose={() => setJournalOpen(false)} /></FullScreen>
       )}
       {mtDrillActive && (
         <FullScreen><BoxingDrillTimer

@@ -49,15 +49,17 @@ function PrimaryButton({ children, disabled, onClick }) {
   )
 }
 
-function SecondaryButton({ children, disabled, onClick, color = C.accent }) {
+// done: disabled but showing a success state (e.g. "נוסף ✓") — keep it green, not greyed out.
+function SecondaryButton({ children, disabled, done, onClick, color = C.accent }) {
+  const muted = disabled && !done
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
         flex: 1, minHeight: 48, borderRadius: 12, cursor: disabled ? 'default' : 'pointer',
-        background: 'transparent', border: `1px solid ${disabled ? C.border : 'rgba(217,179,76,0.35)'}`,
-        color: disabled ? C.faint : color, fontSize: '0.9rem', fontWeight: 700, fontFamily: 'inherit',
+        background: 'transparent', border: `1px solid ${done ? 'rgba(63,175,122,0.35)' : muted ? C.border : 'rgba(217,179,76,0.35)'}`,
+        color: done ? C.ok : muted ? C.faint : color, fontSize: '0.9rem', fontWeight: 700, fontFamily: 'inherit',
       }}
     >{children}</button>
   )
@@ -193,8 +195,8 @@ export default function Journal({ uid, onClose }) {
             />
 
             <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem' }}>
-              <SecondaryButton onClick={handleAddTask} disabled={!stepText || addedStep === stepText} color={addedStep === stepText ? C.ok : C.accent}>
-                {addedStep && addedStep === stepText ? 'נוסף ✓' : 'הוסף למשימות שלי'}
+              <SecondaryButton onClick={handleAddTask} disabled={!stepText || addedStep === stepText} done={!!stepText && addedStep === stepText}>
+                {stepText && addedStep === stepText ? 'נוסף ✓' : 'הוסף למשימות שלי'}
               </SecondaryButton>
             </div>
 
