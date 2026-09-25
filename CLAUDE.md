@@ -1,5 +1,7 @@
 # PRIME — 1% Better · CLAUDE.md
 
+> **Every feature must fit VISION.md. If a request doesn't fit the vision, say so before building it. Never add features that aren't explicitly requested.**
+
 **Project path:** `/Users/nwmkhn/Desktop/1-percent-better`
 **Stack:** React 19 + Vite 8, inline styles only, RTL Hebrew (`direction: 'rtl'`), black-and-gold design.
 **Package name:** `noam-habits-ai` · **No Next.js** — plain SPA.
